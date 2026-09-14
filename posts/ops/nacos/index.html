@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nacos · rensongqi</title>
+<meta name="description" content="/data/nacos/env">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>Nacos</span></div>
+
+<div class="doc-title">
+  <h1>Nacos</h1>
+  <div class="meta">2026-09-14 · 约 740 字 · 源自 notes-src/ops/nacos/README.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#Nacos</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#172161081">172.16.10.81</a></li><li class="l3"><a href="#mysql">启动MySQL</a></li><li class="l3"><a href="#nacos">启动Nacos</a></li><li class="l2"><a href="#172161082">172.16.10.82</a></li><li class="l2"><a href="#172161083">172.16.10.83</a></li><li class="l2"><a href="#_1">添加监控</a></li></ul></nav>
+<main>
+<ul>
+<li><a href="#172161081">172.16.10.81</a></li>
+<li><a href="#启动mysql">启动MySQL</a></li>
+<li><a href="#启动nacos">启动Nacos</a></li>
+<li><a href="#172161082">172.16.10.82</a></li>
+<li><a href="#172161083">172.16.10.83</a></li>
+<li><a href="#添加监控">添加监控</a></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>IP</th>
+<th>服务</th>
+<th>部署</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>172.16.10.81</td>
+<td>mysql、nacos</td>
+<td></td>
+</tr>
+<tr>
+<td>172.16.10.82</td>
+<td>nacos</td>
+<td></td>
+</tr>
+<tr>
+<td>172.16.10.83</td>
+<td>nacos</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h1 id="172161081">172.16.10.81</h1>
+<pre><code>version: &quot;3.8&quot;
+services:
+  nacos:
+    hostname: nacos
+    container_name: nacos
+    network_mode: host
+    image: nacos/nacos-server:v2.3.2
+    volumes:
+      - /data/nacos/data:/home/nacos/logs
+    ports:
+      - &quot;7848:7848&quot;
+      - &quot;8848:8848&quot;
+      - &quot;9848:9848&quot;
+      - &quot;9849:9849&quot;
+    restart: always
+    environment:
+      - NACOS_SERVER_IP=172.16.10.81
+      - NACOS_SERVERS=172.16.10.81:8848 172.16.10.82:8848 172.16.10.83:8848
+      - SPRING_DATASOURCE_PLATFORM=mysql
+      - MYSQL_SERVICE_HOST=172.16.10.81
+      - MYSQL_SERVICE_DB_NAME=nacos
+      - MYSQL_SERVICE_PORT=3306
+      - MYSQL_SERVICE_USER=nacos
+      - MYSQL_SERVICE_PASSWORD=nacos  # mysql pass
+      - MYSQL_SERVICE_DB_PARAM=characterEncoding=utf8&amp;connectTimeout=1000&amp;socketTimeout=3000&amp;autoReconnect=true&amp;useSSL=false&amp;allowPublicKeyRetrieval=true
+      - NACOS_AUTH_ENABLE=true
+      - NACOS_AUTH_TOKEN=Mkc2bnRlcFlDcUVXTlNqenlaa3Zxxxxxxxxxx=
+      - NACOS_AUTH_IDENTITY_KEY=nacos
+      - NACOS_AUTH_IDENTITY_VALUE=xxxxxx
+
+  mysql:
+    container_name: nacos_mysql
+    image: nacos/nacos-mysql:8.0.31
+    env_file:
+      - ./env
+    volumes:
+      - /data/nacos/mysql/conf/my.cnf:/etc/my.cnf
+      - /data/nacos/mysql/datadir:/var/lib/mysql
+      - /etc/localtime:/etc/localtime
+      - /usr/share/zoneinfo/Asia/Shanghai:/etc/timezone
+    ports:
+      - &quot;3306:3306&quot;
+    healthcheck:
+      test: [ &quot;CMD&quot;, &quot;mysqladmin&quot;, &quot;ping&quot;, &quot;-h&quot;, &quot;localhost&quot; ]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+</code></pre>
+<p>/data/nacos/env</p>
+<pre><code>MYSQL_ROOT_PASSWORD=xxxxxxx
+MYSQL_DATABASE=nacos
+MYSQL_USER=nacos
+MYSQL_PASSWORD=nacos
+</code></pre>
+<h2 id="mysql">启动MySQL</h2>
+<blockquote>
+<p>使用nacos/nacos-mysql:8.0.31镜像会自动初始化好nacos所需要的库和表，但是当第一次启动完Nacos之后会出现账号密码不对的情况，需要手动初始化一个账号密码
+</p>
+</blockquote>
+<p>进入mysql容器</p>
+<pre><code class="language-bash"># 启动mysql容器
+cd /data/nacos
+docker-compose up -d mysql
+
+# 进入mysql容器
+docker exec -it nacos_mysql bash
+mysql -u root -p xxxxx
+
+# 以下是SQL命令
+show databases;
+use nacos;
+
+# users表新增一条nacos用户和密码记录
+# XYLb8fvPnnpZRC4N : $2a$10$2k0x0hKgIMqhTTuwHFnLAOxGwkKFKgUkRN2c1l62qfnzwkY2oJ1EW
+INSERT INTO users (username, password, enabled) VALUES ('nacos', '$2a$10$2k0x0hKgIMqhTTuwHFnLAOxGwkKFKgUkRN2c1l62qfnzwkY2oJ1EW', TRUE);
+
+INSERT INTO roles (username, role) VALUES ('admin', 'ROLE_ADMIN');
+</code></pre>
+<h2 id="nacos">启动Nacos</h2>
+<pre><code>cd /data/nacos
+docker-compose up -d nacos
+</code></pre>
+<h1 id="172161082">172.16.10.82</h1>
+<pre><code>version: &quot;3.8&quot;
+services:
+  nacos:
+    hostname: nacos
+    container_name: nacos
+    network_mode: host
+    image: nacos/nacos-server:v2.3.2
+    volumes:
+      - /data/nacos/data:/home/nacos/logs
+    restart: always
+    extra_hosts:
+      - &quot;host.docker.internal:host-gateway&quot;
+    environment:
+      - NACOS_SERVER_IP=172.16.10.82
+      - NACOS_SERVERS=172.16.10.81:8848 172.16.10.82:8848 172.16.10.83:8848
+      - SPRING_DATASOURCE_PLATFORM=mysql
+      - MYSQL_SERVICE_HOST=172.16.10.81
+      - MYSQL_SERVICE_DB_NAME=nacos
+      - MYSQL_SERVICE_PORT=3306
+      - MYSQL_SERVICE_USER=nacos
+      - MYSQL_SERVICE_PASSWORD=nacos
+      - MYSQL_SERVICE_DB_PARAM=characterEncoding=utf8&amp;connectTimeout=1000&amp;socketTimeout=3000&amp;autoReconnect=true&amp;useSSL=false&amp;allowPublicKeyRetrieval=true
+      - NACOS_AUTH_ENABLE=true
+      - NACOS_AUTH_TOKEN=Mkc2bnRlcFlDcUVXTlNqenlaa3Zxxxxxxxxxx
+      - NACOS_AUTH_IDENTITY_KEY=nacos
+      - NACOS_AUTH_IDENTITY_VALUE=xxxxxx
+</code></pre>
+<h1 id="172161083">172.16.10.83</h1>
+<pre><code>version: &quot;3.8&quot;
+services:
+  nacos:
+    hostname: nacos
+    container_name: nacos
+    network_mode: host
+    image: nacos/nacos-server:v2.3.2
+    volumes:
+      - /data/nacos/data:/home/nacos/logs
+    restart: always
+    extra_hosts:
+      - &quot;host.docker.internal:host-gateway&quot;
+    environment:
+      - NACOS_SERVER_IP=172.16.10.83
+      - NACOS_SERVERS=172.16.10.81:8848 172.16.10.82:8848 172.16.10.83:8848
+      - SPRING_DATASOURCE_PLATFORM=mysql
+      - MYSQL_SERVICE_HOST=172.16.10.81
+      - MYSQL_SERVICE_DB_NAME=nacos
+      - MYSQL_SERVICE_PORT=3306
+      - MYSQL_SERVICE_USER=nacos
+      - MYSQL_SERVICE_PASSWORD=nacos
+      - MYSQL_SERVICE_DB_PARAM=characterEncoding=utf8&amp;connectTimeout=1000&amp;socketTimeout=3000&amp;autoReconnect=true&amp;useSSL=false&amp;allowPublicKeyRetrieval=true
+      - NACOS_AUTH_ENABLE=true
+      - NACOS_AUTH_TOKEN=Mkc2bnRlcFlDcUVXTlNqenlaa3Zxxxxxxxxxx
+      - NACOS_AUTH_IDENTITY_KEY=nacos
+      - NACOS_AUTH_IDENTITY_VALUE=xxxxxx
+</code></pre>
+<h1 id="_1">添加监控</h1>
+<blockquote>
+<p><a href="https://nacos.io/docs/latest/guide/admin/monitor-guide/">Nacos 监控手册</a></p>
+<p><a href="https://raw.githubusercontent.com/nacos-group/nacos-template/refs/heads/master/nacos-grafana.json">nacos-grafana</a></p>
+</blockquote>
+<p>进容器，修改 <code>conf/application.properties</code> 暴露metrics数据</p>
+<pre><code>management.endpoints.web.exposure.include=*
+</code></pre>
+<p>访问: <code>x.x.x.x:8848/nacos/actuator/prometheus</code> 获取监控指标</p>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../elk/index.html">ELK</a></li>
+<li class=""><a href="../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="index.html">Nacos</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

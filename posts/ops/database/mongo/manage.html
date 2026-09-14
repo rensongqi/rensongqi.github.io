@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MongoDB · Manage · rensongqi</title>
+<meta name="description" content="授权常见的模式分两种 1. 指定单个数据库给用户授权，此时需要先切换到指定数据库名称空间下，以test为例，use test，然后进行相关的授权grantRolesToUser，以rsq用户为例，第一">
+<link rel="stylesheet" href="../../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../../index.html">首页</a>
+      <a href="../../../../archive.html">归档</a>
+      <a href="../../../../storage.html">存储</a>
+      <a href="../../../../notes/" class="is-active">笔记</a>
+      <a href="../../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../../index.html">首页</a> / <a href="../../../../notes/">笔记</a> / <a href="../../../../notes/ops.html">运维工具</a> / <span>MongoDB · Manage</span></div>
+
+<div class="doc-title">
+  <h1>MongoDB · Manage</h1>
+  <div class="meta">2026-09-14 · 约 1130 字 · 源自 notes-src/ops/database/mongo/manage.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#数据库</span><span>#MongoDB</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1">1 用户管理</a></li><li class="l3"><a href="#11">1.1 角色</a></li><li class="l3"><a href="#12">1.2 注意事项</a></li><li class="l3"><a href="#13">1.3 给单个数据库创建用户</a></li><li class="l3"><a href="#14">1.4 给一个用户授权多个数据库</a></li><li class="l3"><a href="#15">1.5 其它命令</a></li><li class="l3"><a href="#16-mongocollections">1.6 对比两个mongo重复的collections</a></li><li class="l3"><a href="#17-mongo">1.7 mongo间数据迁移</a></li><li class="l2"><a href="#_1">参考文章</a></li></ul></nav>
+<main>
+<ul>
+<li><a href="#1-用户管理">1 用户管理</a></li>
+<li><a href="#11-角色">1.1 角色</a></li>
+<li><a href="#12-注意事项">1.2 注意事项</a></li>
+<li><a href="#13-给单个数据库创建用户">1.3 给单个数据库创建用户</a></li>
+<li><a href="#14-给一个用户授权多个数据库">1.4 给一个用户授权多个数据库</a></li>
+<li><a href="#15-其它命令">1.5 其它命令</a></li>
+<li><a href="#16-对比两个mongo重复的collections">1.6 对比两个mongo重复的collections</a></li>
+<li><a href="#17-mongo间数据迁移">1.7 mongo间数据迁移</a></li>
+<li><a href="#参考文章">参考文章</a></li>
+</ul>
+<h1 id="1">1 用户管理</h1>
+<h2 id="11">1.1 角色</h2>
+<ol>
+<li>数据库用户角色：read、readWrite</li>
+<li>数据库管理角色：dbAdmin、dbOwner、userAdmin</li>
+<li>集群管理角色：clusterAdmin、clusterManager、clusterMonitor、hostManager</li>
+<li>备份恢复角色：backup、restore</li>
+<li>所有数据库角色： readAnyDatabase、readWriteAnyDatabase、userAdminAnyDatabase、
+dbAdminAnyDatabase</li>
+<li>超级用户角色：root</li>
+</ol>
+<h2 id="12">1.2 注意事项</h2>
+<p>授权常见的模式分两种
+1. 指定单个数据库给用户授权，此时需要先切换到指定数据库名称空间下，以test为例，use test，然后进行相关的授权grantRolesToUser，以rsq用户为例，第一次创建，则需要在此数据库中进行用户的创建，注意此用户跟其它数据库的用户不通用，如果需要在test2数据库中给rsq用户授权，则需要在test2中也创建rsq用户。此时mongo连接串需要指定相对应的数据库才可以登录，否则会报认证失败。
+2. 指定多个数据库给一个用户授权，这种情况需要切换到admin数据库中，先对用户进行admin数据库的权限授权，如dbAdmin，授权完再给普通数据库授权，这种情况不需要再进入到普通数据库创建用户，用户是全局生效的。</p>
+<h2 id="13">1.3 给单个数据库创建用户</h2>
+<p>连接串：mongodb://<user>:<pass>@mongo.rsq.cn:27017/?tls=false&amp;authSource=ai-rsq3d-xsl-v56</p>
+<pre><code class="language-bash"># 新建数据库
+use ai-rsq3d-xsl-v56
+
+# 新建一个测试collection
+db.site.insert({&quot;name&quot;:&quot;ai-rsq3d-xsl-v56&quot;})
+
+# 查看数据库
+show dbs
+
+# 给新数据库创建用户，密码跟之前保持一致
+db.createUser({user: &quot;user&quot;,pwd: &quot;xxxxx&quot;,roles: [ { role: &quot;dbOwner&quot;, db: &quot;ai-rsq3d-xsl-v56&quot; } ]})
+
+# 如果需要角色授权，则有如下命令
+db.runCommand(
+    {
+        grantRolesToUser: &quot;user&quot;,
+        roles:
+            [
+                { role: &quot;dbOwner&quot;, db: &quot;ai-rsq3d-corolla-v56&quot; }
+            ]
+    }
+)
+</code></pre>
+<h2 id="14">1.4 给一个用户授权多个数据库</h2>
+<p>连接串：mongodb://user:xxxxx@mongo.rsqrobot.cn:27017/?tls=false</p>
+<pre><code class="language-bash"># 需要进入到admin数据库授权多个数据库给同一个用户
+use admin
+
+# 创建用户
+db.createUser({
+    user: &quot;user&quot;,
+    pwd: &quot;xxxxx&quot;,
+    roles: [
+        { 
+            role: &quot;dbAdmin&quot;, db: &quot;admin&quot; 
+        },
+        { 
+            role: &quot;dbOwner&quot;, db: &quot;user&quot; 
+        },
+        { 
+            role: &quot;dbOwner&quot;, db: &quot;ai-data-cleaning-test&quot; 
+        },
+        { 
+            role: &quot;dbOwner&quot;, db: &quot;ai-rsq3d-x3s-v56&quot; 
+        },
+        { 
+            role: &quot;dbOwner&quot;, db: &quot;ai-rsq3d-corolla-v56&quot; 
+        },
+        { 
+            role: &quot;dbOwner&quot;, db: &quot;ai-rsq3d-xsl-v56&quot; 
+        } 
+    ]
+})
+</code></pre>
+<h2 id="15">1.5 其它命令</h2>
+<pre><code class="language-bash"># 查看db相关权限
+db.runCommand(
+    {
+        rolesInfo: { role: &quot;readWrite&quot;, db: &quot;zgf-lidar&quot; },
+        showPrivileges: true
+    }
+)
+
+# 查询用户
+db.getUsers();
+show users
+
+# 删除用户
+db.dropUser('admin')
+
+# 修改用户密码
+db.updateUser('admin', {pwd: '111111'})
+
+# 创建管理员用户，需要使用admin数据库
+use admin  # 
+db.createUser({user: &quot;rensongqi&quot;,pwd: &quot;xxxxx&quot;,roles: [ { role: &quot;dbAdmin&quot;, db: &quot;perception&quot; } ]})
+
+# 回收用户角色
+db.revokeRolesFromUser(
+    &quot;perception&quot;,
+    [
+        { role: &quot;root&quot;, db: &quot;admin&quot; }
+    ]
+)
+
+# 删除数据库
+use percepai-rsq3d-corolla-v56tion
+db.dropDatabase()
+
+# 添加新角色
+db.createRole({
+  role: &quot;aiPolicyRole&quot;,
+  privileges: [
+    {
+        resource: { db: &quot;&quot;, collection: &quot;&quot; },
+        actions: [ &quot;find&quot;, &quot;insert&quot;, &quot;update&quot;, &quot;remove&quot;, &quot;createCollection&quot;, &quot;dropCollection&quot; ],
+        resource: { db: &quot;ai-&quot;, collection: &quot;&quot; }
+    }
+  ],
+  roles: []
+})
+
+# 删除角色
+db.dropRole( &quot;aiPolicyRole&quot;, { w: &quot;majority&quot; } ) 
+</code></pre>
+<h2 id="16-mongocollections">1.6 对比两个mongo重复的collections</h2>
+<p>使用mongosh，<a href="https://www.mongodb.com/try/download/shell">下载地址</a></p>
+<p>compare.sc</p>
+<pre><code>// 配置两个 MongoDB 集群的连接信息
+const cluster1 = new Mongo(&quot;mongodb://user1:password1@host1:27017&quot;);
+const cluster2 = new Mongo(&quot;mongodb://user2:password2@host2:27017&quot;);
+
+// 获取所有集合的全路径列表
+function getAllCollections(cluster) {
+    const collections = [];
+    const databases = cluster.getDB(&quot;admin&quot;).adminCommand(&quot;listDatabases&quot;).databases;
+
+    databases.forEach((dbInfo) =&gt; {
+        const dbName = dbInfo.name;
+        const db = cluster.getDB(dbName);
+        const collNames = db.getCollectionNames();
+
+        collNames.forEach((collName) =&gt; {
+            collections.push(`${dbName}.${collName}`);
+        });
+    });
+
+    return collections;
+}
+
+// 获取两个集群的集合列表
+const collectionsCluster1 = getAllCollections(cluster1);
+const collectionsCluster2 = getAllCollections(cluster2);
+
+// 比对两个集合列表，找出重复项
+const duplicateCollections = collectionsCluster1.filter((coll) =&gt;
+    collectionsCluster2.includes(coll)
+);
+
+// 打印结果
+if (duplicateCollections.length &gt; 0) {
+    print(&quot;重复的集合列表：&quot;);
+    duplicateCollections.forEach((coll) =&gt; print(coll));
+} else {
+    print(&quot;没有发现重复的集合。&quot;);
+}
+</code></pre>
+<p>执行脚本</p>
+<pre><code class="language-bash">mongosh -f compare.sc
+</code></pre>
+<h2 id="17-mongo">1.7 mongo间数据迁移</h2>
+<p>需要使用<code>mongodump</code>和<code>mongorestore</code>，<a href="https://www.mongodb.com/try/download/database-tools">下载地址</a></p>
+<p>collection.list</p>
+<pre><code>ai-3d-test
+ai-2d-test
+...
+</code></pre>
+<p>dump.sh</p>
+<pre><code class="language-bash">mkdir -p /data/mongo_dump
+while read line; do
+    mongodump -u root -p &lt;pass&gt; --authenticationDatabase admin -d $line -o ./dump/
+done &lt; collection.list
+</code></pre>
+<p>restore.sh</p>
+<pre><code class="language-bash">mongorestore  -u root -p &lt;pass&gt; --host mongo.rsq.cn:27017 --authenticationDatabase admin --dir=/data/mongo_dump --drop
+</code></pre>
+<h1 id="_1">参考文章</h1>
+<ul>
+<li><a href="https://www.cnblogs.com/dbabd/p/10811523.html">mongodb操作指令</a></li>
+<li><a href="https://www.yiibai.com/mongodb/manage-users-and-roles.html">manage-users-and-roles</a></li>
+<li><a href="https://www.cnblogs.com/dbabd/p/10811523.html">MongoDB 4.X 用户和角色权限管理总结</a></li>
+</ul>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../../canal/index.html">Canal</a></li>
+<li class=""><a href="../../consul/index.html">Consul</a></li>
+<li class=""><a href="index.html">MongoDB</a></li>
+<li class=""><a href="../mysql/index.html">MySQL</a></li>
+<li class=""><a href="../pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../redis/index.html">Redis</a></li>
+<li class=""><a href="../../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../../elk/index.html">ELK</a></li>
+<li class=""><a href="../../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="manage.html">MongoDB · Manage</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../../feed.xml">RSS</a>
+      <a href="../../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../../assets/js/main.js"></script>
+</body>
+</html>

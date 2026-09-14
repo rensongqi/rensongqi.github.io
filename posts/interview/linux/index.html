@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>遇到过比较深刻的问题记录 · rensongqi</title>
+<meta name="description" content="Centos dmz网络问题">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/interview.html">面试</a> / <span>遇到过比较深刻的问题记录</span></div>
+
+<div class="doc-title">
+  <h1>遇到过比较深刻的问题记录</h1>
+  <div class="meta">2026-09-14 · 约 1410 字 · 源自 notes-src/interview/linux/README.md</div>
+  <div class="doc-tags"><span>#面试</span><span>#Linux</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#_1">遇到过比较深刻的问题记录</a></li><li class="l3"><a href="#_2">运维侧</a></li><li class="l3"><a href="#_3">开发侧</a></li></ul></nav>
+<main>
+<h2 id="_2">运维侧</h2>
+<ol>
+<li>
+<p>Centos dmz网络问题</p>
+<blockquote>
+<p>背景: 我们的IDC机房有自己的出口防火墙和固定的公网IP，内部的服务映射至公网之后外部访问公网服务没有问题，内部访问映射出去的公网服务就出现了问题，原因在于防火墙做了地址转换后，内网ng有一项内核参数没有调整好</p>
+<p>解决办法：就是禁用反向路径过滤，反向路径过滤是一种安全机制，用于验证接收到的数据包的源地址是否可通过接收接口到达。net.ipv4.conf.default.rp_filter=0 关闭之后解决了该问题</p>
+</blockquote>
+<p><code>vim /etc/sysctl.conf</code>
+<code>bash
+net.ipv4.ip_forward=1
+net.ipv4.conf.default.rp_filter=0     
+net.ipv4.conf.all.rp_filter=0</code></p>
+</li>
+<li>
+<p>Elasticsearch从三节点变为六节点冷热集群架构设计</p>
+</li>
+<li>
+<p>GPFS vfs fuse功能的实现</p>
+<blockquote>
+<p>背景：最开始设想的是如何让用户体验更好的基础上实现的vfs，访问一个文件，获取文件的元数据信息，这些信息存放在inode中，读取文件时判断文件是否具有指定的key value值，如果有的话就从对应的另一个存储中读文件，并将数据写入到buffer中，返回给gpfs客户端。</p>
+<p>踩坑一：直接修改gpfs客户端源码，从内核层面解决这个问题，最后发现压根拿不到文件偏移量等数据信息，可以在内核读取另一个存储的文件数据，但是没办法像原生的方法一样将数据返回给操作系统应用层应用，因为不知道该如何传这些数据量。</p>
+<p>踩坑二：首先把数据迁移到另一个存储是很容易实现的，通过GPFS内置的分层策略可以获取要迁移至第三方存储的文件列表，比如大于14天未访问的文件列表，将这些文件通过自定义脚本迁移至第三方存储中。迁移完需要创建一个跟源文件路径和文件名保持一致的空文件，这个空文件必须要满足一个条件就是执行ls -lh的时候可以查看该文件的大小，但是执行du -sh的时候显示为空数据（保证文件实际上不占用空间，只是inode占了一些空间），可以使用truncate命令创建稀疏文件，刚好满足需求。但是后来发现一个问题，软链接文件没法按照刚才所述的方式首先，读一个软链接文件会直接读取该软链接文件对应的目的文件，在vfs上是会直接返回目的文件路径，然后读取数据。</p>
+<p>最终方案：直接mount第三方存储，迁移完数据，创建一个跟第三方存储相关的软链接文件，后续哪台机器要访问数据，直接挂载第三方存储即可。</p>
+</blockquote>
+</li>
+<li>
+<p>SeaweedFS的Ctime时间跟Mtime时间是保持一致的，没法判断哪些文件经过一段时间可以删除(我们存储上有一些数据保存一两年后是可以删除的)，所以没办法实现数据闭环。经过之前的经验，我们对fuse有了一定的了解，最后修改了seaweedfs的fuse相关的代码实现，实现Ctime在read文件时也会更新。</p>
+</li>
+</ol>
+<h2 id="_3">开发侧</h2>
+<ol>
+<li>
+<p>docker ansible ssh执行playbook完会后会遗留下来一批僵尸进程不会被回收，持续一段时间之后产生内存泄漏问题，宿主机运行playbook后进程则会被init进程回收
+    &gt; https://blog.phusion.nl/2015/01/20/docker-and-the-pid-1-zombie-reaping-problem/</p>
+<p>当在Docker容器中运行Ansible时，僵尸进程问题产生的主要原因有：</p>
+</li>
+</ol>
+<ul>
+<li>PID 1特殊性：在Docker容器中，启动的第一个进程（PID 1）拥有特殊的职责，包括回收子进程。</li>
+<li>普通应用程序（如Python、Bash等）通常没有设计来处理PID 1的职责，尤其是处理SIGCHLD信号和回收子进程。</li>
+<li>信号处理缺失：常规应用程序作为PID 1运行时，不会自动接收和处理SIGCHLD信号，这导致子进程在退出后变成僵尸进程，无法被回收。
+    Ansible工作机制：Ansible在执行playbook时会创建多个子进程来并行执行任务，而这些子进程完成后需要被父进程正确回收。</li>
+</ul>
+<ol start="2">
+<li>
+<p>cmdb开发过程中有一个远程虚拟机的tty的功能开发了很久，主要卡点在于如何实现远程虚拟机像跟在vSphere上远程效果一致的js资源，可以实现远程关机重启等功能，还有就是找到了资源如何远程虚拟机，是通过vSphere还是Esxi，虚拟机时分布在不同的Esxi节点上。最终通过一篇python实现的类似的功能的文章，参考了下改为golang实现。</p>
+</li>
+<li>
+<p>基于PXE的自动装机
+    &gt; 问题一：如何保证待装机的机器装机后网段归属至业务网，后续再次重启不会进入装机网
+    &gt; 
+    &gt; 解决：服务器上的网卡配置多vlan，交换机接口配置trunk，允许多vlan接入，装机之后会有初始化脚本，将服务器网卡ip修改为业务网段ip，保证下次重启不会进入装机网。
+    &gt; </p>
+</li>
+</ol>
+<nav class="doc-series">
+  <p class="lb">面试 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../go/index.html">Golang面试题</a></li>
+<li class=""><a href="../index.html">面试</a></li>
+<li class="cur"><a href="index.html">遇到过比较深刻的问题记录</a></li>
+<li class=""><a href="../mysql/index.html">MySQL</a></li>
+<li class=""><a href="../redis/index.html">一致性Hash</a></li>
+<li class=""><a href="../docker/docker-shim.html">Docker Shim</a></li>
+<li class=""><a href="../go/coding.html">Go · Coding</a></li>
+<li class=""><a href="../go/escape-analysis.html">Go · Escape Analysis</a></li>
+<li class=""><a href="../go/gc.html">Go · GC</a></li>
+<li class=""><a href="../go/goroutine-safety.html">Goroutine Safety</a></li>
+<li class=""><a href="../go/injection.html">依赖注入</a></li>
+<li class=""><a href="../go/memory-management.html">Go · Memory Management</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

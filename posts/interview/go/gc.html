@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go · GC · rensongqi</title>
+<meta name="description" content="编写 Go 代码不需要像写 C/C++ 那样手动的 malloc和 free内存，因为 malloc 操作由 Go 编译器的逃逸分析机制帮我们加上了，而 free 动作则是有 GC 机制来完成。">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/interview.html">面试</a> / <span>Go · GC</span></div>
+
+<div class="doc-title">
+  <h1>Go · GC</h1>
+  <div class="meta">2026-09-14 · 约 2600 字 · 源自 notes-src/interview/go/gc.md</div>
+  <div class="doc-tags"><span>#面试</span><span>#Go</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#_1">介绍</a></li><li class="l2"><a href="#_2">标记清除</a></li><li class="l2"><a href="#_3">并行清除</a></li><li class="l2"><a href="#_4">三色标记法</a></li><li class="l2"><a href="#hibrid-write-barrier">Hibrid Write Barrier</a></li><li class="l2"><a href="#gc">何时触发 GC</a></li><li class="l2"><a href="#_5">其他优化</a></li><li class="l2"><a href="#_6">结论</a></li><li class="l2"><a href="#_7">参考</a></li></ul></nav>
+<main>
+<h2 id="_1">介绍</h2>
+<p>编写 Go 代码不需要像写 C/C++ 那样手动的 <code>malloc</code>和 <code>free</code>内存，因为 <code>malloc</code> 操作由 Go 编译器的逃逸分析机制帮我们加上了，而 <code>free</code> 动作则是有 GC 机制来完成。</p>
+<p>虽说 GC 是一个很好的特性，大大降低了编程门槛，但这是以损耗性能为代价的。Go 的 GC 机制是不断进化提升的，到现在也没有停止。其进化过程中主要有一下几个重要的里程碑：</p>
+<ul>
+<li>1.1 版本: 标记+清除方式，整个过程需要 STW(stop the world，挂起所有用户 goroutine)</li>
+<li>1.3 版本: 标记过程 STW，清除过程并行</li>
+<li>1.5 版本: 标记过程使用三色标记法</li>
+<li>1.8 版本: Hibrid Write Barrier</li>
+<li>未来: 类似 JVM 的分代机制？</li>
+</ul>
+<p>下面详细介绍下这整个演进过程。</p>
+<h2 id="_2">标记清除</h2>
+<p>垃圾回收的算法很多，比如最常见的引用计数，节点复制等等。Go 采用的是标记清除方式。当 GC 开始时，从 root 开始一层层扫描，这里的 root 区值当前所有 goroutine 的栈和全局数据区的变量(主要是这 2 个地方)。扫描过程中把能被触达的 object 标记出来，那么堆空间未被标记的 object 就是垃圾了；最后遍历堆空间所有 object 对垃圾（未标记）的 object 进行清除，清除完成则表示 GC 完成。清除的 object 会被放回到 mcache 中以备后续分配使用。</p>
+<p>我在 <a href="https://www.jianshu.com/p/7405b4e11ee2">Go 语言内存管理（二）：Go 内存管理</a> 提到过，Go 的内存区域中有一个 <code>bitmap</code> 区域，就是用来存储 object 标记的。</p>
+<p>最开始 Go 的整个 GC 过程需要 STW，因为用户进程如果在 GC 过程中修改了变量的引用关系，可能会导致清理错误。举个例子，我们假设下面的变量使用堆空间：</p>
+<pre><code class="language-go">A := new(struct {
+    B *int
+})
+</code></pre>
+<p>如果 GC 已经扫描完了变量 <code>A</code>，并对 <code>A</code> 和 <code>B</code> 进行了标记，如果没有 STW，在执行清除之前，用户线程有可能会执行 <code>A.B = new(int)</code>，那么这个新对象 <code>new(int)</code> 会因为没有标记而被清除。</p>
+<p>Go GC 的 STW 曾经是大家吐槽的焦点，因为它经常使你的系统卡住，造成几百毫秒延迟。</p>
+<h2 id="_3">并行清除</h2>
+<p>这个优化很简单，如上面所述，STW 是为了阻止标记的错误，那么只需对标记过程进行 STW，确保标记正确。清除过程是不需要 STW 的。</p>
+<p>标记清除算法致命的缺点就在 STW 上，所以 Golang 后期的很多优化都是针对 STW 的，尽可能缩短它的时间，避免出现 Go 服务的卡顿。</p>
+<h2 id="_4">三色标记法</h2>
+<p>为了能让标记过程也能并行，Go 采用了三色标记 + 写屏障的机制。它的步骤大致如下：</p>
+<ol>
+<li>GC 开始时，认为所有 object 都是<strong>白色</strong>，即垃圾。</li>
+<li>从 root 区开始遍历，被触达的 object 置成<strong>灰色</strong>。</li>
+<li>遍历所有灰色 object，将他们内部的引用变量置成 <strong>灰色</strong>，自身置成 <strong>黑色</strong></li>
+<li>循环第 3 步，直到没有灰色 object 了，只剩下了黑白两种，白色的都是垃圾。</li>
+<li><strong>对于黑色 object，如果在标记期间发生了写操作，写屏障会在真正赋值前将新对象标记为灰色</strong>。</li>
+<li>标记过程中，<code>mallocgc</code> 新分配的 object，会先被标记成黑色再返回。</li>
+</ol>
+<p>示意图：</p>
+<p><img alt="img" src="https://upload-images.jianshu.io/upload_images/11662994-94548e98fe245de6.png?imageMogr2/auto-orient/strip|imageView2/2/w/741/format/webp" /></p>
+<p>还有一种情况，标记过程中，堆上的 object 被赋值给了一个<strong>栈上指针</strong>，导致这个 object 没有被标记到。<strong>因为对栈上指针进行写入，写屏障是检测不到的</strong>。下图展示了整个流程(其中 L 是栈上指针)：</p>
+<p><img alt="img" src="https://upload-images.jianshu.io/upload_images/11662994-b2d93298df056f97.png?imageMogr2/auto-orient/strip|imageView2/2/w/758/format/webp" /></p>
+<p>为了解决这个问题，标记的最后阶段，还会回头重新扫描一下所有的栈空间，确保没有遗漏。而这个过程就需要启动 STW 了，否则并发场景会使上述场景反复重现。</p>
+<p>整个 GC 流程如下图所示：</p>
+<p><img alt="img" src="https://upload-images.jianshu.io/upload_images/11662994-d448ce59cb2965aa.png?imageMogr2/auto-orient/strip|imageView2/2/w/1200/format/webp" /></p>
+<p>解释下：</p>
+<ol>
+<li>正常情况下，写操作就是正常的赋值。</li>
+<li>GC 开始，开启写屏障等准备工作。开启写屏障等准备工作需要短暂的 STW。</li>
+<li>Stack scan 阶段，从全局空间和 goroutine 栈空间上收集变量。</li>
+<li>Mark 阶段，执行上述的三色标记法，直到没有灰色对象。</li>
+<li>Mark termination 阶段，开启 STW，回头重新扫描 root 区域新变量，对他们进行标记。</li>
+<li>Sweep 阶段，关闭 STW 和 写屏障，对白色对象进行清除。</li>
+</ol>
+<h2 id="hibrid-write-barrier">Hibrid Write Barrier</h2>
+<p>三色标记方式，需要在最后重新扫描一下所有全局变量和 goroutine 栈空间，如果系统的 goroutine 很多，这个阶段耗时也会比较长，甚至会长达 100ms。毕竟 Goroutine 很轻量，大型系统中，上百万的 Goroutine 也是常有的事儿。</p>
+<p>上面说<em>对栈上指针进行写入，写屏障是检测不到</em>，实际上并不是做不到，而是代价非常高，Go 的写屏障故意没去管它，而是采取了再次扫描的方案。</p>
+<p>Go 在 1.8 版本引入了<strong>混合写屏障</strong>，其会在赋值前，对旧数据置灰，再视情况对新值进行置灰。大致如下图所示：</p>
+<p><img alt="img" src="https://upload-images.jianshu.io/upload_images/11662994-8994c6b1dc536940.png?imageMogr2/auto-orient/strip|imageView2/2/w/713/format/webp" /></p>
+<p>这样就不需要在最后回头重新扫描所有 Goroutine 的栈空间了，这使得整个 GC 过程 STW 几乎可以忽略不计了。</p>
+<p>写屏障的伪代码如下（看不懂可忽略）：</p>
+<pre><code class="language-go">writePointer(slot, ptr):  // 1.8 之前
+    shade(ptr)
+    *slot = ptr
+
+writePointer(slot, ptr): // 1.8 之后
+    shade(*slot)
+    if current stack is grey:
+        shade(ptr)
+    *slot = ptr
+</code></pre>
+<p>混合写屏障会有一点小小的代价，就是上例中如果 <code>C</code> 没有赋值给 <code>L</code>，用户执行 <code>B.next = nil</code> 后，<code>C</code> 的的确确变成了垃圾，而我们却把置灰了，使得 <code>C</code> 只能等到下一轮 GC 才能被回收了。</p>
+<p>GC 过程创建的新对象直接标记成黑色也会带来这个问题，即使新 object 在扫描结束前变成了垃圾，这次 GC 也不会回收它，只能等下轮。</p>
+<h2 id="gc">何时触发 GC</h2>
+<p>一般是当 Heap 上的内存达到一定数值后，会触发一次 GC，这个数值我们可以通过环境变量 <code>GOGC</code> 或者 <code>debug.SetGCPercent()</code> 设置，默认是 <code>100</code>，表示当内存增长 <code>100%</code> 执行一次 GC。如果当前堆内存使用了 <code>10MB</code>，那么等到它涨到 <code>20MB</code> 的时候就会触发 GC。</p>
+<p>再就是每隔 2 分钟，如果期间内没有触发 GC，也会强制触发一次。</p>
+<p>最后就是用户手动触发了，也就是调用 <code>runtime.GC()</code> 强制触发一次。</p>
+<h2 id="_5">其他优化</h2>
+<p>扫描过程最多使用 25% 的 CPU 进行标记，这是为了尽可能降低 GC 过程对用户的影响。而如果 GC 未完成，下一轮 GC 又触发了，系统会等待上一轮 GC 结束。</p>
+<p>对于 tiny 对象，标记阶段是直接标记成黑色了，没有灰色阶段。因为 tiny 对象是不存放引用类型数据（指针）的，这个在 <a href="https://www.jianshu.com/p/7405b4e11ee2">Go 语言内存管理（二）：Go 内存管理</a> 提到过，没必要标记成灰色再检查一遍。</p>
+<h2 id="_6">结论</h2>
+<p>Go 的 GC 会不断演进，尽管现在<code>1.12</code>版本跟几年前的版本已经有了很大的提升了，但 GC 仍然是大家吐槽的焦点之一。作为用户能做的就是尽可能在代码上避开 GC（如果有这个必要），比如尽量少用存在多级引用的数据结构，比如 <code>chan map[string][]*string</code> 这种糟糕的数据结构。引用层级越多，GC 的成本也就越高。</p>
+<p>估计 Go 后续也会引入分代机制的，个人认为这会很大程度提升 GC 效率。我在 <a href="https://www.jianshu.com/p/7405b4e11ee2">Go 语言内存管理（二）：Go 内存管理</a> 提到过金字塔模型，分代机制本质上就是构造金字塔结构，将 GC 工作分成几级来完成。像 JVM 那样将内存分成新生代，老生代，永生代，不同生代投入不同的计算资源。
+ 现在这样每次都要全局扫描所有对象，进行标记回收，效率确实不怎么高。</p>
+<p>我曾在一些项目中使用全局对象池的方案，企图降低内存分配回收压力，但效果一般，虽然 <code>mallocgc</code> 和 <code>gcSweep</code> 不怎么吃 CPU 了，但 <code>gcMark</code> 压力变大，成了无解的存在。如果可以将对象池放到老生代中，不让 GC 频繁的对其扫描，相信性能会有较大的提升。</p>
+<p>还有种方法是直接申请一块大内存空间(大于32K)，这样对于 GC 来说它就是一个 <code>largespan</code>；但对这个大空间的分配使用就需要我们自己写代码管理了，我们将会遇到和操作系统内存管理类似的问题，比如内存碎片，指针问题，并发问题等等，非常麻烦，写得不好性能反而会更差。好在已有成熟的开源项目 <a href="https://links.jianshu.com/go?to=https%3A%2F%2Fgithub.com%2Fcoocood%2Ffreecache">freecache</a>和 <a href="https://links.jianshu.com/go?to=https%3A%2F%2Fgithub.com%2Fallegro%2Fbigcache">bigcache</a> 可直接使用。</p>
+<h2 id="_7">参考</h2>
+<ul>
+<li><a href="https://links.jianshu.com/go?to=https%3A%2F%2Fninokop.github.io%2F2017%2F12%2F07%2FGo-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%2F">Go 垃圾回收</a></li>
+<li><a href="https://links.jianshu.com/go?to=https%3A%2F%2Fwww.cnblogs.com%2Fzkweb%2Fp%2F7880099.html">Golang源码探索(三) GC的实现原理（强烈推荐）</a></li>
+<li><a href="https://links.jianshu.com/go?to=http%3A%2F%2Flegendtkl.com%2F2017%2F04%2F28%2Fgolang-gc%2F">Golang 垃圾回收剖析</a></li>
+<li><a href="https://links.jianshu.com/go?to=https%3A%2F%2Fgithub.com%2Fgolang%2Fproposal%2Fblob%2Fmaster%2Fdesign%2F17503-eliminate-rescan.md">Hibride Write Barrier</a></li>
+</ul>
+<p>作者：达菲格
+链接：https://www.jianshu.com/p/0083a90a8f7e
+来源：简书</p>
+<nav class="doc-series">
+  <p class="lb">面试 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="index.html">Golang面试题</a></li>
+<li class=""><a href="../index.html">面试</a></li>
+<li class=""><a href="../linux/index.html">遇到过比较深刻的问题记录</a></li>
+<li class=""><a href="../mysql/index.html">MySQL</a></li>
+<li class=""><a href="../redis/index.html">一致性Hash</a></li>
+<li class=""><a href="../docker/docker-shim.html">Docker Shim</a></li>
+<li class=""><a href="coding.html">Go · Coding</a></li>
+<li class=""><a href="escape-analysis.html">Go · Escape Analysis</a></li>
+<li class="cur"><a href="gc.html">Go · GC</a></li>
+<li class=""><a href="goroutine-safety.html">Goroutine Safety</a></li>
+<li class=""><a href="injection.html">依赖注入</a></li>
+<li class=""><a href="memory-management.html">Go · Memory Management</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

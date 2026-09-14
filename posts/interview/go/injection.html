@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>依赖注入 · rensongqi</title>
+<meta name="description" content="Golang 依赖注入（Dependency Injection, DI）是一种设计模式，它用于将依赖关系（即一个组件需要的外部对象）从组件内部的创建过程剥离出来，而是在外部构造并传递给该组件。这种方">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/interview.html">面试</a> / <span>依赖注入</span></div>
+
+<div class="doc-title">
+  <h1>依赖注入</h1>
+  <div class="meta">2026-09-14 · 约 540 字 · 源自 notes-src/interview/go/Injection.md</div>
+  <div class="doc-tags"><span>#面试</span><span>#Go</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#_1">依赖注入</a></li><li class="l3"><a href="#11">1.1 手动依赖注入（最常见）</a></li><li class="l3"><a href="#12">1.2 使用全局变量（不推荐）</a></li><li class="l3"><a href="#13-google-wire">1.3 使用 Google 的 wire 依赖注入框架</a></li></ul></nav>
+<main>
+<blockquote>
+<p>Golang 依赖注入（Dependency Injection, DI）是一种设计模式，它用于将依赖关系（即一个组件需要的外部对象）从组件内部的创建过程剥离出来，而是在外部构造并传递给该组件。这种方式可以提高代码的可测试性、可维护性和灵活性。</p>
+</blockquote>
+<p>为什么需要依赖注入？</p>
+<ul>
+<li>降低耦合：组件不需要关心依赖对象的创建和管理，而是由外部提供。</li>
+<li>提高可测试性：可以在测试时轻松替换真实依赖，使用 mock/stub 进行单元测试。</li>
+<li>增强灵活性：可以更方便地更换不同的实现（如使用不同的数据库、日志库等）。</li>
+</ul>
+<h2 id="11">1.1 手动依赖注入（最常见）</h2>
+<p>手动创建依赖并将其作为参数传递。</p>
+<pre><code class="language-go">package main
+
+import &quot;fmt&quot;
+
+// 定义一个 Logger 结构体
+type Logger struct{}
+
+func (l *Logger) Log(message string) {
+    fmt.Println(&quot;Log:&quot;, message)
+}
+
+// Service 依赖 Logger
+type Service struct {
+    logger *Logger
+}
+
+// Service 需要 Logger 作为依赖
+func NewService(logger *Logger) *Service {
+    return &amp;Service{logger: logger}
+}
+
+func (s *Service) DoSomething() {
+    s.logger.Log(&quot;Doing something...&quot;)
+}
+
+func main() {
+    logger := &amp;Logger{}       // 由外部创建 Logger
+    service := NewService(logger) // 通过构造函数注入 Logger
+    service.DoSomething()
+}
+</code></pre>
+<p>优势：
+- 代码清晰，易于理解
+- 依赖关系显式可见
+- 不需要额外库，完全由 Go 语言原生支持</p>
+<h2 id="12">1.2 使用全局变量（不推荐）</h2>
+<pre><code class="language-go">var logger = &amp;Logger{}
+
+type Service struct{}
+
+func (s *Service) DoSomething() {
+    logger.Log(&quot;Doing something...&quot;)
+}
+
+</code></pre>
+<p>问题：
+- 依赖是隐藏的，难以测试
+- 代码可维护性差</p>
+<h2 id="13-google-wire">1.3 使用 Google 的 wire 依赖注入框架</h2>
+<p><a href="https://github.com/google/wire">Google Wire</a> 是 Go 中一个流行的依赖注入工具，使用代码生成的方式实现依赖注入。<a href="https://github.com/google/wire/blob/main/_tutorial/README.md">Wire tutorial</a></p>
+<pre><code class="language-go">// wire.go
+package main
+
+import &quot;github.com/google/wire&quot;
+
+// 提供 Logger 实例
+func NewLogger() *Logger {
+    return &amp;Logger{}
+}
+
+// 生成 Service 实例
+func NewService(logger *Logger) *Service {
+    return &amp;Service{logger: logger}
+}
+
+// 使用 wire 绑定依赖
+var ProviderSet = wire.NewSet(NewLogger, NewService)
+</code></pre>
+<p>优势：</p>
+<ul>
+<li>代码清晰，无需手动管理依赖树</li>
+<li>自动生成依赖图，避免手写工厂方法</li>
+</ul>
+<p>劣势：</p>
+<ul>
+<li>需要额外的工具</li>
+<li>代码生成带来一定复杂性</li>
+</ul>
+<nav class="doc-series">
+  <p class="lb">面试 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="index.html">Golang面试题</a></li>
+<li class=""><a href="../index.html">面试</a></li>
+<li class=""><a href="../linux/index.html">遇到过比较深刻的问题记录</a></li>
+<li class=""><a href="../mysql/index.html">MySQL</a></li>
+<li class=""><a href="../redis/index.html">一致性Hash</a></li>
+<li class=""><a href="../docker/docker-shim.html">Docker Shim</a></li>
+<li class=""><a href="coding.html">Go · Coding</a></li>
+<li class=""><a href="escape-analysis.html">Go · Escape Analysis</a></li>
+<li class=""><a href="gc.html">Go · GC</a></li>
+<li class=""><a href="goroutine-safety.html">Goroutine Safety</a></li>
+<li class="cur"><a href="injection.html">依赖注入</a></li>
+<li class=""><a href="memory-management.html">Go · Memory Management</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thanos · rensongqi</title>
+<meta name="description" content="Thanos架构图：">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>Thanos</span></div>
+
+<div class="doc-title">
+  <h1>Thanos</h1>
+  <div class="meta">2026-09-14 · 约 2980 字 · 源自 notes-src/ops/thanos/README.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#Thanos</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#_1">架构说明</a></li><li class="l2"><a href="#_2">部署方式</a></li><li class="l3"><a href="#docker">Docker部署</a></li><li class="l3"><a href="#kubernetes">Kubernetes部署</a></li><li class="l2"><a href="#prometheus">接入Prometheus</a></li><li class="l2"><a href="#thanos">Thanos增加配置</a></li></ul></nav>
+<main>
+<ul>
+<li><a href="#架构说明">架构说明</a></li>
+<li><a href="#部署方式">部署方式</a></li>
+<li><a href="#docker部署">Docker部署</a></li>
+<li><a href="#kubernetes部署">Kubernetes部署</a></li>
+<li><a href="#接入prometheus">接入Prometheus</a></li>
+<li><a href="#thanos增加配置">Thanos增加配置</a></li>
+</ul>
+<h1 id="_1">架构说明</h1>
+<p>Thanos架构图：
+<img alt="图片" src="../../../assets/images/notes/thanos.png" /></p>
+<p>组件的功能分别是：
+- Sidecar： Thanos 的数据上传组件，用来和 Prometheus 通信，并且将 Prometheus 的监控数据上传到对象存储
+- Query：Thanos 的查询组件，用来查询监控数据
+- Store：Thanos 的数据存储组件，用来和对象存储通信，为对象存储提供数据代理服务。
+- Receive：Thanos 的数据收取组件，支持 Prometheus 的远程写功能，对于同一个 Prometheus 实例，只能在 Sidecar 和 Receiver 中间二选一。
+- Rule：Thanos 的集中的告警管理组件
+- Compactor：Thanos 的数据处理组件，用来将监控数据降准和压缩
+- Query Frontend：Thanos 的查询前端
+- tools：Thanos 的运维工具，用途很多。</p>
+<h1 id="_2">部署方式</h1>
+<h2 id="docker">Docker部署</h2>
+<p>docker-compose.yml</p>
+<pre><code class="language-yaml">version: '2.1'
+services:
+  # Node Exporter
+  node-exporter:
+    image: docker.io/bitnami/node-exporter:1
+    ports:
+      - '9100:9100'
+    command:
+      - --web.listen-address=0.0.0.0:9100
+  # Prepare Prometheus Configuration
+  prepare-prometheus:
+    image: docker.io/bitnami/minideb:latest
+    command:
+      - /bin/bash
+      - -ec
+      - |
+        cat &gt;'/conf/prometheus.yml'&lt;&lt;'EOF'
+        global:
+          scrape_interval: 5s
+          external_labels:
+            foo: bar
+        scrape_configs:
+          - job_name: node-exporter
+            static_configs:
+              - targets:
+                  - node-exporter:9100
+          - job_name: prometheus
+            static_configs:
+              - targets:
+                  - localhost:9090
+        EOF
+    volumes:
+      - 'prom_conf:/conf'
+  # Prometheus Server
+  prometheus:
+    image: docker.io/bitnami/prometheus:2
+    ports:
+      - '9091:9090'
+    volumes:
+      - 'tsdb_data:/opt/bitnami/prometheus/data'
+      - 'prom_conf:/opt/bitnami/prometheus/conf'
+    depends_on:
+      - node-exporter
+      - prepare-prometheus
+  # Thanos Sidecar
+  sidecar:
+    image: docker.io/bitnami/thanos:0
+    command:
+      - sidecar
+      - --tsdb.path=/data
+      - --prometheus.url=http://prometheus:9090
+      - --grpc-address=0.0.0.0:10901
+    volumes:
+      - 'tsdb_data:/data'
+    depends_on:
+      - query
+  # MinIO
+  minio:
+    image: docker.io/bitnami/minio:2021
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    healthcheck:
+      test: [&quot;CMD&quot;, &quot;curl&quot;, &quot;-f&quot;, &quot;http://localhost:9000/minio/health/live&quot;]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - 'minio_data:/data'
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=minio123
+      - MINIO_DEFAULT_BUCKETS=thanos
+  # Prepare Object Store configuration
+  prepare-object-store-conf:
+    image: docker.io/bitnami/minideb:latest
+    command:
+      - /bin/bash
+      - -ec
+      - |
+        cat &gt;'/conf/bucket.yml'&lt;&lt;'EOF'
+        type: s3
+        config:
+          bucket: thanos
+          endpoint: minio:9000
+          insecure: true
+          access_key: minio
+          secret_key: minio123
+        EOF
+    volumes:
+      - 'ojb_store_conf:/conf'
+  # Thanos Store Gateway
+  store-gateway:
+    image: docker.io/bitnami/thanos:0
+    command:
+      - store
+      - --objstore.config-file=/conf/bucket.yml
+      - --data-dir=/data
+      - --grpc-address=0.0.0.0:10901
+    user: &quot;0&quot;
+    volumes:
+      - 'ojb_store_conf:/conf'
+      - 'store_data:/data'
+    depends_on:
+      - query
+  # Thanos Compactor
+  compactor:
+    image: docker.io/bitnami/thanos:0
+    command:
+      - compact
+      - --objstore.config-file=/conf/bucket.yml
+      - --data-dir=/data
+    user: &quot;0&quot;
+    volumes:
+      - 'ojb_store_conf:/conf'
+    depends_on:
+      - query
+  # Thanos Query
+  query:
+    image: docker.io/bitnami/thanos:0
+    command:
+      - query
+      - --grpc-address=0.0.0.0:10901
+      - --http-address=0.0.0.0:9090
+      - --store=sidecar:10901
+      - --store=store-gateway:10901
+    ports:
+      - '9090:9090'
+    depends_on:
+      prepare-object-store-conf:
+        condition: service_started
+      prometheus:
+        condition: service_started
+      minio:
+        condition: service_healthy
+volumes:
+  prom_conf:
+    driver: local
+  tsdb_data:
+    driver: local
+  minio_data:
+    driver: local
+  ojb_store_conf:
+    driver: local
+  store_data:
+    driver: local
+</code></pre>
+<h2 id="kubernetes">Kubernetes部署</h2>
+<p>参考：https://github.com/forbearing/thanos/tree/main/thanos-v0.23
+1. thanos-storage-minio.yaml</p>
+<pre><code class="language-yaml"># vi thanos-storage-minio.yaml
+type: s3
+config:
+  bucket: thanos
+  endpoint: ossapi.rsq.cn:9000
+  access_key: MdcjsPMUVUVZpE7k
+  secret_key: oTVL9W3nIgp7H7oHF7kTSJI8ckfSylVj
+  insecure: true
+</code></pre>
+<ol start="2">
+<li>创建secret关联thanos-storage-minio.yaml</li>
+</ol>
+<pre><code class="language-bash">kubectl create secret generic thanos-objectstorage --from-file=bucket.yaml=thanos-storage-minio.yaml -n monitoring
+</code></pre>
+<ol start="3">
+<li>kube-store.yaml</li>
+</ol>
+<pre><code class="language-yaml">---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-store
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: thanos-store
+    app.kubernetes.io/component: store
+    app.kubernetes.io/version: v0.26.0
+    app.kubernetes.io/part-of: thanos
+spec:
+  ports:
+  - name: grpc
+    port: 10905
+    targetPort: 10905
+  - name: http
+    port: 10906
+    targetPort: 10906
+  selector:
+    app.kubernetes.io/name: thanos-store
+    app.kubernetes.io/component: store
+    app.kubernetes.io/part-of: thanos
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-store-external
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: thanos-store
+    app.kubernetes.io/component: store
+    app.kubernetes.io/version: v0.26.0
+    app.kubernetes.io/part-of: thanos
+spec:
+  ports:
+  - name: http
+    port: 10906
+    targetPort: 10906
+    nodePort: 30906
+  selector:
+    app.kubernetes.io/name: thanos-store
+    app.kubernetes.io/component: store
+    app.kubernetes.io/part-of: thanos
+  type: NodePort
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-store
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: thanos-store
+    app.kubernetes.io/component: store
+    app.kubernetes.io/version: v0.26.0
+    app.kubernetes.io/part-of: thanos
+spec:
+  replicas: 2
+  serviceName: thanos-store
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: thanos-store
+      app.kubernetes.io/component: store
+      app.kubernetes.io/part-of: thanos
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: thanos-store
+        app.kubernetes.io/component: store
+        app.kubernetes.io/part-of: thanos
+    spec:
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        fsGroup: 65534
+        runAsUser: 65534
+      nodeSelector:
+              #kubernetes.io/hostname: node1
+        thanos: &quot;on&quot;
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - thanos-store
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                - store
+            topologyKey: kubernetes.io/hostname
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - thanos-store
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                - store
+            topologyKey: topology.kubernetes.io/zone
+      containers:
+      - name: thanos-store
+        image: harbor.rsq.cn/public/quay.io/thanos/thanos:v0.26.0
+        args:
+        - store
+        - --log.level=info
+        - --log.format=logfmt
+        - --data-dir=/var/thanos/store
+        - --grpc-address=0.0.0.0:10905
+        - --http-address=0.0.0.0:10906
+        - --objstore.config-file=/config/bucket.yaml
+        - --ignore-deletion-marks-delay=24h
+        ports:
+        - name: grpc
+          containerPort: 10905
+        - name: http
+          containerPort: 10906
+        env:
+        - name: HOST_IP_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 10906
+            scheme: HTTP
+          failureThreshold: 4
+          periodSeconds: 30
+          initialDelaySeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 10906
+            scheme: HTTP
+          failureThreshold: 20
+          periodSeconds: 5
+          initialDelaySeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+        resources: {}
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - name: data
+          mountPath: /var/thanos/store
+          readOnly: false
+        - name: thanos-objstore
+          mountPath: /config
+      volumes:
+      - name: thanos-objstore
+        secret:
+          secretName: thanos-objstore
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+</code></pre>
+<ol start="4">
+<li>thanos-receiver.yaml</li>
+</ol>
+<pre><code class="language-yaml">---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-receive
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: thanos-receive
+    app.kubernetes.io/component: receive
+    app.kubernetes.io/version: v0.26.0
+    app.kubernetes.io/part-of: thanos
+spec:
+  ports:
+  - name: grpc
+    port: 10907
+    protocol: TCP
+    targetPort: 10907
+  - name: remote-write
+    port: 10908
+    protocol: TCP
+    targetPort: 10908
+  - name: http
+    port: 10909
+    protocol: TCP
+    targetPort: 10909
+  selector:
+    app.kubernetes.io/name: thanos-receive
+    app.kubernetes.io/component: receive
+    app.kubernetes.io/part-of: thanos
+  clusterIP: None
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-receive-external
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: thanos-receive
+    app.kubernetes.io/component: receive
+    app.kubernetes.io/version: v0.26.0
+    app.kubernetes.io/part-of: thanos
+spec:
+  ports:
+  - name: remote-write
+    port: 10908
+    protocol: TCP
+    targetPort: 10908
+    nodePort: 30908
+  selector:
+    app.kubernetes.io/name: thanos-receive
+    app.kubernetes.io/component: receive
+    app.kubernetes.io/part-of: thanos
+  type: NodePort
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: thanos-receive-hashring
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: thanos-receive
+    app.kubernetes.io/component: receive
+    app.kubernetes.io/version: v0.26.0
+    app.kubernetes.io/part-of: thanos
+data:
+  hashrings.json: |
+    [
+      {
+        &quot;endpoints&quot;:
+        [
+          &quot;thanos-receive-0.thanos-receive.monitoring.svc.cluster.local:10907&quot;,
+          &quot;thanos-receive-1.thanos-receive.monitoring.svc.cluster.local:10907&quot;,
+          &quot;thanos-receive-2.thanos-receive.monitoring.svc.cluster.local:10907&quot;
+        ]
+      }
+    ]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-receive
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: thanos-receive
+    app.kubernetes.io/component: receive
+    app.kubernetes.io/version: v0.26.0
+    app.kubernetes.io/part-of: thanos
+spec:
+  replicas: 2
+  serviceName: thanos-receive
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: thanos-receive
+      app.kubernetes.io/component: receive
+      app.kubernetes.io/part-of: thanos
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: thanos-receive
+        app.kubernetes.io/component: receive
+        app.kubernetes.io/part-of: thanos
+    spec:
+      terminationGracePeriodSeconds: 900
+      securityContext:
+        fsGroup: 65534
+        runAsUser: 65534
+      nodeSelector:
+              #kubernetes.io/os: linux
+        thanos: &quot;on&quot;
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - thanos-receive
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                - receive
+            topologyKey: kubernetes.io/hostname
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - thanos-receive
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                - receive
+            topologyKey: topology.kubernetes.io/zone
+      containers:
+      - name: thanos-receive
+        image: harbor.rsq.cn/public/quay.io/thanos/thanos:v0.26.0
+        args:
+        - receive
+        - --log.level=info
+        - --log.format=logfmt
+        - --tsdb.path=/var/thanos/receive
+        - --tsdb.retention=1d
+        #- --tsdb.retention=15d
+        #- --tsdb.wal-compression
+        - --grpc-address=0.0.0.0:10907
+        - --remote-write.address=0.0.0.0:10908
+        - --http-address=0.0.0.0:10909
+        - --receive.replication-factor=1
+        - --label=replica=&quot;$(NAME)&quot;
+        - --label=receive=&quot;true&quot;
+        - --receive.local-endpoint=$(NAME).thanos-receive.$(NAMESPACE).svc.cluster.local:10907
+        - --receive.hashrings-file=/var/lib/thanos-receive/hashrings.json
+        - --objstore.config-file=/config/bucket.yaml
+        volumeMounts:
+        - mountPath: /var/lib/thanos-receive
+          name: thanos-receive-hashring
+        - mountPath: /var/thanos/receive
+          name: data
+          readOnly: false
+        - name: thanos-objstore
+          mountPath: /config
+          mountPath: /etc/secret
+        ports:
+        - name: grpc
+          containerPort: 10907
+        - name: remote-write
+          containerPort: 10908
+        - name: http
+          containerPort: 10909
+        livenessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /-/healthy
+            port: 10909
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 3
+        readinessProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /-/ready
+            port: 10909
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        env:
+        - name: NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: HOST_IP_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        #resources:
+        #  limits:
+        #    cpu: 1
+        #    memory: 2Gi
+        terminationMessagePolicy: FallbackToLogsOnError
+      volumes:
+      - name: thanos-receive-hashring
+        configMap:
+          name: thanos-receive-hashring
+      - name: thanos-objstore
+        secret:
+          secretName: thanos-objstore
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+</code></pre>
+<ol start="5">
+<li>thanos-query.yaml</li>
+</ol>
+<pre><code class="language-yaml">---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-query
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: thanos-query
+    app.kubernetes.io/component: query
+    app.kubernetes.io/version: v0.26.0
+    app.kubernetes.io/part-of: thanos
+spec:
+  ports:
+  - name: grpc
+    port: 10903
+    targetPort: 10903
+  - name: http
+    port: 10904
+    protocol: TCP
+    targetPort: 10904
+  selector:
+    app.kubernetes.io/name: thanos-query
+    app.kubernetes.io/component: query
+    app.kubernetes.io/part-of: thanos
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-query-external
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: thanos-query
+    app.kubernetes.io/component: query
+    app.kubernetes.io/version: v0.26.0
+    app.kubernetes.io/part-of: thanos
+spec:
+  ports:
+  - name: http
+    port: 10904
+    protocol: TCP
+    targetPort: 10904
+    nodePort: 30904
+  selector:
+    app.kubernetes.io/name: thanos-query
+    app.kubernetes.io/component: query
+    app.kubernetes.io/part-of: thanos
+  type: NodePort
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thanos-query
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: thanos-query
+    app.kubernetes.io/component: query
+    app.kubernetes.io/version: v0.26.0
+    app.kubernetes.io/part-of: thanos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: thanos-query
+      app.kubernetes.io/component: query
+      app.kubernetes.io/part-of: thanos
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: thanos-query
+        app.kubernetes.io/component: query
+        app.kubernetes.io/part-of: thanos
+    spec:
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        fsGroup: 65534
+        runAsUser: 65534
+      nodeSelector:
+        kubernetes.io/os: linux
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - thanos-query
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                - query
+            topologyKey: kubernetes.io/hostname
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - thanos-query
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                - query
+            topologyKey: topology.kubernetes.io/zone
+      containers:
+      - name: thanos-query
+        image: harbor.rsq.cn/public/quay.io/thanos/thanos:v0.26.0
+        args: 
+        - query 
+        - --log.level=info
+        - --log.format=logfmt
+        - --grpc-address=0.0.0.0:10903
+        - --http-address=0.0.0.0:10904
+        - --query.replica-label=replica           # 以哪个标签做去重(deduplication), receive 的参数一定要加上 --label=replica=&quot;$(NAME)&quot;
+        - --store=dnssrv+_grpc._tcp.thanos-receive.monitoring.svc.cluster.local     # 从 thanos-receive 查询数据
+        - --store=dnssrv+_grpc._tcp.thanos-store.monitoring.svc.cluster.local       # 从 thanos-store 查询数据
+        - --store=dnssrv+_grpc._tcp.thanos-ruler.monitoring.svc.cluster.local       # 从 thanos-ruler 查询数据
+        #- --store=dnssrv+_grpc._tcp.thanos-sidecar.monitoring.svc.cluster.local    # 从 thanos-sidecar 查询数据
+        - --query.auto-downsampling
+        ports:
+        - name: grpc
+          containerPort: 10903
+        - name: http
+          containerPort: 10904
+        livenessProbe:
+          failureThreshold: 4
+          httpGet:
+            path: /-/healthy
+            port: 10904
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 3
+        readinessProbe:
+          failureThreshold: 20
+          httpGet:
+            path: /-/ready
+            port: 10904
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        terminationMessagePolicy: FallbackToLogsOnError
+</code></pre>
+<ol start="6">
+<li>thanos-compactor.yaml</li>
+</ol>
+<pre><code class="language-yaml">---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-compactor
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: thanos-compactor
+    app.kubernetes.io/component: compactor
+    app.kubernetes.io/version: v0.26.0
+    app.kubernetes.io/part-of: thanos
+spec:
+  ports:
+  - name: http
+    port: 10912
+    targetPort: 10912
+  selector:
+    app.kubernetes.io/name: thanos-compactor
+    app.kubernetes.io/component: compactor
+    app.kubernetes.io/part-of: thanos
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-compactor-external
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: thanos-compactor
+    app.kubernetes.io/component: compactor
+    app.kubernetes.io/version: v0.26.0
+    app.kubernetes.io/part-of: thanos
+spec:
+  ports:
+  - name: http
+    port: 10912
+    targetPort: 10912
+    nodePort: 30912
+  selector:
+    app.kubernetes.io/name: thanos-compactor
+    app.kubernetes.io/component: compactor
+    app.kubernetes.io/part-of: thanos
+  type: NodePort
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-compactor
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: thanos-compactor
+    app.kubernetes.io/component: compactor
+    app.kubernetes.io/version: v0.26.0
+    app.kubernetes.io/part-of: thanos
+spec:
+  replicas: 1
+  serviceName: thanos-compactor
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: thanos-compactor
+      app.kubernetes.io/component: compactor
+      app.kubernetes.io/part-of: thanos
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: thanos-compactor
+        app.kubernetes.io/component: compactor
+        app.kubernetes.io/part-of: thanos
+    spec:
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        fsGroup: 65534
+        runAsUser: 65534
+      nodeSelector:
+        thanos: &quot;on&quot;
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - thanos-compactor
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                - compactor
+            topologyKey: kubernetes.io/hostname
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - thanos-compactor
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                - compactor
+            topologyKey: topology.kubernetes.io/zone
+      containers:
+      - name: thanos-compactor
+        image: harbor.rsq.cn/public/quay.io/thanos/thanos:v0.26.0
+        args:
+        - compact
+        - --wait
+        - --log.level=info
+        - --log.format=logfmt
+        - --http-address=0.0.0.0:10912
+        - --data-dir=/var/thanos/compactor
+        - --debug.accept-malformed-index
+        - --retention.resolution-raw=60d
+        - --retention.resolution-5m=60d
+        - --retention.resolution-1h=60d
+        - --delete-delay=48h
+        #- --downsampling.disable
+        #- --objstore.config-file=/config/bucket.yaml
+        - --objstore.config-file=/config/thanos.yaml
+        ports:
+        - name: http
+          containerPort: 10912
+        env:
+        - name: HOST_IP_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 10912
+            scheme: HTTP
+          failureThreshold: 4
+          periodSeconds: 30
+          initialDelaySeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 10912
+            scheme: HTTP
+          failureThreshold: 20
+          periodSeconds: 5
+          initialDelaySeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+        resources: {}
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - name: data
+          mountPath: /var/thanos/compactor
+          readOnly: false
+        - name: thanos-objstore
+          mountPath: /config
+      volumes:
+      - name: thanos-objstore
+        secret:
+          secretName: thanos-objstore
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+</code></pre>
+<ol start="7">
+<li>验证
+打开queryer页面http://172.16.112.101:30904/</li>
+</ol>
+<h1 id="prometheus">接入Prometheus</h1>
+<p>Kubernetes接入：
+先安装kube-prometheus
+创建thanos-storage-minio.yaml</p>
+<pre><code class="language-yaml"># vi thanos-storage-minio.yaml
+type: s3
+config:
+  bucket: thanos
+  endpoint: ossapi.rsq.cn:9000
+  access_key: MdcjsPMUVUVZpE7k
+  secret_key: oTVL9W3nIgp7H7oHF7kTSJI8ckfSylVj
+  insecure: true
+</code></pre>
+<p>使用上面的配置文件创建一个对应的 Secret 资源对象：</p>
+<pre><code class="language-bash">kubectl -n monitoring create secret generic thanos-objectstorage --from-file=thanos.yaml=thanos-storage-minio.yaml
+</code></pre>
+<p>在 prometheus 的 CRD 对象中添加如下配置：(prometheus-prometheus.yaml )</p>
+<pre><code class="language-yaml">#kubectl edit prometheus -n monitoring
+
+thanos:
+    image: harbor.rsq.cn/public/quay.io/thanos/thanos:v0.26.0
+    objectStorageConfig:
+      key: thanos.yaml
+      name: thanos-objectstorage
+</code></pre>
+<p>添加thanos sidecar nodeport 端口(prometheus-service.yaml)</p>
+<pre><code class="language-yaml">#kubectl edit service/prometheus-k8s -n monitoring
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: prometheus
+    app.kubernetes.io/instance: k8s
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: kube-prometheus
+    app.kubernetes.io/version: 2.42.0
+  name: prometheus-k8s
+  namespace: monitoring
+spec:
+  ports:
+  - name: web
+    port: 9090
+    targetPort: web
+  - name: reloader-web
+    port: 8080
+    targetPort: reloader-web
+  - name: rpc-thanos
+    nodePort: 30991
+    port: 10901
+    targetPort: 10901
+  selector:
+    app.kubernetes.io/component: prometheus
+    app.kubernetes.io/instance: k8s
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: kube-prometheus
+  sessionAffinity: ClientIP
+</code></pre>
+<p>参考文档：
+https://www.cnblogs.com/hahaha111122222/p/16351312.html</p>
+<h1 id="thanos">Thanos增加配置</h1>
+<p>Thanos query 添加store</p>
+<pre><code class="language-bash">#bash
+thanos query \
+    --http-address        &quot;0.0.0.0:9090&quot; \
+    --store               &quot;&lt;store-api&gt;:&lt;grpc-port&gt;&quot; \
+    --store               &quot;&lt;store-api2&gt;:&lt;grpc-port&gt;&quot; \
+
+#docker
+image: docker.io/bitnami/thanos:0
+    command:
+      - query
+      - --grpc-address=0.0.0.0:10901
+      - --http-address=0.0.0.0:9090
+      - --store=sidecar:10901
+      - --store=172.16.104.101:30991
+      - --store=store-gateway:10901
+
+</code></pre>
+<p>参考文档：
+https://thanos.io/tip/components/query.md/</p>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../elk/index.html">ELK</a></li>
+<li class=""><a href="../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="index.html">Thanos</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

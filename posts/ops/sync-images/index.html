@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>镜像同步 · rensongqi</title>
+<meta name="description" content="自动同步公网docker镜像，包含gcr.io、quay.io、docker.io、registry.k8s.io镜像至内网gitlab镜像仓库">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>镜像同步</span></div>
+
+<div class="doc-title">
+  <h1>镜像同步</h1>
+  <div class="meta">2026-09-14 · 约 320 字 · 源自 notes-src/ops/sync_images/README.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#镜像同步</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#sync_images">sync_images</a></li><li class="l3"><a href="#_1">使用</a></li><li class="l3"><a href="#_2">文件介绍</a></li><li class="l3"><a href="#_3">手动同步镜像</a></li></ul></nav>
+<main>
+<h1 id="sync_images">sync_images</h1>
+<p>自动同步公网docker镜像，包含gcr.io、quay.io、docker.io、registry.k8s.io镜像至内网gitlab镜像仓库</p>
+<p>依赖：<a href="https://github.com/containers/skopeo">skopeo</a></p>
+<h2 id="_1">使用</h2>
+<p>通过在gitlab中提交issue来自动同步公网镜像至内网镜像仓库中</p>
+<blockquote>
+<p>使用指定的 tag 用于同步。</p>
+</blockquote>
+<pre><code>k8s.gcr.io/pause
+k8s.gcr.io/defaultbackend-amd64
+</code></pre>
+<p>同步规则</p>
+<pre><code>k8s.gcr.io/{image_name}  ==&gt;  harbor.rsq.cn/gcr.io/{image_name}
+</code></pre>
+<p><strong>拉取镜像</strong></p>
+<pre><code class="language-bash">$ docker pull harbor.rsq.cn/gcr.io/&lt;image_name&gt;:[镜像版本号]
+</code></pre>
+<h2 id="_2">文件介绍</h2>
+<ul>
+<li><code>config.yaml</code>: 供 <code>generate_sync_yaml.py</code> 脚本使用，此文件配置了需要动态(获取<code>last</code>个最新的版本)同步的镜像列表。</li>
+<li><code>custom_sync.yaml</code>: 自定义的 <a href="https://github.com/containers/skopeo"><code>skopeo</code></a> 同步源配置文件。</li>
+<li><code>generate_sync_yaml.py</code>: 根据配置，动态生成 <a href="https://github.com/containers/skopeo"><code>skopeo</code></a> 同步源配置文件。定时同步时才需要用到此脚本。</li>
+<li><code>run.py</code>: 用于手动或定时执行同步镜像操作。</li>
+</ul>
+<h2 id="_3">手动同步镜像</h2>
+<p>将 <code>nvcr.io/nvidia/cuda:12.5.1-devel-ubuntu22.04</code> 同步到内网镜像仓库 <code>harbor.rsq.cn/nvcr.io/nvidia</code></p>
+<p>需要将<code>nvcr.io</code>更换为代理地址<code>ngc.nju.edu.cn</code></p>
+<pre><code class="language-bash">skopeo --insecure-policy sync -a --keep-going --src docker --dest docker ngc.nju.edu.cn/nvidia/cuda:12.5.1-devel-ubuntu22.04 harbor.rsq.cn/nvcr.io/nvidia
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../elk/index.html">ELK</a></li>
+<li class=""><a href="../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="index.html">镜像同步</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MySQL · rensongqi</title>
+<meta name="description" content="MySQL 常见面试题">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/interview.html">面试</a> / <span>MySQL</span></div>
+
+<div class="doc-title">
+  <h1>MySQL</h1>
+  <div class="meta">2026-09-14 · 约 3280 字 · 源自 notes-src/interview/mysql/README.md</div>
+  <div class="doc-tags"><span>#面试</span><span>#MySQL</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1-mysql">1 MySQL常见的引擎</a></li><li class="l3"><a href="#11-myisam">1.1 MyISAM</a></li><li class="l3"><a href="#12-innodb">1.2 InnoDb</a></li><li class="l2"><a href="#2-mysql">2 Mysql慢查询该如何优化</a></li><li class="l2"><a href="#3-mysql">3 Mysql锁有哪些，如何理解</a></li><li class="l2"><a href="#4-mysql">4 MySQL 事务</a></li><li class="l2"><a href="#5">5 视图的作用，视图可以更改么</a></li><li class="l2"><a href="#6-dropdeletetruncate">6 drop，delete与truncate的区别</a></li><li class="l2"><a href="#7-mysql">7 MySQL 索引的工作原理及其种类</a></li><li class="l2"><a href="#8-mysql">8 MySQL连接的种类</a></li><li class="l2"><a href="#9">9 数据库范式</a></li><li class="l2"><a href="#10">10 数据库优化的思路</a></li><li class="l2"><a href="#11">11 存储过程与触发器的区别</a></li></ul></nav>
+<main>
+<p>MySQL 常见面试题</p>
+<h1 id="1-mysql">1 MySQL常见的引擎</h1>
+<ul>
+<li>InnoDB</li>
+<li>MyISAM</li>
+<li>Memory</li>
+</ul>
+<p>区别：
+1. InnoDB支持事务、外键和行锁，写入数据时操作快，MySQL5.6版本以上才支持全文索引。
+2. Myisam不支持事务和外键，支持表锁，支持全文索引，读取数据快
+3. Memory所有的数据都保留在内存中,不需要进行磁盘的IO所以读取的速度很快, 但是一旦关机的话表的结构会保留但是数据就会丢失，表支持Hash索引，因此查找速度很快
+4. InnoDB跟Myisam的默认索引是B+tree，Memory的默认索引是hash</p>
+<h2 id="11-myisam">1.1 MyISAM</h2>
+<ul>
+<li>不支持事务，但是每次查询都是原子的；</li>
+<li>支持表级锁，即每次操作是对整个表加锁;</li>
+<li>存储表的总行数；用SELECT COUNT(*)时速度比较快</li>
+<li>一个MYISAM表有三个文件：索引文件、表结构文件、数据文件;</li>
+<li>采用非聚集索引，素引文件的数据域存储指向数据文件的指针。辅素引与主索引(基本一致，但是辅索引不用保证唯一性。</li>
+</ul>
+<h2 id="12-innodb">1.2 InnoDb</h2>
+<ul>
+<li>支持ACID的事务，支持事务的四种陽离级别；</li>
+<li>支持行级锁及外键约束：因此可以支持写并发;</li>
+<li>不存储总行数；用SELECT COUNT(*)时速度比较慢</li>
+<li>一个InnoDb引擎存储在一个文件空间(共享表空间，表大小不受操作系统控制，一个表可能分布在多个文件里），也有可能为多个 （设置为独立表空，表大小受操作系统文件大小限制，一般为2G），受操作系统文件大小的限制</li>
+</ul>
+<h1 id="2-mysql">2 Mysql慢查询该如何优化</h1>
+<ol>
+<li>检查是否走了素引，如果没有则优化SQL利用索引</li>
+<li>检查所利用的索引，是否是最优素引</li>
+<li>检查所查字段是否都是必须的，是否查询了过多字段，查出了多余数据</li>
+<li>检查表中数据是否过多，是否应该进行分库分表了</li>
+<li>检查数据库实例所在机器的性能配置，是否太低，是否可以适当增加资源</li>
+</ol>
+<h1 id="3-mysql">3 Mysql锁有哪些，如何理解</h1>
+<p>按锁粒度分类：
+1. 行锁：锁某行数据，锁粒度最小，并发度高
+2. 表锁：锁整张表，锁粒度最大，并发度低
+3. 间隙锁：锁的是—个区间</p>
+<p>还可以分为：
+1. 共享锁：也就是读锁，一个事务给某行数据加了读锁，其他事务也可以读，但是不能写
+2. 排它锁：也就是写锁，一个事务给某行数据加了写锁，其他事务不能读，也不能写</p>
+<p>还可以分为：
+1. 乐观锁：井不会真正的去锁某行记录，而是通过一个版本号来实现的
+2. 悲观锁：上面所的行锁、表锁等都是悲观锁</p>
+<p>在事务的隔离级别实现中，就需要利用锁来解决幻读</p>
+<h1 id="4-mysql">4 MySQL 事务</h1>
+<p>数据库事务transanction正确执行的四个基本要素。
+ACID,原子性(Atomicity)、一致性(Correspondence)、隔离性(Isolation)、持久性(Durability)。</p>
+<ul>
+<li><strong>原子性:</strong> 整个事务中的所有操作，要么全部完成，要么全部不完成，不可能停滞在中间某个环节。事务在执行过程中发生错误，会被回滚（Rollback）到事务开始前的状态，就像这个事务从来没有执行过一样。</li>
+<li><strong>一致性:</strong> 在事务开始之前和事务结束以后，数据库的完整性约束没有被破坏。</li>
+<li><strong>隔离性:</strong> 隔离状态执行事务，使它们好像是系统在给定时间内执行的唯一操作。如果有两个事务，运行在相同的时间内，执行 相同的功能，事务的隔离性将确保每一事务在系统中认为只有该事务在使用系统。这种属性有时称为串行化，为了防止事务操作间的混淆，必须串行化或序列化请 求，使得在同一时间仅有一个请求用于同一数据。</li>
+<li><strong>持久性:</strong> 在事务完成以后，该事务所对数据库所作的更改便持久的保存在数据库之中，并不会被回滚。</li>
+</ul>
+<h1 id="5">5 视图的作用，视图可以更改么</h1>
+<ul>
+<li>视图是虚拟的表，与包含数据的表不一样，视图只包含使用时动态检索数据的查询；不包含任何列或数据。使用视图可以简化复杂的sql操作，隐藏具体的细节，保护数据；视图创建后，可以使用与表相同的方式利用它们。</li>
+<li>视图不能被索引，也不能有关联的触发器或默认值，如果视图本身内有order by 则对视图再次order by将被覆盖。
+创建视图：<code>create view XXX as XXXXXXXXXXXXXX;</code></li>
+<li>对于某些视图比如未使用联结子查询分组聚集函数Distinct Union等，是可以对其更新的，对视图的更新将对基表进行更新；但是视图主要用于简化检索，保护数据，并不用于更新，而且大部分视图都不可以更新。</li>
+</ul>
+<h1 id="6-dropdeletetruncate">6 drop，delete与truncate的区别</h1>
+<ul>
+<li>drop直接删掉表</li>
+<li>truncate删除表中数据，再插入时自增长id又从1开始；只能对table</li>
+<li>delete删除表中数据（行级别），可以加where字句；可以对table和view</li>
+</ul>
+<p>一般来说drop &gt; truncate &gt; delete</p>
+<h1 id="7-mysql">7 MySQL 索引的工作原理及其种类</h1>
+<p>索引是由数据库表中一列或者多列组合而成，其作用是提高对表中数据的查询速度，索引的实现通常使用B树及其变种B+树（经过优化的 B+树），主要是在所有的叶子结点中增加了指向下一个叶子节点的指针，因此 InnoDB 建议为大部分表使用默认自增的主键作为主索引
+优点：提高了查询数据的速度
+缺点：需要投入更多精力管理索引</p>
+<p>索引的类别：
+1. 单列索引: 给单个字段创建索引，单列索引可以是唯一索引还可以是全文索引
+2. 组合索引: 指多个字段上创建的索引，只有在查询条件中使用了创建索引时的第一个字段，索引才会被使用。使用组合索引时遵循最左前缀集合。
+3. 普通索引: 是最基本的索引，它没有任何限制,这类索引可以创建在任何数据类型中
+4. 唯一索引: 使用UNIQUE参数可设置，限制该索引的值必须是唯一的，但允许有空值，如果是组合索引，则列值的组合必须唯一
+5. 全文索引: 主要用来查找文本中的关键字，而不是直接与索引中的值相比较。fulltext索引跟其它索引大不相同，它更像是一个搜索引擎，而不是简单的where语句的参数匹配。fulltext索引配合match against操作使用，而不是一般的where语句加like。它可以在create table，alter table ，create index使用，不过目前只有char、varchar，text 列上可以创建全文索引。值得一提的是，在数据量较大时候，现将数据放入一个没有全局索引的表中，然后再用CREATE index创建fulltext索引，要比先为一张表建立fulltext然后再将数据写入的速度快很多。
+6. 空间索引: 空间索引和全文索引 MyISM不支持</p>
+<h1 id="8-mysql">8 MySQL连接的种类</h1>
+<p>外连接：
+- 左连接：LEFT (OUTER) JOIN（指定左表所有行，如果左表的某行在右表中无匹配，则右表返回空值）
+- 右连接：RIGHT (OUTER) JOIN（返回右表所有行，如果右表某行在左表中无匹配，则左表返回空值）
+- 完整外部连接：FULL (OUTER) JOIN（返回左表和右表中的所有行。当某行在另一个表中没有匹配行时，则另一个表的选择列表列包含空值。如果表之间有匹配行，则整个结果集行包含基表的数据值。）</p>
+<p>内连接：
+- 内联接是用比较运算符比较要联接列的值的联接，只返回符合条件的table1和table2的列
+- JOIN
+- INNOR JOIN</p>
+<p>交叉连接：
+- 没有 WHERE 子句的交叉联接将产生联接所涉及的表的笛卡尔积。第一个表的行数乘以第二个表的行数等于笛卡尔积结果集的大小。（table1和table2交叉连接产生3*3=9条记录）
+- cross join (不带条件where...)
+- SELECT * FROM table1 cross JOIN table2</p>
+<h1 id="9">9 数据库范式</h1>
+<ol>
+<li>第一范式：就是无重复的列</li>
+<li>第二范式：就是非主属性非部分依赖于主关键字</li>
+<li>第三范式：就是属性不依赖于其它非主属性。（我的理解是消除冗余）
+满足第二范式必须满足第一范式；满足第三范式必须满足第二范式；</li>
+</ol>
+<h1 id="10">10 数据库优化的思路</h1>
+<p>1.SQL语句优化
+- 应尽量避免在 where 子句中使用!=或&lt;&gt;操作符，否则将引擎放弃使用索引而进行全表扫描。
+- 应尽量避免在 where 子句中对字段进行 null 值判断，否则将导致引擎放弃使用索引而进行全表扫描，如：<code>select id from t where num is null</code>可以在num上设置默认值0，确保表中num列没有null值，然后这样查询：<code>select id from t where num=0</code>
+- 很多时候用 exists 代替 in 是一个好的选择
+- 用Where子句替换HAVING 子句 因为HAVING 只会在检索出所有记录之后才对结果集进行过滤</p>
+<p>2.索引优化</p>
+<p>看上文索引</p>
+<p>3.数据库结构优化
+1. 范式优化： 比如消除冗余（节省空间。。） 
+2. 反范式优化：比如适当加冗余等（减少join）
+3. 拆分表： 分区将数据在物理上分隔开，不同分区的数据可以制定保存在处于不同磁盘上的数据文件里。这样，当对这个表进行查询时，只需要在表分区中进行扫描，而不必进行全表扫描，明显缩短了查询时间，另外处于不同磁盘的分区也将对这个表的数据传输分散在不同的磁盘I/O，一个精心设置的分区可以将数据传输对磁盘I/O竞争均匀地分散开。对数据量大的时时表可采取此方法。可按月自动建表分区。
+4. 拆分其实又分垂直拆分和水平拆分： 案例： 简单购物系统暂设涉及如下表： 1.产品表（数据量10w，稳定） 2.订单表（数据量200w，且有增长趋势） 3.用户表 （数据量100w，且有增长趋势） 以mysql为例讲述下水平拆分和垂直拆分，mysql能容忍的数量级在百万静态数据可以到千万 垂直拆分：解决问题：表与表之间的io竞争 不解决问题：单表中数据量增长出现的压力 方案： 把产品表和用户表放到一个server上 订单表单独放到一个server上 水平拆分： 解决问题：单表中数据量增长出现的压力 不解决问题：表与表之间的io争夺方案： 用户表通过性别拆分为男用户表和女用户表 订单表通过已完成和完成中拆分为已完成订单和未完成订单 产品表 未完成订单放一个server上 已完成订单表和男用户表放一个server上 女用户表放一个server上</p>
+<ol start="5">
+<li>服务器硬件优化
+   多加资源</li>
+</ol>
+<h1 id="11">11 存储过程与触发器的区别</h1>
+<ul>
+<li>触发器与存储过程非常相似，触发器也是SQL语句集.
+两者唯一的区别是触发器不能用EXECUTE语句调用，而是在用户执行Transact-SQL语句时自动触发（激活）执行。</li>
+<li>触发器是在一个修改了指定表中的数据时执行的存储过程。
+通常通过创建触发器来强制实现不同表中的逻辑相关数据的引用完整性和一致性。由于用户不能绕过触发器，所以可以用它来强制实施复杂的业务规则，以确保数据的完整性。</li>
+<li>触发器不同于存储过程，触发器主要是通过事件执行触发而被执行的，而存储过程可以通过存储过程名称名字而直接调用。当对某一表进行诸如UPDATE、INSERT、DELETE这些操作时，SQLSERVER就会自动执行触发器所定义的SQL语句，从而确保对数据的处理必须符合这些SQL语句所定义的规则。 </li>
+</ul>
+<nav class="doc-series">
+  <p class="lb">面试 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../go/index.html">Golang面试题</a></li>
+<li class=""><a href="../index.html">面试</a></li>
+<li class=""><a href="../linux/index.html">遇到过比较深刻的问题记录</a></li>
+<li class="cur"><a href="index.html">MySQL</a></li>
+<li class=""><a href="../redis/index.html">一致性Hash</a></li>
+<li class=""><a href="../docker/docker-shim.html">Docker Shim</a></li>
+<li class=""><a href="../go/coding.html">Go · Coding</a></li>
+<li class=""><a href="../go/escape-analysis.html">Go · Escape Analysis</a></li>
+<li class=""><a href="../go/gc.html">Go · GC</a></li>
+<li class=""><a href="../go/goroutine-safety.html">Goroutine Safety</a></li>
+<li class=""><a href="../go/injection.html">依赖注入</a></li>
+<li class=""><a href="../go/memory-management.html">Go · Memory Management</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

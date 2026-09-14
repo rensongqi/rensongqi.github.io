@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux · Optimize OS Kernel · rensongqi</title>
+<meta name="description" content="如果出现节点仅收到syn的请求，但是并没有对这些请求做ack响应，则修改如下配置">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>Linux · Optimize OS Kernel</span></div>
+
+<div class="doc-title">
+  <h1>Linux · Optimize OS Kernel</h1>
+  <div class="meta">2026-09-14 · 约 400 字 · 源自 notes-src/ops/linux/optimize_os_kernel.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#Linux</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#ubuntu">Ubuntu</a></li><li class="l2"><a href="#centos7">Centos7</a></li></ul></nav>
+<main>
+<h1 id="ubuntu">Ubuntu</h1>
+<pre><code class="language-bash">cat &gt;&gt;/etc/security/limits.conf&lt;&lt;EOF
+* soft nofile 1055350
+* hard nofile 1055350
+* soft nproc 1055350
+* hard nproc 1055350
+* soft memlock unlimited
+* hard memlock unlimited
+EOF
+# 修改文件最大打开数量，root &amp; other users
+echo 'DefaultLimitNOFILE=1055350' &gt;&gt; /etc/systemd/system.conf
+echo 'DefaultLimitNOFILE=1055350' &gt;&gt; /etc/systemd/user.conf
+echo &quot;* - nofile 1055350&quot; &gt; /etc/security/limits.d/nofile.conf
+echo &quot;root - nofile 1055350&quot; &gt;&gt; /etc/security/limits.d/nofile.conf
+
+cat &gt;/etc/sysctl.conf&lt;&lt;EOF
+fs.file-max = 4194303
+vm.max_map_count=262144
+vm.swappiness = 1
+vm.vfs_cache_pressure = 50
+vm.min_free_kbytes = 1000000
+net.ipv4.tcp_timestamps = 0
+net.ipv4.tcp_sack = 1
+net.core.netdev_max_backlog = 250000
+net.core.rmem_max = 4194304
+net.core.wmem_max = 4194304
+net.core.rmem_default = 4194304
+net.core.wmem_default = 4194304
+net.core.optmem_max = 4194304
+net.ipv4.tcp_low_latency = 1
+net.ipv4.tcp_adv_win_scale = 1
+net.core.somaxconn = 65535
+net.core.netdev_max_backlog = 10000
+net.ipv4.tcp_max_syn_backlog = 4096
+net.ipv4.tcp_fin_timeout = 15
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.all.accept_source_route = 0
+net.ipv4.tcp_mtu_probing = 1
+fs.inotify.max_user_watches=524288
+EOF
+sysctl -p
+</code></pre>
+<h1 id="centos7">Centos7</h1>
+<p>如果出现节点仅收到syn的请求，但是并没有对这些请求做ack响应，则修改如下配置</p>
+<p><code>/etc/sysctl.conf</code></p>
+<pre><code class="language-bash">net.ipv4.tcp_fin_timeout = 2
+net.ipv4.tcp_tw_reuse = 1
+#net.ipv4.tcp_tw_recycle = 1
+net.ipv4.tcp_tw_recycle = 0
+net.ipv4.tcp_syncookies = 1
+net.ipv4.tcp_keepalive_time = 600
+net.ipv4.ip_local_port_range = 4000 65000
+net.ipv4.tcp_max_syn_backlog = 16384
+net.ipv4.tcp_max_tw_buckets = 36000
+net.ipv4.route.gc_timeout = 100
+net.ipv4.tcp_syn_retries = 1
+net.ipv4.tcp_synack_retries = 1
+net.core.somaxconn = 16384
+net.core.netdev_max_backlog = 16384
+net.ipv4.tcp_max_orphans = 16384
+vm.max_map_count=262144
+fs.file-max=104857600
+net.ipv4.ip_forward=1                      # 1表示开启 0表示关闭
+net.ipv4.conf.default.rp_filter=0     
+net.ipv4.conf.all.rp_filter=0              #控制系统是否开启对数据包源地址的校验
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../elk/index.html">ELK</a></li>
+<li class=""><a href="../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="optimize-os-kernel.html">Linux · Optimize OS Kernel</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

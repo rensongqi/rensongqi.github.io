@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline · Share Library · rensongqi</title>
+<meta name="description" content="一个仓库放pipeline，另一个仓库放代码库">
+<link rel="stylesheet" href="../../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../../index.html">首页</a>
+      <a href="../../../../archive.html">归档</a>
+      <a href="../../../../storage.html">存储</a>
+      <a href="../../../../notes/" class="is-active">笔记</a>
+      <a href="../../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../../index.html">首页</a> / <a href="../../../../notes/">笔记</a> / <a href="../../../../notes/cicd.html">CI/CD</a> / <span>Pipeline · Share Library</span></div>
+
+<div class="doc-title">
+  <h1>Pipeline · Share Library</h1>
+  <div class="meta">2026-09-14 · 约 470 字 · 源自 notes-src/cicd/jenkins/pipeline/share_library.md</div>
+  <div class="doc-tags"><span>#CI/CD</span><span>#Jenkins</span><span>#Pipeline</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1">1 准备工作</a></li><li class="l3"><a href="#11">1.1 需要两个仓库</a></li><li class="l3"><a href="#12-jenkins-share-library">1.2 Jenkins 配置Share Library</a></li><li class="l3"><a href="#13-groovy">1.3 相关groovy</a></li><li class="l2"><a href="#2-jenkins-item">2 Jenkins 新建流水线 item 测试</a></li></ul></nav>
+<main>
+<h1 id="1">1 准备工作</h1>
+<h2 id="11">1.1 需要两个仓库</h2>
+<p>一个仓库放pipeline，另一个仓库放代码库</p>
+<table>
+<thead>
+<tr>
+<th>git仓库</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>devops_pipeline</td>
+<td>Sharable library pipeline</td>
+</tr>
+<tr>
+<td>devops</td>
+<td>代码</td>
+</tr>
+</tbody>
+</table>
+<p><strong>devops_pipeline 目录结构：</strong></p>
+<pre><code class="language-bash">$ ls -l
+total 5
+-rw-r--r-- 1 rsq rsq  21 Oct 24 13:48 README.md
+-rwxr-xr-x 1 rsq rsq 595 Oct 24 14:20 test.groovy*
+drwxr-xr-x 1 rsq rsq   0 Oct 24 13:56 vars/
+$ ls -l vars
+total 2
+-rwxr-xr-x 1 rsq rsq 178 Oct 24 14:17 build.groovy*
+-rwxr-xr-x 1 rsq rsq 819 Oct 24 14:07 gitCheckout.groovy*
+</code></pre>
+<p><strong>devops目录结构：</strong></p>
+<pre><code class="language-bash">$ ls -l
+total 2
+-rw-r--r-- 1 rsq rsq Oct 24 13:41 README.md
+-rw-r--r-- 1 rsq rsq 29 Oct 24 13:52 build.sh
+$ cat build.sh
+echo &quot;This is a test scripts&quot;
+</code></pre>
+<h2 id="12-jenkins-share-library">1.2 Jenkins 配置Share Library</h2>
+<p>Manager Jnekins --&gt; Configure System --&gt; Global Pipeline Libraries ---&gt; Add Libary(选择devops_pipeline)
+<img alt="在这里插入图片描述" src="https://img-blog.csdnimg.cn/cc3baa40e34644238c514793a145fb9b.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBAUlNR5Y2a5a6i,size_20,color_FFFFFF,t_70,g_se,x_16" /></p>
+<h2 id="13-groovy">1.3 相关groovy</h2>
+<p><strong>gitCheckout.groovy</strong></p>
+<pre><code class="language-groovy">#!/usr/bin/env groovy
+def call(String gitRepo, String gitBranch, String gitCredential) {
+    checkout(
+        [   
+            $class: 'GitSCM', 
+            branches: [[name: gitBranch]], 
+            doGenerateSubmoduleConfigurations: false, 
+            extensions: [
+                [$class: 'CheckoutOption', timeout: 60],
+                [$class: 'GitLFSPull'],
+                [$class: 'CloneOption', noTags: false, reference: '', shallow: false, timeout: 60],
+                [$class: 'SubmoduleOption', timeout: 60, disableSubmodules: false, parentCredentials: true, recursiveSubmodules: true, reference: '', trackingSubmodules: false]
+            ], 
+            submoduleCfg: [], 
+            userRemoteConfigs: [[credentialsId: gitCredential, 
+            url: gitRepo]]
+        ]
+    )
+}
+</code></pre>
+<p><strong>build.groovy</strong></p>
+<pre><code class="language-groovy">#!/usr/bin/env groovy
+def call() {
+    dir(&quot;${WORKSPACE}&quot;) {
+        sh '''
+            echo &quot;This is a test scripts.&quot;
+            echo &quot;${WROKSPACE}&quot;
+        '''
+    }
+}
+</code></pre>
+<p>test.groovy 主要实现跟share library联动
+<strong>test.groovy</strong></p>
+<pre><code class="language-groovy">#!/usr/bin/env groovy
+// share library entrypoint.
+@Library(&quot;devops&quot;) _
+node(&quot;devops_linux&quot;) {
+    // define const
+    def gitRepo = &quot;${env.gitRepo}&quot;
+    def gitBranch = &quot;${env.gitBranch}&quot;
+    def gitCredential = &quot;${env.gitCredential}&quot;
+    // custom workspace
+    env.WORKSPACE = &quot;/home/devops/test&quot;
+
+    stage(&quot;Clean Env&quot;) {
+        sh '''
+            echo &quot;---------------------&quot;
+            echo ${WORKSPACE}
+        '''
+    }
+
+    stage(&quot;Git Clone&quot;) {
+        gitCheckout(gitRepo, gitBranch, gitCredential)
+    }
+
+    stage(&quot;Build&quot;) {
+        build()
+    }
+}
+</code></pre>
+<h1 id="2-jenkins-item">2 Jenkins 新建流水线 item 测试</h1>
+<p><img alt="在这里插入图片描述" src="https://img-blog.csdnimg.cn/4a8e9b82cf704850b3317fc41c89d7c0.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBAUlNR5Y2a5a6i,size_20,color_FFFFFF,t_70,g_se,x_16" /></p>
+<p>Configure item，pipeline SCM选择<code>devops_pipeline</code>这个仓库，Script Path选择 <code>test.groovy</code>
+<img alt="在这里插入图片描述" src="https://img-blog.csdnimg.cn/ebf596db24994a2da17aa578572e6f72.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBAUlNR5Y2a5a6i,size_20,color_FFFFFF,t_70,g_se,x_16" /></p>
+<nav class="doc-series">
+  <p class="lb">CI/CD · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../../argo/index.html">Argo CD</a></li>
+<li class=""><a href="../index.html">Jenkins</a></li>
+<li class=""><a href="pipeline-usages.html">Pipeline Usages</a></li>
+<li class="cur"><a href="share-library.html">Pipeline · Share Library</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../../feed.xml">RSS</a>
+      <a href="../../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../../assets/js/main.js"></script>
+</body>
+</html>

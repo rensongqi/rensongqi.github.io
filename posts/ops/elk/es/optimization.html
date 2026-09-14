@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elasticsearch · Optimization · rensongqi</title>
+<meta name="description" content="1 集群规划优化实践">
+<link rel="stylesheet" href="../../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../../index.html">首页</a>
+      <a href="../../../../archive.html">归档</a>
+      <a href="../../../../storage.html">存储</a>
+      <a href="../../../../notes/" class="is-active">笔记</a>
+      <a href="../../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../../index.html">首页</a> / <a href="../../../../notes/">笔记</a> / <a href="../../../../notes/ops.html">运维工具</a> / <span>Elasticsearch · Optimization</span></div>
+
+<div class="doc-title">
+  <h1>Elasticsearch · Optimization</h1>
+  <div class="meta">2026-09-14 · 约 2370 字 · 源自 notes-src/ops/elk/es/optimization.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#ELK</span><span>#Elasticsearch</span></div>
+</div>
+
+<div class="layout no-toc">
+
+<main>
+<p>1 集群规划优化实践</p>
+<p>1.1 基于目标数据量规划集群</p>
+<p>在业务初期，经常被问到的问题，要几个节点的集群，内存、CPU要多大，要不要SSD？
+最主要的考虑点是：你的目标存储数据量是多大？可以针对目标数据量反推节点多少。</p>
+<p>1.2 要留出容量Buffer</p>
+<p>注意：Elasticsearch有三个警戒水位线，磁盘使用率达到85%、90%、95%。
+不同警戒水位线会有不同的应急处理策略。
+这点，磁盘容量选型中要规划在内。控制在85%之下是合理的。
+当然，也可以通过配置做调整。</p>
+<p>1.3 ES集群各节点尽量不要和其他业务功能复用一台机器。</p>
+<p>除非内存非常大。
+举例：普通服务器，安装了ES+Mysql+redis，业务数据量大了之后，势必会出现内存不足等问题。</p>
+<p>1.4 磁盘尽量选择SSD</p>
+<p>Elasticsearch官方文档肯定推荐SSD，考虑到成本的原因。需要结合业务场景，
+如果业务对写入、检索速率有较高的速率要求，建议使用SSD磁盘。
+阿里的业务场景，SSD磁盘比机械硬盘的速率提升了5倍。
+但要因业务场景而异。</p>
+<p>1.5 内存配置要合理</p>
+<p>官方建议：堆内存的大小是官方建议是：Min（32GB，机器内存大小/2）。
+Medcl和wood大叔都有明确说过，不必要设置32/31GB那么大，建议：热数据设置：26GB，冷数据：31GB。
+总体内存大小没有具体要求，但肯定是内容越大，检索性能越好。
+经验值供参考：每天200GB+增量数据的业务场景，服务器至少要64GB内存。
+除了JVM之外的预留内存要充足，否则也会经常OOM。</p>
+<p>1.6 CPU核数不要太小</p>
+<p>CPU核数是和ESThread pool关联的。和写入、检索性能都有关联。
+建议：16核+。</p>
+<p>1.7 超大量级的业务场景，可以考虑跨集群检索</p>
+<p>除非业务量级非常大，例如：滴滴、携程的PB+的业务场景，否则基本不太需要跨集群检索。</p>
+<p>1.8 集群节点个数无需奇数</p>
+<p>ES内部维护集群通信，不是基于zookeeper的分发部署机制，所以，无需奇数。
+但是discovery.zen.minimum_master_nodes的值要设置为：候选主节点的个数/2+1，才能有效避免脑裂。</p>
+<p>1.9 节点类型优化分配</p>
+<p>集群节点数：&lt;=3，建议：所有节点的master：true， data：true。既是主节点也是路由节点。
+集群节点数：&gt;3, 根据业务场景需要，建议：逐步独立出Master节点和协调/路由节点。</p>
+<p>1.10 建议冷热数据分离</p>
+<p>热数据存储SSD和普通历史数据存储机械磁盘，物理上提高检索效率。</p>
+<p>2、索引优化实践</p>
+<p>Mysql等关系型数据库要分库、分表。Elasticserach的话也要做好充分的考虑。</p>
+<p>2.1 设置多少个索引？</p>
+<p>建议根据业务场景进行存储。
+不同通道类型的数据要分索引存储。举例：知乎采集信息存储到知乎索引；APP采集信息存储到APP索引。</p>
+<p>2.2 设置多少分片？</p>
+<p>建议根据数据量衡量。
+经验值：建议每个分片大小不要超过30GB。</p>
+<p>2.3 分片数设置？</p>
+<p>建议根据集群节点的个数规模，分片个数建议&gt;=集群节点的个数。
+5节点的集群，5个分片就比较合理。
+注意：除非reindex操作，分片数是不可以修改的。</p>
+<p>2.4副本数设置？</p>
+<p>除非你对系统的健壮性有异常高的要求，比如：银行系统。可以考虑2个副本以上。
+否则，1个副本足够。
+注意：副本数是可以通过配置随时修改的。</p>
+<p>2.5不要再在一个索引下创建多个type</p>
+<p>即便你是5.X版本，考虑到未来版本升级等后续的可扩展性。
+建议：一个索引对应一个type。6.x默认对应_doc，5.x你就直接对应type统一为doc。</p>
+<p>2.6 按照日期规划索引</p>
+<p>随着业务量的增加，单一索引和数据量激增给的矛盾凸显。
+按照日期规划索引是必然选择。
+好处1：可以实现历史数据秒删。很对历史索引delete即可。注意：一个索引的话需要借助delete_by_query+force_merge操作，慢且删除不彻底。
+好处2：便于冷热数据分开管理，检索最近几天的数据，直接物理上指定对应日期的索引，速度快的一逼！
+操作参考：模板使用+rollover API使用。</p>
+<p>2.7 务必使用别名</p>
+<p>ES不像mysql方面的更改索引名称。使用别名就是一个相对灵活的选择。</p>
+<p>3、数据模型优化实践</p>
+<p>3.1 不要使用默认的Mapping</p>
+<p>默认Mapping的字段类型是系统自动识别的。其中：string类型默认分成：text和keyword两种类型。如果你的业务中不需要分词、检索，仅需要精确匹配，仅设置为keyword即可。
+根据业务需要选择合适的类型，有利于节省空间和提升精度，如：浮点型的选择。</p>
+<p>3.2 Mapping各字段的选型流程</p>
+<p>3.3 选择合理的分词器</p>
+<p>常见的开源中文分词器包括：ik分词器、ansj分词器、hanlp分词器、结巴分词器、海量分词器、“ElasticSearch最全分词器比较及使用方法” 搜索可查看对比效果。
+如果选择ik，建议使用ik_max_word。因为：粗粒度的分词结果基本包含细粒度ik_smart的结果。</p>
+<p>3.4 date、long、还是keyword</p>
+<p>根据业务需要，如果需要基于时间轴做分析，必须date类型；
+如果仅需要秒级返回，建议使用keyword。</p>
+<p>4、数据写入优化实践</p>
+<p>4.1 要不要秒级响应？</p>
+<p>Elasticsearch近实时的本质是：最快1s写入的数据可以被查询到。
+如果refresh_interval设置为1s，势必会产生大量的segment，检索性能会受到影响。
+所以，非实时的场景可以调大，设置为30s，甚至-1。</p>
+<p>4.2 减少副本，提升写入性能。</p>
+<p>写入前，副本数设置为0，
+写入后，副本数设置为原来值。</p>
+<p>4.3 能批量就不单条写入</p>
+<p>批量接口为bulk，批量的大小要结合队列的大小，而队列大小和线程池大小、机器的cpu核数。</p>
+<p>4.4 禁用swap</p>
+<p>在Linux系统上，通过运行以下命令临时禁用交换：</p>
+<pre><code class="language-bash">sudo swapoff -a
+</code></pre>
+<p>5、检索聚合优化实战</p>
+<p>5.1 禁用 wildcard模糊匹配</p>
+<p>数据量级达到TB+甚至更高之后，wildcard在多字段组合的情况下很容易出现卡死，甚至导致集群节点崩溃宕机的情况。
+后果不堪设想。
+替代方案：</p>
+<blockquote>
+<p>方案一：针对精确度要求高的方案:两套分词器结合，standard和ik结合，使用match_phrase检索。
+方案二：针对精确度要求不高的替代方案：建议ik分词，通过match_phrase和slop结合查询。</p>
+</blockquote>
+<p>5.2极小的概率使用match匹配</p>
+<p>中文match匹配显然结果是不准确的。很大的业务场景会使用短语匹配“match_phrase"。
+match_phrase结合合理的分词词典、词库，会使得搜索结果精确度更高，避免噪音数据。</p>
+<p>5.3 结合业务场景，大量使用filter过滤器</p>
+<p>对于不需要使用计算相关度评分的场景，无疑filter缓存机制会使得检索更快。
+举例：过滤某邮编号码。</p>
+<p>5.4控制返回字段和结果</p>
+<p>和mysql查询一样，业务开发中，select * 操作几乎是不必须的。
+同理，ES中，_source 返回全部字段也是非必须的。
+要通过_source 控制字段的返回，只返回业务相关的字段。
+网页正文content，网页快照html_content类似字段的批量返回，可能就是业务上的设计缺陷。
+显然，摘要字段应该提前写入，而不是查询content后再截取处理。</p>
+<p>5.5 分页深度查询和遍历</p>
+<p>分页查询使用：from+size;
+遍历使用：scroll；
+并行遍历使用：scroll+slice。
+斟酌集合业务选型使用。</p>
+<p>5.6 聚合Size的合理设置</p>
+<p>聚合结果是不精确的。除非你设置size为2的32次幂-1，否则聚合的结果是取每个分片的Top size元素后综合排序后的值。
+实际业务场景要求精确反馈结果的要注意。
+尽量不要获取全量聚合结果——从业务层面取TopN聚合结果值是非常合理的。因为的确排序靠后的结果值意义不大。</p>
+<p>5.7 聚合分页合理实现</p>
+<p>聚合结果展示的时，势必面临聚合后分页的问题，而ES官方基于性能原因不支持聚合后分页。
+如果需要聚合后分页，需要自开发实现。包含但不限于：
+方案一：每次取聚合结果，拿到内存中分页返回。
+方案二：scroll结合scroll after集合redis实现。</p>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../../canal/index.html">Canal</a></li>
+<li class=""><a href="../../consul/index.html">Consul</a></li>
+<li class=""><a href="../../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../../database/redis/index.html">Redis</a></li>
+<li class=""><a href="index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../index.html">ELK</a></li>
+<li class=""><a href="../kafka/index.html">Kafka</a></li>
+<li class=""><a href="../logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="optimization.html">Elasticsearch · Optimization</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../../feed.xml">RSS</a>
+      <a href="../../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux · Ubuntu Private Repo · rensongqi</title>
+<meta name="description" content="搭建ubuntu私有repo，使用gpg对私有包进行自签认证，通过apt安装签名后的包">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>Linux · Ubuntu Private Repo</span></div>
+
+<div class="doc-title">
+  <h1>Linux · Ubuntu Private Repo</h1>
+  <div class="meta">2026-09-14 · 约 980 字 · 源自 notes-src/ops/linux/ubuntu_private_repo.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#Linux</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1-gpg">1 GPG配置</a></li><li class="l2"><a href="#2">2 客户端使用</a></li><li class="l2"><a href="#3">3 刷新索引和签名</a></li></ul></nav>
+<main>
+<p>搭建ubuntu私有repo，使用gpg对私有包进行自签认证，通过apt安装签名后的包</p>
+<h1 id="1-gpg">1 GPG配置</h1>
+<pre><code class="language-bash"># 1 生成gpg密钥，这里没有用密码认证
+root@RSQ2204:~# gpg --full-generate-key
+gpg (GnuPG) 2.2.27; Copyright (C) 2021 Free Software Foundation, Inc.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Please select what kind of key you want:
+   (1) RSA and RSA (default)
+   (2) DSA and Elgamal
+   (3) DSA (sign only)
+   (4) RSA (sign only)
+  (14) Existing key from card
+Your selection? 1
+RSA keys may be between 1024 and 4096 bits long.
+What keysize do you want? (3072) 4096
+Requested keysize is 4096 bits
+Please specify how long the key should be valid.
+         0 = key does not expire
+      &lt;n&gt;  = key expires in n days
+      &lt;n&gt;w = key expires in n weeks
+      &lt;n&gt;m = key expires in n months
+      &lt;n&gt;y = key expires in n years
+Key is valid for? (0) 0
+Key does not expire at all
+Is this correct? (y/N) y
+
+GnuPG needs to construct a user ID to identify your key.
+
+Real name: rensongqi
+Email address: admin@rsq.com
+Comment: rensongqi
+You selected this USER-ID:
+    &quot;rensongqi (rensongqi) &lt;admin@rsq.com&gt;&quot;
+
+Change (N)ame, (C)omment, (E)mail or (O)kay/(Q)uit? O
+We need to generate a lot of random bytes. It is a good idea to perform
+some other action (type on the keyboard, move the mouse, utilize the
+disks) during the prime generation; this gives the random number
+generator a better chance to gain enough entropy.
+We need to generate a lot of random bytes. It is a good idea to perform
+some other action (type on the keyboard, move the mouse, utilize the
+disks) during the prime generation; this gives the random number
+generator a better chance to gain enough entropy.
+gpg: /root/.gnupg/trustdb.gpg: trustdb created
+gpg: key 29BDA33B3FF40E51 marked as ultimately trusted
+gpg: directory '/root/.gnupg/openpgp-revocs.d' created
+gpg: revocation certificate stored as '/root/.gnupg/openpgp-revocs.d/3EFC047A4FB62F5DD1324E3629BDA33B3FF40E51.rev'
+public and secret key created and signed.
+
+pub   rsa4096 2024-03-29 [SC]
+      3EFC047A4FB62F5DD1324E3629BDA33B3FF40E51
+uid                      rensongqi (rensongqi) &lt;admin@rsq.com&gt;
+sub   rsa4096 2024-03-29 [E]
+
+# 2 先获取当前key有哪些，使用指定的key生成Release.gpg文件
+root@RSQ2204:~# gpg --list-secret-keys --keyid-format=long
+gpg: checking the trustdb
+gpg: marginals needed: 3  completes needed: 1  trust model: pgp
+gpg: depth: 0  valid:   1  signed:   0  trust: 0-, 0q, 0n, 0m, 0f, 1u
+/root/.gnupg/pubring.kbx
+------------------------
+sec   rsa4096/29BDA33B3FF40E51 2024-03-29 [SC]
+      3EFC047A4FB62F5DD1324E3629BDA33B3FF40E51
+uid                 [ultimate] rensongqi (rensongqi) &lt;admin@rsq.com&gt;
+ssb   rsa4096/DF02B8F8B21963C9 2024-03-29 [E]
+
+# 3 生成gpgkey文件（只需要生成一次就行）
+gpg --export 29BDA33B3FF40E51 &gt; gpgkey
+</code></pre>
+<p>配置内部环境</p>
+<pre><code class="language-bash"># 1 创建相对应的目录
+cd /disk/storage/mirrors/custom
+mkdir -p dists/{jammy,bionic,focal}/pool/stable/amd64/
+mkdir -p dists/{jammy,bionic,focal}/stable/binary-amd64/
+
+# 2 生成binary-amd64目录下的索引文件
+# 生成Packages文件
+cd /disk/storage/mirrors/custom/
+apt-ftparchive packages dists/jammy &gt; dists/jammy/stable/binary-amd64/Packages
+
+# 3 生成jammy当前目录的签名文件
+# patch.conf
+APT::FTPArchive::Release {
+  Origin &quot;custom&quot;;
+  Label &quot;custom&quot;;
+  Suite &quot;jammy&quot;;
+  Codename &quot;jammy&quot;;
+  Architectures &quot;amd64&quot;;
+  Components &quot;stable&quot;;
+  Description &quot;jammy&quot;;
+};
+
+# 指定 patch.conf 生成Release文件
+apt-ftparchive release -c=./patch.conf dists/jammy &gt; dists/jammy/Release
+# 生成InRelease文件
+gpg --clearsign -o dists/jammy/InRelease dists/jammy/Release
+# 生成gpg签名文件
+gpg -abs -u 3EFC047A4FB62F5DD1324E3629BDA33B3FF40E51 -o dists/jammy/Release.gpg dists/jammy/Release
+</code></pre>
+<h1 id="2">2 客户端使用</h1>
+<p>ubuntu20.04</p>
+<pre><code class="language-bash">echo -e &quot;deb [arch=amd64] https://mirrors.rsq.cn/custom/ focal stable&quot; &gt;&gt; /etc/apt/sources.list
+curl -fsSL https://mirrors.rsq.cn/custom/gpgkey | sudo tee /etc/apt/trusted.gpg.d/custom.gpg &gt;&gt;/dev/null 2&gt;&amp;1
+sudo chmod 644 /etc/apt/trusted.gpg.d/custom.gpg
+
+# 更新源
+apt update -y
+</code></pre>
+<p>ubuntu22.04</p>
+<pre><code class="language-bash">echo -e &quot;deb [arch=amd64] https://mirrors.rsq.cn/custom/ jammy stable&quot; &gt;&gt; /etc/apt/sources.list
+curl -fsSL https://mirrors.rsq.cn/custom/gpgkey | sudo tee /etc/apt/trusted.gpg.d/custom.gpg &gt;&gt;/dev/null 2&gt;&amp;1
+sudo chmod 644 /etc/apt/trusted.gpg.d/custom.gpg
+
+# 更新源
+apt update -y
+</code></pre>
+<h1 id="3">3 刷新索引和签名</h1>
+<pre><code class="language-bash">#!/bin/bash
+
+# 生成jammy的索引和签名
+# 1 生成Packages索引文件
+cd /disk/storage/mirrors/custom/
+apt-ftparchive packages dists/jammy &gt; dists/jammy/stable/binary-amd64/Packages
+
+# 2 生成Release文件
+apt-ftparchive release -c=./patch.conf dists/jammy &gt; dists/jammy/Release
+
+# 3 生成InRelease文件
+rm -f -r dists/jammy/InRelease
+gpg --clearsign -o dists/jammy/InRelease dists/jammy/Release
+
+# 生成gpg签名文件
+rm -f -r dists/jammy/Release.gpg
+gpg -abs -u 3EFC047A4FB62F5DD1324E3629BDA33B3FF40E51 -o dists/jammy/Release.gpg dists/jammy/Release
+
+
+# 生成focal的索引和签名
+# 1 生成Packages索引文件
+cd /disk/storage/mirrors/custom/
+apt-ftparchive packages dists/focal &gt; dists/focal/stable/binary-amd64/Packages
+
+# 2 生成Release文件
+apt-ftparchive release -c=./patch.conf dists/focal &gt; dists/focal/Release
+
+# 3 生成InRelease文件
+rm -f -r dists/focal/InRelease
+gpg --clearsign -o dists/focal/InRelease dists/focal/Release
+
+# 生成gpg签名文件
+rm -f -r dists/focal/Release.gpg
+gpg -abs -u 3EFC047A4FB62F5DD1324E3629BDA33B3FF40E51 -o dists/focal/Release.gpg dists/focal/Release
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../elk/index.html">ELK</a></li>
+<li class=""><a href="../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="ubuntu-private-repo.html">Linux · Ubuntu Private Repo</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

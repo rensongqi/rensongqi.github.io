@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kubernetes · KubeSphere Deploy · rensongqi</title>
+<meta name="description" content="KubeSphere部署">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>Kubernetes · KubeSphere Deploy</span></div>
+
+<div class="doc-title">
+  <h1>Kubernetes · KubeSphere Deploy</h1>
+  <div class="meta">2026-09-14 · 约 1730 字 · 源自 notes-src/ops/k8s/kubesphere_deploy.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#Kubernetes</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1-k8s">1 部署k8s集群</a></li><li class="l3"><a href="#11-hosts">1.1 修改hosts文件</a></li><li class="l3"><a href="#12-group_vars">1.2 修改group_vars</a></li><li class="l3"><a href="#13-k8s">1.3 部署k8s集群</a></li><li class="l2"><a href="#2-nfsstorageclass">2 配置nfs和storageClass</a></li><li class="l3"><a href="#21-nfs-server">2.1 nfs server配置如下</a></li><li class="l3"><a href="#22-nfs-client">2.2 nfs client配置如下</a></li><li class="l3"><a href="#23-nfs-storageclass">2.3 创建nfs storageclass</a></li><li class="l2"><a href="#3-metrics-server">3 部署metrics-server</a></li><li class="l2"><a href="#4-kubesphere">4 部署Kubesphere</a></li></ul></nav>
+<main>
+<p>KubeSphere部署</p>
+<p>机器列表：</p>
+<table>
+<thead>
+<tr>
+<th>主机IP</th>
+<th>主机名</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>172.16.0.50</td>
+<td>master</td>
+<td></td>
+</tr>
+<tr>
+<td>172.16.0.51</td>
+<td>node01</td>
+<td></td>
+</tr>
+<tr>
+<td>172.16.0.52</td>
+<td>node02</td>
+<td>nfs server</td>
+</tr>
+<tr>
+<td>172.16.0.53</td>
+<td>node03</td>
+<td></td>
+</tr>
+<tr>
+<td>172.16.0.58</td>
+<td>node08</td>
+<td></td>
+</tr>
+<tr>
+<td>172.16.0.59</td>
+<td>node09</td>
+<td></td>
+</tr>
+<tr>
+<td>172.16.0.60</td>
+<td>node10</td>
+<td></td>
+</tr>
+<tr>
+<td>172.16.0.60</td>
+<td>node11</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-k8s">1 部署k8s集群</h2>
+<p>这里我用的ansible来批量部署初始化集群，ansible配置在 芜湖R750 那台机器
+系统的初始化包括防火墙、hosts文件都已经集成在ansible中</p>
+<h3 id="11-hosts">1.1 修改hosts文件</h3>
+<pre><code class="language-bash"># vim /etc/ansible/hosts
+[master]
+172.16.0.50 node_name=master
+
+[node]
+172.16.0.51 node_name=node01
+172.16.0.52 node_name=node02
+172.16.0.53 node_name=node03
+172.16.0.58 node_name=node08
+172.16.0.59 node_name=node09
+172.16.0.60 node_name=node10
+172.16.0.61 node_name=node11
+
+[nfs]
+172.16.0.51 node_name=node01
+172.16.0.53 node_name=node03
+172.16.0.58 node_name=node08
+172.16.0.59 node_name=node09
+172.16.0.60 node_name=node10
+172.16.0.61 node_name=node11
+</code></pre>
+<h3 id="12-group_vars">1.2 修改group_vars</h3>
+<p>安装k8s版本和网络插件自定义即可</p>
+<pre><code class="language-bash"># vim /etc/ansible/group_vars/all.yml
+# k8s version [1.18.3/1.19.4/...]
+# 支持大多数版本
+k8s_version: '1.22.10'
+
+# network plugin [flannel/calico]
+network_plugin: 'calico'
+
+# 集群网络规划
+service_cidr: '10.96.0.0/12'
+pod_cidr: '10.244.0.0/16'
+
+# 集群IP规划，master暂时只支持一个，node可以有多个
+hosts:
+  master:
+    - '172.16.0.50'
+  node:
+    - '172.16.0.51'
+    - '172.16.0.52'
+    - '172.16.0.53'
+    - '172.16.0.58'
+    - '172.16.0.59'
+    - '172.16.0.60'
+    - '172.16.0.61'
+</code></pre>
+<h3 id="13-k8s">1.3 部署k8s集群</h3>
+<p>以root用户执行如下命令</p>
+<pre><code># cd /etc/ansible/
+ansible-playbook k8s_single_master_install.yml
+</code></pre>
+<h2 id="2-nfsstorageclass">2 配置nfs和storageClass</h2>
+<h3 id="21-nfs-server">2.1 nfs server配置如下</h3>
+<pre><code class="language-bash"># 1. 在每个机器内执行
+yum install -y nfs-utils
+# 用ansible操作命令如下
+ansible all -m yum -a &quot;name=nfs-utils state=latest&quot;
+
+# 2. 在nfs server上执行以下命令 
+echo &quot;/home/data/ *(insecure,rw,sync,no_root_squash)&quot; &gt; /etc/exports
+
+# 3. 在nfs server执行
+systemctl enable rpcbind
+systemctl enable nfs-server
+systemctl start rpcbind
+systemctl start nfs-server
+
+# 4. 在nfs server执行 使配置生效
+exportfs -r
+
+# 5. 在nfs server执行 检查配置是否生效
+exportfs
+</code></pre>
+<h3 id="22-nfs-client">2.2 nfs client配置如下</h3>
+<pre><code class="language-bash"># 1. 没台client机器均需要创建挂在的目录
+ansible all -m shell -a &quot;mkdir /data&quot;
+# 2. 用ansible对所有的node节点进行nfs 挂载
+ansible nfs -m shell -a &quot;echo '172.16.0.52:/home/data /data nfs defaults 0 0' &gt;&gt;/etc/fstab&quot;
+ansible nfs -m shell -a &quot;mount -a&quot;
+</code></pre>
+<h3 id="23-nfs-storageclass">2.3 创建nfs storageclass</h3>
+<pre><code class="language-bash">kubectl apply -f nfs.yaml
+</code></pre>
+<p>yaml文件如下:</p>
+<pre><code class="language-yaml">## 创建了一个存储类
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-storage
+  annotations:
+    storageclass.kubernetes.io/is-default-class: &quot;true&quot;
+provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+parameters:
+  archiveOnDelete: &quot;true&quot;  ## 删除pv的时候，pv的内容是否要备份
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-client-provisioner
+  labels:
+    app: nfs-client-provisioner
+  # replace with namespace where provisioner is deployed
+  namespace: default
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nfs-client-provisioner
+  template:
+    metadata:
+      labels:
+        app: nfs-client-provisioner
+    spec:
+      serviceAccountName: nfs-client-provisioner
+      containers:
+        - name: nfs-client-provisioner
+          image: registry.cn-hangzhou.aliyuncs.com/lfy_k8s_images/nfs-subdir-external-provisioner:v4.0.2
+          # resources:
+          #    limits:
+          #      cpu: 10m
+          #    requests:
+          #      cpu: 10m
+          volumeMounts:
+            - name: nfs-client-root
+              mountPath: /persistentvolumes
+          env:
+            - name: PROVISIONER_NAME
+              value: k8s-sigs.io/nfs-subdir-external-provisioner
+            - name: NFS_SERVER
+              value: 172.16.0.52 ## 指定自己nfs服务器地址
+            - name: NFS_PATH  
+              value: /home/data  ## nfs服务器共享的目录
+      volumes:
+        - name: nfs-client-root
+          nfs:
+            server: 172.16.0.52
+            path: /home/data
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nfs-client-provisioner
+  # replace with namespace where provisioner is deployed
+  namespace: default
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nfs-client-provisioner-runner
+rules:
+  - apiGroups: [&quot;&quot;]
+    resources: [&quot;nodes&quot;]
+    verbs: [&quot;get&quot;, &quot;list&quot;, &quot;watch&quot;]
+  - apiGroups: [&quot;&quot;]
+    resources: [&quot;persistentvolumes&quot;]
+    verbs: [&quot;get&quot;, &quot;list&quot;, &quot;watch&quot;, &quot;create&quot;, &quot;delete&quot;]
+  - apiGroups: [&quot;&quot;]
+    resources: [&quot;persistentvolumeclaims&quot;]
+    verbs: [&quot;get&quot;, &quot;list&quot;, &quot;watch&quot;, &quot;update&quot;]
+  - apiGroups: [&quot;storage.k8s.io&quot;]
+    resources: [&quot;storageclasses&quot;]
+    verbs: [&quot;get&quot;, &quot;list&quot;, &quot;watch&quot;]
+  - apiGroups: [&quot;&quot;]
+    resources: [&quot;events&quot;]
+    verbs: [&quot;create&quot;, &quot;update&quot;, &quot;patch&quot;]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: run-nfs-client-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: nfs-client-provisioner
+    # replace with namespace where provisioner is deployed
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: nfs-client-provisioner-runner
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: leader-locking-nfs-client-provisioner
+  # replace with namespace where provisioner is deployed
+  namespace: default
+rules:
+  - apiGroups: [&quot;&quot;]
+    resources: [&quot;endpoints&quot;]
+    verbs: [&quot;get&quot;, &quot;list&quot;, &quot;watch&quot;, &quot;create&quot;, &quot;update&quot;, &quot;patch&quot;]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: leader-locking-nfs-client-provisioner
+  # replace with namespace where provisioner is deployed
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: nfs-client-provisioner
+    # replace with namespace where provisioner is deployed
+    namespace: default
+roleRef:
+  kind: Role
+  name: leader-locking-nfs-client-provisioner
+  apiGroup: rbac.authorization.k8s.io
+</code></pre>
+<h2 id="3-metrics-server">3 部署metrics-server</h2>
+<pre><code class="language-bash">kubectl apply -f metrics-server.yaml
+</code></pre>
+<p>yaml文件如下:</p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    k8s-app: metrics-server
+  name: metrics-server
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    k8s-app: metrics-server
+    rbac.authorization.k8s.io/aggregate-to-admin: &quot;true&quot;
+    rbac.authorization.k8s.io/aggregate-to-edit: &quot;true&quot;
+    rbac.authorization.k8s.io/aggregate-to-view: &quot;true&quot;
+  name: system:aggregated-metrics-reader
+rules:
+- apiGroups:
+  - metrics.k8s.io
+  resources:
+  - pods
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    k8s-app: metrics-server
+  name: system:metrics-server
+rules:
+- apiGroups:
+  - &quot;&quot;
+  resources:
+  - pods
+  - nodes
+  - nodes/stats
+  - namespaces
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    k8s-app: metrics-server
+  name: metrics-server-auth-reader
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: ServiceAccount
+  name: metrics-server
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    k8s-app: metrics-server
+  name: metrics-server:system:auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: metrics-server
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    k8s-app: metrics-server
+  name: system:metrics-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:metrics-server
+subjects:
+- kind: ServiceAccount
+  name: metrics-server
+  namespace: kube-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: metrics-server
+  name: metrics-server
+  namespace: kube-system
+spec:
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: https
+  selector:
+    k8s-app: metrics-server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: metrics-server
+  name: metrics-server
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      k8s-app: metrics-server
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        k8s-app: metrics-server
+    spec:
+      containers:
+      - args:
+        - --cert-dir=/tmp
+        - --kubelet-insecure-tls
+        - --secure-port=4443
+        - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+        - --kubelet-use-node-status-port
+        image: registry.cn-hangzhou.aliyuncs.com/lfy_k8s_images/metrics-server:v0.4.3
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /livez
+            port: https
+            scheme: HTTPS
+          periodSeconds: 10
+        name: metrics-server
+        ports:
+        - containerPort: 4443
+          name: https
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: https
+            scheme: HTTPS
+          periodSeconds: 10
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp-dir
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-cluster-critical
+      serviceAccountName: metrics-server
+      volumes:
+      - emptyDir: {}
+        name: tmp-dir
+---
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  labels:
+    k8s-app: metrics-server
+  name: v1beta1.metrics.k8s.io
+spec:
+  group: metrics.k8s.io
+  groupPriorityMinimum: 100
+  insecureSkipTLSVerify: true
+  service:
+    name: metrics-server
+    namespace: kube-system
+  version: v1beta1
+  versionPriority: 100
+</code></pre>
+<h2 id="4-kubesphere">4 部署Kubesphere</h2>
+<ol>
+<li>
+<p>配置文件如下：
+- <a href="https://lpq-k8s.oss-cn-hangzhou.aliyuncs.com/kubesphere-installer.yaml">kubesphere-installer.yaml</a>
+- <a href="https://lpq-k8s.oss-cn-hangzhou.aliyuncs.com/cluster-configuration.yaml">cluster-configuration.yaml</a></p>
+</li>
+<li>
+<p>修改cluster-configuration.yaml</p>
+</li>
+</ol>
+<p>将文件内172.31.0.4 全局替换为自己master节点的IP地址</p>
+<ol start="3">
+<li>部署KubeSphere</li>
+</ol>
+<pre><code class="language-bash">kubectl apply -f kubesphere-installer.yaml
+kubectl apply -f cluster-configuration.yaml
+</code></pre>
+<ol start="4">
+<li>查看安装进度</li>
+</ol>
+<pre><code class="language-bash">kubectl logs -n kubesphere-system $(kubectl get pod -n kubesphere-system -l app=ks-install -o jsonpath='{.items[0].metadata.name}') -f
+</code></pre>
+<ol start="5">
+<li>如果有etcd监控证书找不到的bug，执行如下命令</li>
+</ol>
+<pre><code class="language-bash">kubectl -n kubesphere-monitoring-system create secret generic kube-etcd-client-certs  --from-file=etcd-client-ca.crt=/etc/kubernetes/pki/etcd/ca.crt  --from-file=etcd-client.crt=/etc/kubernetes/pki/apiserver-etcd-client.crt  --from-file=etcd-client.key=/etc/kubernetes/pki/apiserver-etcd-client.key
+</code></pre>
+<ol start="6">
+<li>部署成功后log输出如下</li>
+</ol>
+<pre><code class="language-bash">Collecting installation results ...
+#####################################################
+###              Welcome to KubeSphere!           ###
+#####################################################
+
+Console: http://172.16.0.50:30880
+Account: admin
+Password: P@88w0rd
+
+NOTES：
+  1. After you log into the console, please check the
+     monitoring status of service components in
+     &quot;Cluster Management&quot;. If any service is not
+     ready, please wait patiently until all components 
+     are up and running.
+  2. Please change the default password after login.
+
+#####################################################
+https://kubesphere.io             2022-05-30 13:50:14
+#####################################################
+</code></pre>
+<p>参考博客：<a href="https://blog.csdn.net/baidu_41860619/article/details/124920503">k8s与kubesphere安装</a></p>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../elk/index.html">ELK</a></li>
+<li class=""><a href="../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="kubesphere-deploy.html">Kubernetes · KubeSphere Deploy</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

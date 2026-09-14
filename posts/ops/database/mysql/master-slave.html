@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MySQL · Master Slave · rensongqi</title>
+<meta name="description" content="进入master容器，查看 file 和 pos 数据">
+<link rel="stylesheet" href="../../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../../index.html">首页</a>
+      <a href="../../../../archive.html">归档</a>
+      <a href="../../../../storage.html">存储</a>
+      <a href="../../../../notes/" class="is-active">笔记</a>
+      <a href="../../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../../index.html">首页</a> / <a href="../../../../notes/">笔记</a> / <a href="../../../../notes/ops.html">运维工具</a> / <span>MySQL · Master Slave</span></div>
+
+<div class="doc-title">
+  <h1>MySQL · Master Slave</h1>
+  <div class="meta">2026-09-14 · 约 450 字 · 源自 notes-src/ops/database/mysql/master_slave.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#数据库</span><span>#MySQL</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1-master">1 master</a></li><li class="l2"><a href="#2-slave">2 slave</a></li><li class="l2"><a href="#3">3 配置主从</a></li></ul></nav>
+<main>
+<h1 id="1-master">1 master</h1>
+<pre><code class="language-bash"># mkdir /data/mysql-master/volumes/{log,conf,data} -p
+
+# vim /data/mysql-master/docker-compose.yml
+version: &quot;2&quot;
+services:
+  mysql-master:
+    container_name: mysql-master
+    image: harbor.rsq.cn/library/mysql/mysql:5.7
+    restart: always
+    ports:
+      - &quot;3306:3306&quot;
+    privileged: true
+    volumes:
+      - ./volumes/log:/var/log/mysql
+      - ./volumes/conf/my.cnf:/etc/mysql/my.cnf
+      - ./volumes/data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: &quot;xxxxxx&quot;
+      TZ: &quot;Asia/Shanghai&quot;
+    command: [
+      &quot;--character-set-server=utf8mb4&quot;,
+      &quot;--collation-server=utf8mb4_general_ci&quot;,
+      &quot;--max_connections=30000&quot;
+    ]
+
+# 编辑配置文件
+# vim /data/mysql-master/volumes/conf/my.cnf
+[mysqld]
+server_id=1000
+binlog-ignore-db=mysql
+log-bin=replicas-mysql-bin
+binlog_cache_size=1M
+binlog_format=mixed
+expire_logs_days=7
+slave_skip_errors=1062
+innodb_buffer_pool_size = 8G
+join_buffer_size = 8M
+sort_buffer_size = 8M
+read_buffer_size = 4M
+read_rnd_buffer_size = 8M
+
+# 启动容器
+# cd /data/mysql-master
+# docker-compose up -d
+</code></pre>
+<h1 id="2-slave">2 slave</h1>
+<pre><code class="language-bash">mkdir /data/mysql-slave/volumes/{log,conf,data} -p
+
+vim /data/mysql-slave/docker-compose.yml
+version: &quot;2&quot;
+services:
+  mysql-slave:
+    container_name: mysql-slave
+    image: harbor.rsq.cn/library/mysql/mysql:5.7
+    restart: always
+    ports:
+      - &quot;3306:3306&quot;
+    privileged: true
+    volumes:
+      - ./volumes/log:/var/log/mysql
+      - ./volumes/conf/my.cnf:/etc/mysql/my.cnf
+      - ./volumes/data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: &quot;xxxxxx&quot;
+      TZ: &quot;Asia/Shanghai&quot;
+    command: [
+      &quot;--character-set-server=utf8mb4&quot;,
+      &quot;--collation-server=utf8mb4_general_ci&quot;,
+      &quot;--max_connections=30000&quot;
+    ]
+
+# 编辑配置文件
+vim /data/mysql-slave/volumes/conf/my.cnf
+[mysqld]
+server_id=2000
+binlog-ignore-db=mysql
+log-bin=replicas-mysql-slave1-bin
+binlog_cache_size=1M
+binlog_format=mixed
+expire_logs_days=7
+slave_skip_errors=1062
+relay_log=replicas-mysql-relay-bin
+log_slave_updates=1
+read_only=1
+innodb_buffer_pool_size = 8G
+join_buffer_size = 8M
+sort_buffer_size = 8M
+read_buffer_size = 4M
+read_rnd_buffer_size = 8M
+
+# 启动容器
+docker-compose up -d
+</code></pre>
+<h1 id="3">3 配置主从</h1>
+<p>进入master容器，查看 file 和 pos 数据</p>
+<pre><code class="language-bash">mysql -uroot -p
+
+mysql&gt; show master status;
++---------------------------+----------+--------------+------------------+-------------------+
+| File                      | Position | Binlog_Do_DB | Binlog_Ignore_DB | Executed_Gtid_Set |
++---------------------------+----------+--------------+------------------+-------------------+
+| replicas-mysql-bin.000003 |      154 |              | mysql            |                   |
++---------------------------+----------+--------------+------------------+-------------------+
+1 row in set (0.00 sec)
+</code></pre>
+<p>进入slave容器</p>
+<pre><code class="language-bash">mysql -uroot -p
+
+mysql&gt; change master to master_host='172.16.104.104',master_user='root',master_password='xxxxxx',master_port=3306,master_log_file='replicas-mysql-bin.000003', master_log_pos=154,master_connect_retry=30;
+mysql&gt; start slave;
+mysql&gt; show slave status \G；
+</code></pre>
+<p>测试主从同步情况，master创建数据库，查看slave有没有</p>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../../canal/index.html">Canal</a></li>
+<li class=""><a href="../../consul/index.html">Consul</a></li>
+<li class=""><a href="../mongo/index.html">MongoDB</a></li>
+<li class=""><a href="index.html">MySQL</a></li>
+<li class=""><a href="../pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../redis/index.html">Redis</a></li>
+<li class=""><a href="../../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../../elk/index.html">ELK</a></li>
+<li class=""><a href="../../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="master-slave.html">MySQL · Master Slave</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../../feed.xml">RSS</a>
+      <a href="../../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../../assets/js/main.js"></script>
+</body>
+</html>

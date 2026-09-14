@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generics · rensongqi</title>
+<meta name="description" content="go泛型示例">
+<link rel="stylesheet" href="../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../index.html">首页</a>
+      <a href="../../archive.html">归档</a>
+      <a href="../../storage.html">存储</a>
+      <a href="../../notes/" class="is-active">笔记</a>
+      <a href="../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../index.html">首页</a> / <a href="../../notes/">笔记</a> / <a href="../../notes/go.html">Go 语言</a> / <span>Generics</span></div>
+
+<div class="doc-title">
+  <h1>Generics</h1>
+  <div class="meta">2026-09-14 · 约 410 字 · 源自 notes-src/go/generics.md</div>
+  <div class="doc-tags"><span>#Go 语言</span></div>
+</div>
+
+<div class="layout no-toc">
+
+<main>
+<p>go泛型示例</p>
+<pre><code class="language-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;golang.org/x/exp/constraints&quot;
+)
+
+// 定义一个泛型切片函数，支持 int、float64 和 float32
+func processSlice[T constraints.Integer | constraints.Float](slice []T) {
+    for _, v := range slice {
+        fmt.Printf(&quot;%v &quot;, v)
+    }
+    fmt.Println()
+}
+
+// MySlice 求和
+type MySlice[T int | float64 | string] []T
+
+// Sum 泛型方法求和
+func (m MySlice[T]) Sum() T {
+    var sum T
+    for _, num := range m {
+        sum += num
+    }
+    return sum
+}
+
+// Add 泛型函数
+func Add[T int | string | float64](a, b T) T {
+    return a + b
+}
+
+// 类型别名
+type intAAA int8
+
+// MyType 自定义泛型类型
+type MyType interface {
+    // 在类型前加 ～ 可以自动进行类型推断，支持所有相同类型的类型别名参数，如intAAA
+    int | ~int8 | int16 | int32 | float64
+}
+
+func CompareNum[T MyType](a, b T) T {
+    if a &gt; b {
+        return a
+    }
+    return b
+}
+
+func main() {
+    // 整数切片
+    intSlice := []int{1, 2, 3, 4, 5}
+    processSlice(intSlice)
+    // float64 切片
+    float64Slice := []float64{1.1, 2.2, 3.3, 4.4, 5.5}
+    processSlice(float64Slice)
+    // float32 切片
+    float32Slice := []float32{1.1, 2.2, 3.3, 4.4, 5.5}
+    processSlice(float32Slice)
+
+    // 声明切片类型的泛型
+    type Slice[T int64 | float64 | float32] []T
+    var s Slice[int64] = []int64{1, 2, 3}
+    fmt.Println(s)
+    // 声明map类型的泛型
+    type MyMap[KEY int | string, VALUE string | float32] map[KEY]VALUE
+    var myMap MyMap[int, string] = map[int]string{
+        1: &quot;rsq&quot;,
+        2: &quot;zk&quot;,
+    }
+    for k, v := range myMap {
+        fmt.Println(k, v)
+    }
+    // 泛型特殊用法
+    type Slice2[T int | string | float64] int
+    var s2 Slice2[int] = 1
+    //var ss Slice2[string] = &quot;2&quot; // 这种写法会报错
+    fmt.Println(s2)
+
+    // 调用泛型函数求和
+    var i MySlice[int] = []int{2, 3, 4, 5}
+    var s3 MySlice[string] = []string{&quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;}
+    var f MySlice[float64] = []float64{2.1, 3.2, 4.3, 5.4}
+    fmt.Println(i.Sum())
+    fmt.Println(s3.Sum())
+    fmt.Println(f.Sum())
+
+    // 调用泛型函数
+    fmt.Println(Add(1, 2))
+
+    // 自定义泛型类型
+    fmt.Println(CompareNum(1, 2))
+    fmt.Println(CompareNum[int](1, 2))
+    // 类型别名
+    fmt.Println(CompareNum[intAAA](1, 2))
+}
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">Go 语言 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="grpc/index.html">gRPC</a></li>
+<li class=""><a href="index.html">Go 语言</a></li>
+<li class=""><a href="channel.html">Channel</a></li>
+<li class=""><a href="container-list.html">Container List</a></li>
+<li class="cur"><a href="generics.html">Generics</a></li>
+<li class=""><a href="gorm.html">GORM</a></li>
+<li class=""><a href="sync.html">Sync</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../feed.xml">RSS</a>
+      <a href="../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../assets/js/main.js"></script>
+</body>
+</html>

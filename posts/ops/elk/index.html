@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ELK · rensongqi</title>
+<meta name="description" content="ELK">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>ELK</span></div>
+
+<div class="doc-title">
+  <h1>ELK</h1>
+  <div class="meta">2026-09-14 · 约 1090 字 · 源自 notes-src/ops/elk/README.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#ELK</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#_1">架构图</a></li><li class="l2"><a href="#1-elk">1 多节点部署ELK</a></li><li class="l3"><a href="#11-es">1.1 ES</a></li><li class="l3"><a href="#12-kafka">1.2 Kafka</a></li><li class="l3"><a href="#13-logstash">1.3 Logstash</a></li><li class="l3"><a href="#14-filebeat">1.4 Filebeat</a></li><li class="l2"><a href="#2-es">2 单节点部署ES（带密码）</a></li></ul></nav>
+<main>
+<ul>
+<li><a href="#架构图">架构图</a></li>
+<li><a href="#1-多节点部署elk">1 多节点部署ELK</a></li>
+<li><a href="#11-es">1.1 ES</a></li>
+<li><a href="#12-kafka">1.2 Kafka</a></li>
+<li><a href="#13-logstash">1.3 Logstash</a></li>
+<li><a href="#14-filebeat">1.4 Filebeat</a></li>
+<li><a href="#2-单节点部署es带密码">2 单节点部署ES（带密码）</a></li>
+</ul>
+<h1 id="_1">架构图</h1>
+<p><img alt="elk" src="../../../assets/images/notes/elk.png" /></p>
+<h1 id="1-elk">1 多节点部署ELK</h1>
+<h2 id="11-es">1.1 ES</h2>
+<p>以三节点为例</p>
+<pre><code class="language-bash">mkdir /data/elk/elasticsearch/{config,data,plugins}
+chmod -R 777 config data plugins
+
+# vim /data/elk/config/elasticsearch.yml
+# es-node1配置文件如下
+cluster.name: material-es
+node.name: es-node1
+node.roles: [ master, data ]
+xpack.security.enabled: false
+network.host: 0.0.0.0
+network.publish_host: 172.16.0.31
+http.port: 9200
+discovery.seed_hosts: [&quot;172.16.0.31:9300&quot;, &quot;172.16.0.32:9300&quot;, &quot;172.16.0.33:9300&quot;]
+cluster.initial_master_nodes: [&quot;es-node1&quot;,&quot;es-node2&quot;,&quot;es-node3&quot;]
+http.cors.enabled: true
+http.cors.allow-origin: &quot;*&quot;
+
+# es-node2配置文件如下
+cluster.name: material-es
+node.name: es-node2
+node.roles: [ master, data ]
+xpack.security.enabled: false
+network.host: 0.0.0.0
+network.publish_host: 172.16.0.32
+http.port: 9200
+discovery.seed_hosts: [&quot;172.16.0.31:9300&quot;, &quot;172.16.0.32:9300&quot;, &quot;172.16.0.33:9300&quot;]
+cluster.initial_master_nodes: [&quot;es-node1&quot;,&quot;es-node2&quot;,&quot;es-node3&quot;]
+http.cors.enabled: true
+http.cors.allow-origin: &quot;*&quot;
+
+# es-node3配置文件如下
+cluster.name: material-es
+node.name: es-node3
+node.roles: [ master, data ]
+xpack.security.enabled: false
+network.host: 0.0.0.0
+network.publish_host: 172.16.0.33
+http.port: 9200
+discovery.seed_hosts: [&quot;172.16.0.31:9300&quot;, &quot;172.16.0.32:9300&quot;, &quot;172.16.0.33:9300&quot;]
+cluster.initial_master_nodes: [&quot;es-node1&quot;,&quot;es-node2&quot;,&quot;es-node3&quot;]
+http.cors.enabled: true
+http.cors.allow-origin: &quot;*&quot;
+</code></pre>
+<p>启动容器
+docker-compose.yml</p>
+<pre><code class="language-yml">services:
+  elasticsearch:
+    image: elasticsearch:8.2.0
+    restart: always
+    ports:
+      - &quot;9200:9200&quot;
+      - &quot;9300:9300&quot;
+    environment:
+      ES_JAVA_OPTS: &quot;-Xms5000m -Xmx5000m&quot;
+    volumes:
+      - /data/elk/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - /data/elk/elasticsearch/certs:/usr/share/elasticsearch/certs
+      - /disk01/elk/elasticsearch/data:/usr/share/elasticsearch/data
+      - /disk01/elk/elasticsearch/plugins:/usr/share/elasticsearch/plugins
+</code></pre>
+<h2 id="12-kafka">1.2 Kafka</h2>
+<p>docker-compose.yml</p>
+<pre><code class="language-yml">services:
+  zookeeper:
+    image: quay.io/strimzi/kafka:0.45.0-kafka-3.9.0
+    command: [
+        &quot;sh&quot;, &quot;-c&quot;,
+        &quot;bin/zookeeper-server-start.sh config/zookeeper.properties&quot;
+      ]
+    ports:
+      - &quot;2181:2181&quot;
+    environment:
+      LOG_DIR: /tmp/logs
+  kafka:
+    image: quay.io/strimzi/kafka:0.45.0-kafka-3.9.0
+    command: [
+      &quot;sh&quot;, &quot;-c&quot;,
+      &quot;bin/kafka-server-start.sh config/server.properties --override listeners=$${KAFKA_LISTENERS} --override advertised.listeners=$${KAFKA_ADVERTISED_LISTENERS} --override zookeeper.connect=$${KAFKA_ZOOKEEPER_CONNECT}&quot;
+    ]
+    depends_on:
+      - zookeeper
+    ports:
+      - &quot;9092:9092&quot;
+    environment:
+      LOG_DIR: &quot;/tmp/logs&quot;
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+</code></pre>
+<h2 id="13-logstash">1.3 Logstash</h2>
+<p>logstash.conf</p>
+<pre><code>input {
+    kafka {
+        topics_pattern =&gt; &quot;.*&quot;
+        auto_offset_reset =&gt; &quot;earliest&quot;
+        bootstrap_servers =&gt; [&quot;kafka:9092&quot;]
+        group_id =&gt; &quot;logstash&quot;
+        decorate_events =&gt; true
+        codec =&gt; &quot;json&quot;
+    }
+}
+
+filter {
+    mutate {
+        remove_field =&gt; [&quot;[event][original]&quot;]
+    }
+}
+
+output {
+    elasticsearch {
+        hosts =&gt; [&quot;172.16.0.31:9200&quot;, &quot;172.16.0.32:9200&quot;, &quot;172.16.0.33:9200&quot;]
+        index =&gt; &quot;%{[@metadata][kafka][topic]}-%{+YYYY.MM.dd}&quot;
+    }
+}
+</code></pre>
+<p>docker-compose.yml</p>
+<pre><code class="language-yml">services:
+  logstash:
+    image: logstash:8.4.2
+    hostname: logstash
+    container_name: logstash
+    volumes:
+      #- /elk/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,Z
+      - /data/elk/logstash/conf.d:/usr/share/logstash/pipeline:ro,Z
+    ports:
+      - &quot;5044:5044&quot;
+      - &quot;50000:50000/tcp&quot;
+      - &quot;50000:50000/udp&quot;
+      - &quot;9600:9600&quot;
+    environment:
+      - LS_JAVA_OPTS=-Xms2048m -Xmx2048m
+      - LOGSTASH_INTERNAL_PASSWORD=xxxxxx
+      - TZ=Asia/Shanghai
+    restart: always
+    networks:
+      - elk
+</code></pre>
+<h2 id="14-filebeat">1.4 Filebeat</h2>
+<p>若有需要可单独部署</p>
+<p>docker-compose.yml</p>
+<pre><code class="language-yml">version: '3'
+services:
+  filebeat:
+    image: filebeat:8.4.2
+    user: root
+    hostname: &quot;${HOSTNAME}&quot;
+    command: filebeat -e -strict.perms=false
+    volumes:
+      - ./filebeat.docker.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./system.yml:/usr/share/filebeat/modules.d/system.yml:ro
+      - /var/log:/var/log:ro
+    restart: always
+</code></pre>
+<p>filebeat.docker.yml</p>
+<pre><code class="language-yml">filebeat.config:
+  modules:
+    path: ${path.config}/modules.d/*.yml
+    reload.enabled: true
+
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      hints.enabled: true
+
+processors:
+- drop_event:
+    when:
+      contains:
+        container.image.name: &quot;filebeat:8.4.2&quot;
+- add_fields:
+    fields:
+      log_source: &quot;server&quot;
+
+setup.kibana:
+    host: &quot;172.16.0.31:5601&quot;
+
+# ================================== Outputs ===================================
+output.kafka:
+  hosts: [&quot;172.16.0.31:9092&quot;, &quot;172.16.0.32:9092&quot;, &quot;172.16.0.33:9092&quot;]
+  topic: '%{[fields.topic]}' # 根据topic自动创建对应的index
+  topics:
+    - topic: &quot;system&quot;
+      when.contains:
+        event.module: &quot;system&quot;
+  partition.round_robin:
+    reachable_only: false
+  required_acks: 1
+  compression: gzip
+  max_message_bytes: 1000000
+</code></pre>
+<h1 id="2-es">2 单节点部署ES（带密码）</h1>
+<blockquote>
+<p>需要账号密码管理的es，版本为 elasticsearch7.x</p>
+</blockquote>
+<p><code>config/elasticsearch.yml</code></p>
+<pre><code class="language-bash">cluster.name: material-es
+node.name: es-node1
+xpack.security.enabled: true
+xpack.security.transport.ssl.enabled: true
+network.host: 0.0.0.0
+network.publish_host: 172.16.1.108
+http.port: 9200
+http.cors.enabled: true
+http.cors.allow-origin: &quot;*&quot;
+ingest.geoip.downloader.enabled: false
+</code></pre>
+<p><code>config/kibana.yml</code></p>
+<pre><code class="language-bash">i18n.locale: zh-CN
+server.host: &quot;0.0.0.0&quot;
+server.shutdownTimeout: &quot;5s&quot;
+elasticsearch.hosts: [ &quot;http://172.16.1.108:19200&quot; ]
+monitoring.ui.container.elasticsearch.enabled: true
+elasticsearch.username: &quot;elastic&quot;
+elasticsearch.password: &quot;xxxxxxxx&quot;
+</code></pre>
+<p><code>docker-compose.yml</code></p>
+<pre><code class="language-yml">version: '3.7'
+services:
+  elasticsearch:
+    image: docker.io/elasticsearch:7.17.25
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms5000m -Xmx5000m
+    ports:
+      - &quot;9200:9200&quot;
+      - &quot;9300:9300&quot;
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ./config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./certs:/usr/share/elasticsearch/certs
+      - /elk/data:/usr/share/elasticsearch/data
+    networks:
+      - es-net
+
+  kibana:
+    image: docker.io/kibana:7.17.25
+    hostname: kibana
+    container_name: kibana
+    volumes: 
+      - ./config/kibana.yml:/usr/share/kibana/config/kibana.yml
+    ports:
+      - &quot;15601:5601&quot;
+    environment:
+      - TZ=Asia/Shanghai
+    restart: always
+    networks:
+      - es-net
+
+networks:
+  es-net:
+    driver: bridge
+</code></pre>
+<p>启动容器</p>
+<pre><code class="language-bash">docker-compose up -d elasticsearch
+
+# 进入容器创建初始密码
+docker exec -it elasticsearch bash
+
+# interactive: 手动指定密码
+# auto: 随机生成密码
+./bin/elasticsearch-setup-passwords interactive
+
+# 重启容器后生效
+docker-compose restart elasticsearch
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class="cur"><a href="index.html">ELK</a></li>
+<li class=""><a href="kafka/index.html">Kafka</a></li>
+<li class=""><a href="logstash/index.html">修改logstash配置</a></li>
+<li class=""><a href="../git/index.html">Git</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

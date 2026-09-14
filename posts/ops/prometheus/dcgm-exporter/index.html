@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DCGM Exporter · rensongqi</title>
+<meta name="description" content="DCGM Exporter">
+<link rel="stylesheet" href="../../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../../index.html">首页</a>
+      <a href="../../../../archive.html">归档</a>
+      <a href="../../../../storage.html">存储</a>
+      <a href="../../../../notes/" class="is-active">笔记</a>
+      <a href="../../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../../index.html">首页</a> / <a href="../../../../notes/">笔记</a> / <a href="../../../../notes/ops.html">运维工具</a> / <span>DCGM Exporter</span></div>
+
+<div class="doc-title">
+  <h1>DCGM Exporter</h1>
+  <div class="meta">2026-09-14 · 约 300 字 · 源自 notes-src/ops/prometheus/dcgm_exporter/README.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#Prometheus</span><span>#DCGM Exporter</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#install-nvidia-docker">Install nvidia-docker</a></li><li class="l3"><a href="#centos">Centos</a></li><li class="l3"><a href="#ubuntu">Ubuntu</a></li><li class="l2"><a href="#run-dcgm_exporter">Run dcgm_exporter</a></li></ul></nav>
+<main>
+<ul>
+<li><a href="#install-nvidia-docker">Install nvidia-docker</a></li>
+<li><a href="#centos">Centos</a></li>
+<li><a href="#ubuntu">Ubuntu</a></li>
+<li><a href="#run-dcgm_exporter">Run dcgm_exporter</a></li>
+</ul>
+<h1 id="install-nvidia-docker">Install nvidia-docker</h1>
+<h2 id="centos">Centos</h2>
+<pre><code class="language-bash"># 配置repo
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.repo | \
+  sudo tee /etc/yum.repos.d/nvidia-docker.repo
+
+# import repo key
+DIST=$(sed -n 's/releasever=//p' /etc/yum.conf)
+DIST=${DIST:-$(. /etc/os-release; echo $VERSION_ID)}
+sudo yum makecache
+
+# 安装nvidia-docker2
+sudo yum install nvidia-docker2
+
+# 修改daemon.json ，把cgroupdriver改为systemd
+sed -i 's/cgroupfs/systemd/g' /etc/docker/daemon.json
+
+# daemon reload &amp;&amp; 重启docker
+systemctl daemon-reload
+systemctl restart docker
+
+# 进行测试
+sudo docker run --rm --gpus all nvidia/cuda:11.0.3-base-ubuntu18.04 nvidia-smi
+</code></pre>
+<h2 id="ubuntu">Ubuntu</h2>
+<pre><code class="language-bash"># Ubuntu 配置repo(没有key会报)
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | \sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+
+# Ubuntu import repo key
+curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | \sudo apt-key add -
+sudo apt update
+
+# Ubuntu 安装sudo apt-get install nvidia-docker2
+sudo apt install nvidia-docker2
+
+# 修改daemon.json ，把cgroupdriver改为systemd
+sed -i 's/cgroupfs/systemd/g' /etc/docker/daemon.json
+
+# daemon reload &amp;&amp; 重启docker
+systemctl daemon-reload
+systemctl restart docker
+
+# 进行测试
+sudo docker run --rm --gpus all nvidia/cuda:11.0.3-base-ubuntu18.04 nvidia-smi
+
+</code></pre>
+<h1 id="run-dcgm_exporter">Run dcgm_exporter</h1>
+<pre><code class="language-bash">nvidia-docker run --cap-add SYS_ADMIN --name 249dcgm-exporter --restart=unless-stopped -d -p 9400:9400 nvidia/dcgm-exporter:2.2.9-2.4.0-ubuntu18.04
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../../canal/index.html">Canal</a></li>
+<li class=""><a href="../../consul/index.html">Consul</a></li>
+<li class=""><a href="../../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../../elk/index.html">ELK</a></li>
+<li class=""><a href="../../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="index.html">DCGM Exporter</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../../feed.xml">RSS</a>
+      <a href="../../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../../assets/js/main.js"></script>
+</body>
+</html>

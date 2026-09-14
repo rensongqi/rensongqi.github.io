@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go · Memory Management · rensongqi</title>
+<meta name="description" content="malloc：内存分配（memory allocation）">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/interview.html">面试</a> / <span>Go · Memory Management</span></div>
+
+<div class="doc-title">
+  <h1>Go · Memory Management</h1>
+  <div class="meta">2026-09-14 · 约 1640 字 · 源自 notes-src/interview/go/memory_management.md</div>
+  <div class="doc-tags"><span>#面试</span><span>#Go</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1-golang">1 Golang内存管理简述</a></li><li class="l2"><a href="#2">2 内存命中率</a></li><li class="l2"><a href="#3-cpu">3 CPU里的寄存器</a></li><li class="l2"><a href="#4">4 上下文切换</a></li></ul></nav>
+<main>
+<h1 id="1-golang">1 Golang内存管理简述</h1>
+<p>malloc：内存分配（memory allocation） </p>
+<p>1、go可以实现自动的内存管理，在操作系统中，go有两个地方可以分配内存，一个全局堆空间用来动态分配内存，另一个是每个goroutine都有自身的栈空间。</p>
+<ul>
+<li>
+<p>栈空间是通过压栈出栈方式自动分配释放的，由系统管理，使用起来高效无感知。</p>
+</li>
+<li>
+<p>堆空间是用以动态分配的，由程序自己管理分配和释放。Go 语言虽然可以帮我们自动管理分配和释放，但是代价也是很高的。</p>
+</li>
+</ul>
+<p>2、go本身更倾向于在栈空间分配内存，因为这块代价比较低，只需要两个CPU操作指令：一是push数据到栈空间完成分配，二是将数据从栈空间释放。但不是所有的数据都在栈空间，栈空间的分配要求变量的生命周期和内存足迹（代表和一个变量相关的所有内存块）可以在编译时确定，否则就会在堆上分配。</p>
+<p>3、go的哪些变量是分配到堆上哪些变量是分配到栈上一般会按照数据类型来，go的数据类型大致分为两种类型，一种是值类型，另一种是引用类型。</p>
+<ul>
+<li>值类型包括：基本数据类型 int、float、bool、string、数组和结构体。</li>
+</ul>
+<p>值类型变量直接存储时，内存通常在栈中分配（golang中有逃逸分析，所以有可能值类型还会在堆中），Go编辑器会根据变量使用多长时间来决定在哪，比如一个变量生存时间比较长，那可能就放在堆区，还比如有一个值类型在其他函数中可能也会用到，那么这个值类型就有可能会在堆区存放</p>
+<ul>
+<li>引用类型：指针、切片、map、channel管道、interface等都是引用类型。</li>
+</ul>
+<p>引用类型变量存储的是一个内存地址，这个地址对应的空间才是真正存储数据（值），内存通常在堆上分配，当没有任何变量引用这个地址时，该地址对应的数据空间就成为一个垃圾，由GC来回收。</p>
+<h1 id="2">2 内存命中率</h1>
+<p>假设在 n 次内存访问中，出现命中的次数是 m，那么 m / n * 100% 就表示命中率，这是衡量内存管理程序好坏的一个很重要的指标。</p>
+<p>如果物理内存不足了，数据会在主存和磁盘之间频繁交换，命中率很低，性能出现急剧下降，我们称这种现象叫内存颠簸。这时你会发现系统的 swap 空间利用率开始增高， CPU 利用率中 iowait 占比开始增高。</p>
+<p>大多数情况下，只要物理内存够用，页命中率不会非常低，不会出现内存颠簸的情况。因为大多数程序都有一个特点，就是局部性。</p>
+<p><strong>局部性就是说被引用过一次的存储器位置，很可能在后续再被引用多次；而且在该位置附近的其他位置，也很可能会在后续一段时间内被引用。</strong></p>
+<p>计算机使用一级级的缓存来提升性能，归根结底就是利用了局部性的特征，如果没有这个特性，一级级的缓存不会有那么大的作用。所以一个局部性很好的程序运行速度会更快。</p>
+<p>局部性好的程序，可以提高缓存命中率，这对底层系统的内存管理是很友好的，可以提高程序的性能。CPU Cache 层面的低命中率导致的是程序运行缓慢，内存层面的低命中率会出现内存颠簸，出现这种现象时你的服务基本上已经瘫痪了。Go 语言的内存管理是参考 tcmalloc 实现的，它其实就是利用好了 OS 管理内存的这些特点，来最大化内存分配性能的。</p>
+<h1 id="3-cpu">3 CPU里的寄存器</h1>
+<p>其实就是我们常说的：Cache，有1级 和 2级和3级。L1容量比较小，L2集成在主板上，所使用的为静态RAM，所以L2容量会多一些。</p>
+<p>L1是集成在CPU内部的寄存器(L1与CPU 同步），访问它速度自然很快，但容量比较小，L1 64K L2现在最高的就2MB，这显然是不够的，所以我们都需要扩展它，内存(DDR RAM)就是扩展的“寄存器”，它的访问速度就比 Cache 速度慢！CPU 在运行某计算时，它会把使用频率高的数据放到L1，L2，把不常用的数据保存在RAM中，需要访问的时候再读入Cache，当然相比之下硬盘的速度就更低。</p>
+<h1 id="4">4 上下文切换</h1>
+<p>上下文切换指的是<a href="https://baike.baidu.com/item/内核/108410">内核</a>（操作系统的核心）在<a href="https://baike.baidu.com/item/CPU/120556">CPU</a>上对进程或者线程进行切换。上下文切换过程中的信息被保存在<a href="https://baike.baidu.com/item/进程控制块/7205297">进程控制块</a>（PCB-Process Control Block）中。PCB又被称作切换帧（SwitchFrame）。上下文切换的信息会一直被保存在CPU的内存中，直到被再次使用。</p>
+<p>上下文切换的基本原理就是当发生任务切换时, 保存当前任务的寄存器到内存中, 将下一个即将要切换过来的任务的寄存器状态恢复到当前CPU寄存器中, 使其继续执行, 同一时刻只允许一个任务独享寄存器。在任务切换的过程中是涉及任务上下文的保存和恢复操作, 而任务上下文切换操作的性能是衡量操作系统性能的一个重要指标。任务上下文切换指标可以反映出操作系统在多任务环境下的处理能力。</p>
+<p>上下文的切换流程如下：
+1. 挂起一个进程，将这个进程在CPU中的状态（上下文信息）存储于内存的PCB中。
+2. 在PCB中检索下一个进程的上下文并将其在CPU的寄存器中恢复。
+3. 跳转到程序计数器所指向的位置（即跳转到进程被中断时的代码行）并恢复该进程。</p>
+<nav class="doc-series">
+  <p class="lb">面试 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="index.html">Golang面试题</a></li>
+<li class=""><a href="../index.html">面试</a></li>
+<li class=""><a href="../linux/index.html">遇到过比较深刻的问题记录</a></li>
+<li class=""><a href="../mysql/index.html">MySQL</a></li>
+<li class=""><a href="../redis/index.html">一致性Hash</a></li>
+<li class=""><a href="../docker/docker-shim.html">Docker Shim</a></li>
+<li class=""><a href="coding.html">Go · Coding</a></li>
+<li class=""><a href="escape-analysis.html">Go · Escape Analysis</a></li>
+<li class=""><a href="gc.html">Go · GC</a></li>
+<li class=""><a href="goroutine-safety.html">Goroutine Safety</a></li>
+<li class=""><a href="injection.html">依赖注入</a></li>
+<li class="cur"><a href="memory-management.html">Go · Memory Management</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

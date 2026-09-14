@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>通过shell脚本实现弱密码检查 · rensongqi</title>
+<meta name="description" content="通过shell脚本实现弱密码检查">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>通过shell脚本实现弱密码检查</span></div>
+
+<div class="doc-title">
+  <h1>通过shell脚本实现弱密码检查</h1>
+  <div class="meta">2026-09-14 · 约 730 字 · 源自 notes-src/ops/openssl/check_weak_pass.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#OpenSSL</span></div>
+</div>
+
+<div class="layout no-toc">
+
+<main>
+<ol>
+<li>对比/etc/shadow文件中guest用户是否存在弱密码，支持主流的md5、blowfish、sha-256、sha-512、yescrypt算法</li>
+<li>存在弱密码则修改密码，并把新密码加盐后使用公钥加密存放在/etc/product/.passwd文件中</li>
+<li>如果密码修改失败，则用户密码回退至旧密码</li>
+<li>每隔15天密码将自动重置以防止密码泄露</li>
+</ol>
+<pre><code class="language-bash">#!/bin/bash
+
+# weak password example
+dict=(&quot;!@#&quot;
+&quot;!@#$%^&quot;
+&quot;!@#$%^&amp;*&quot;
+&quot;!@#$%^&amp;*()_+&quot;
+&quot;%resu%&quot;
+&quot;%tsoh%&quot;
+&quot;%user%&quot;
+&quot;%user%!&quot;
+&quot;%user%!@#&quot;
+&quot;%user%.&quot;
+&quot;%user%00&quot;
+&quot;%user%111&quot;
+&quot;%user%12&quot;
+&quot;%user%123&quot;
+&quot;%user%1234&quot;
+&quot;%user%888&quot;
+&quot;%user%@&quot;
+&quot;%user%ab&quot;
+&quot;%user%abc&quot;
+&quot;%user%abcd&quot;
+&quot;(%user%)&quot;
+&quot;.%user%.&quot;
+&quot;000000&quot;
+&quot;00000000&quot;
+&quot;111111&quot;
+&quot;11111111&quot;
+&quot;111222&quot;
+&quot;123&quot;
+&quot;123!@#&quot;
+&quot;123123&quot;
+&quot;123321&quot;
+&quot;1234&quot;
+&quot;12345&quot;
+&quot;123456&quot;
+&quot;1234567&quot;
+&quot;12345678&quot;
+&quot;123456789&quot;
+&quot;1234567890-=&quot;
+&quot;123qwe&quot;
+&quot;222222&quot;
+&quot;333333&quot;
+&quot;444444&quot;
+&quot;555555&quot;
+&quot;654321&quot;
+&quot;6543210&quot;
+&quot;6666&quot;
+&quot;666666&quot;
+&quot;66666666&quot;
+&quot;666888&quot;
+&quot;816357&quot;
+&quot;8888&quot;
+&quot;888888&quot;
+&quot;88888888&quot;
+&quot;999999&quot;
+&quot;99999999&quot;
+&quot;Admin123&quot;
+&quot;Guest123&quot;
+&quot;^%user%^&quot;
+&quot;1234567890-=&quot;
+&quot;aaaaaa&quot;
+&quot;ab&quot;
+&quot;abc&quot;
+&quot;abc123&quot;
+&quot;abcd&quot;
+&quot;abcd1234&quot;
+&quot;abcde&quot;
+&quot;abcdef&quot;
+&quot;abcdefg&quot;
+&quot;abcdefgh&quot;
+&quot;abcdefghi&quot;
+&quot;admin&quot;
+&quot;asdfghjkl&quot;
+&quot;asdfjkl;&quot;
+&quot;exit&quot;
+&quot;guest&quot;
+&quot;iloveyou&quot;
+&quot;master&quot;
+&quot;password&quot;
+&quot;qazwsx&quot;
+&quot;qq123456&quot;
+&quot;qweasd&quot;
+&quot;root&quot;
+&quot;taobao&quot;
+&quot;test&quot;
+&quot;test123&quot;
+&quot;wang1234&quot;
+&quot;woaini&quot;
+&quot;xiaoming&quot;
+&quot;zzzzzz&quot;
+&quot;xxxxxxxx&quot;
+&quot; &quot;)
+
+pub_key=&quot;-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA6F+9rKUlGqEo02NOkRGK\nlsgpMVS5mQKmLCpwOvQzGjOUZM08aC1q/Ygt9iXS/FdSrcB7b3cl99sMizZCdHRz\nHEWH9mmeArjY60Nm4QL/cFD8YTm8z0SAcwJZQT1cPGG5YkoQeTnwYLoxjVx75fzt\nsv2iTscLQZ+vXu1oO1k7Bh0bK8FLEsifp9o5a5CqpvYJTJiCdX0xAHfFu8HBsVlH\nklow+Eghc0PPa16pJg0o8VNcHMZdpsHL0k134Mm0rehbuYpuAL2s8l69BiU/44+Y\nfK+hm8frYjVoEBOt2EBKeFbeeHM0YotKkogKnFQ87vTrrvBcPW7YDiKO+5FVUqQY\nQQIDAQAB\n-----END PUBLIC KEY-----&quot;
+pub_path=&quot;/tmp/client.pub&quot;
+salt_key=&quot;pAOx20AkCxCrvZqv&quot;
+pass_dir=/etc/product
+pass_file=&quot;.passwd&quot;
+pass_file_path=&quot;$pass_dir/$pass_file&quot;
+
+notify_iot() {
+    echo &quot;notifying iot ...&quot;
+}
+
+change_pass() {
+    user=$1
+    old_password=$2
+    new_password=$3
+
+    if [[ ! -d $pass_dir ]]; then
+        mkdir -p $pass_dir
+    fi
+    # change passwd
+    echo &quot;$user:$new_password&quot; | chpasswd
+
+    # check whether the password is successfully changed
+    if [ $? -eq 0 ]; then
+        echo &quot;$new_password$salt_key&quot; &gt; &quot;$pass_file_path-temp&quot;
+        encrypt_pass_file
+        echo &quot;Password for $1 has been successfully changed.&quot;
+    else
+        # if the change fails, roll back the old password
+        echo &quot;$user:$old_password&quot; | chpasswd
+    fi
+}
+
+change_current_user_pass() {
+    # get file modify time
+    modification_time=$(stat -c %Y &quot;$pass_file_path&quot;)
+
+    # get current time
+    current_time=$(date +%s)
+
+    # calculate the time difference
+    time_difference=$((current_time - modification_time))
+
+    # check if the password file has been modified for more than 15 days
+    if [ $time_difference -gt $((15 * 24 * 3600)) ]; then
+        old_pass_en=$(&lt;$pass_file_path-temp)
+        old_pass=$(echo $old_pass_en | cut -c 1-12)
+        generate_rand_pass
+        change_pass &quot;guest&quot; $old_pass $new_pass
+    fi
+}
+
+generate_rand_pass() {
+    pass_length=12
+    pass=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9')
+    new_pass=${pass:0:$pass_length}
+}
+
+check_pass() {
+    host=$(hostname -s)
+    tsoh=$(echo $host | rev)
+
+    while IFS=':' read -r username password _; do
+        # sha256 sha-512 ...
+        if [[ ! $password =~ [!!|*] ]] &amp;&amp; [[ ! $password =~ ^\$y\$j9T ]]; then
+            IFS='$' read -r _ const salt hash &lt;&lt;&lt; &quot;$password&quot;
+            for d in &quot;${dict[@]}&quot;; do
+                t=&quot;$d&quot;
+                resu=$(echo &quot;$username&quot; | rev)
+
+                t=&quot;${t//\%user\%/$username}&quot;
+                t=&quot;${t//\%resu\%/$resu}&quot;
+
+                t=&quot;${t//\%host\%/$host}&quot;
+                t=&quot;${t//\%tsoh\%/$tsoh}&quot;
+
+                hashed=$(perl -e &quot;print crypt('$t', '\$$const\$$salt\$')&quot;)
+
+                if [ &quot;$hashed&quot; == &quot;$password&quot; ] &amp;&amp; [ &quot;$username&quot; == &quot;guest&quot; ]; then
+                    generate_rand_pass
+                    change_pass $username $t $new_pass
+                    echo &quot;$username [$t]&quot;
+                    break
+                fi
+            done
+        # yescrypt algorithm
+        elif [[ $password =~ ^\$y\$j9T ]]; then
+            IFS='$' read -r _ const str salt hash &lt;&lt;&lt; &quot;$password&quot;
+            for d in &quot;${dict[@]}&quot;; do
+                t=&quot;$d&quot;
+                resu=$(echo &quot;$username&quot; | rev)
+
+                t=&quot;${t//\%user\%/$username}&quot;
+                t=&quot;${t//\%resu\%/$resu}&quot;
+
+                t=&quot;${t//\%host\%/$host}&quot;
+                t=&quot;${t//\%tsoh\%/$tsoh}&quot;
+
+                hashed=$(perl -e &quot;print crypt('$t', '\$$const\$$str\$$salt\$')&quot;)
+
+                if [ &quot;$hashed&quot; == &quot;$password&quot; ] &amp;&amp; [ &quot;$username&quot; == &quot;guest&quot; ]; then
+                    generate_rand_pass
+                    change_pass $username $t $new_pass
+                    echo &quot;$username [$t]&quot;
+                    break
+                fi
+            done
+        fi
+    done &lt; /etc/shadow
+}
+
+encrypt_pass_file() {
+    # save pub_key to file
+    echo -e $pub_key &gt; $pub_path
+
+    # use public key to encrypt
+    openssl rsautl -encrypt -pubin -inkey $pub_path -in $pass_file_path-temp -out $pass_file_path
+
+    # use private key to decrypt
+    # openssl rsautl -decrypt -inkey client.key -in $pass_file_path -out $pass_file_path-decode
+
+    # delete pub_key file
+    rm -f $pub_path
+}
+
+func() {
+    echo &quot;Usage: check.sh [-a|-c|-h]&quot;
+    echo &quot;&quot;
+    echo &quot;    -a, automatically check for weak passwords and change them&quot;
+    echo &quot;    -c, changing the password of an existing user&quot;
+    exit -1
+}
+
+while getopts ':ach' OPT; do
+    case $OPT in
+        a) check_pass;;
+        c) change_current_user_pass;;
+        h) func;;
+        ?) func;;
+    esac
+done
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../elk/index.html">ELK</a></li>
+<li class=""><a href="../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="check-weak-pass.html">通过shell脚本实现弱密码检查</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

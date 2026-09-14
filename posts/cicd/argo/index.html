@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Argo CD · rensongqi</title>
+<meta name="description" content="获取token">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/cicd.html">CI/CD</a> / <span>Argo CD</span></div>
+
+<div class="doc-title">
+  <h1>Argo CD</h1>
+  <div class="meta">2026-09-14 · 约 1220 字 · 源自 notes-src/cicd/argo/README.md</div>
+  <div class="doc-tags"><span>#CI/CD</span><span>#Argo CD</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1">1 部署</a></li><li class="l2"><a href="#2-argo-workflows-demo">2 Argo workflows demo</a></li><li class="l3"><a href="#21-argo-hello-world">2.1 Argo Hello World</a></li><li class="l3"><a href="#22-argo-artifactory">2.2 Argo Artifactory</a></li><li class="l3"><a href="#23-argo-cicd">2.3 Argo CICD</a></li><li class="l2"><a href="#_1">参考文章</a></li></ul></nav>
+<main>
+<h1 id="1">1 部署</h1>
+<pre><code class="language-bash">kubectl create ns argo
+kubectl apply -f quick-start-mysql.yaml -n argo
+</code></pre>
+<p>获取token</p>
+<pre><code class="language-bash"># 在argo server的pod中获取token
+kubectl exec -it argo-server-7b59b5f8cf-p8kkf -n argo -- argo auth token
+</code></pre>
+<p>部署ArgoCli</p>
+<pre><code class="language-bash"># Download the binary
+curl -sLO https://github.com/argoproj/argo-workflows/releases/download/v3.3.8/argo-linux-amd64.gz
+
+# Unzip
+gunzip argo-linux-amd64.gz
+
+# Make binary executable
+chmod +x argo-linux-amd64
+
+# Move binary to path
+mv ./argo-linux-amd64 /usr/bin/argo
+
+# Test installation
+argo version
+</code></pre>
+<p>部署argo event</p>
+<pre><code class="language-bash"># create ns
+kubectl create namespace argo-events
+
+# 1. Deploy Argo Events SA, ClusterRoles, and Controller for Sensor, EventBus, and EventSource.
+kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-events/stable/manifests/install.yaml
+# 安装认证admission控制器
+kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-events/stable/manifests/install-validating-webhook.yaml
+
+ * On GKE, you may need to grant your account the ability to create new custom resource definitions and clusterroles        kubectl create clusterrolebinding YOURNAME-cluster-admin-binding --clusterrole=cluster-admin --user=YOUREMAIL@gmail.com * On OpenShift:
+     - Make sure to grant `anyuid` scc to the service account.        oc adm policy add-scc-to-user anyuid system:serviceaccount:argo-events:default     - Add update permissions for the `deployments/finalizers` and `clusterroles/finalizers` of the argo-events-webhook ClusterRole(this is necessary for the validating admission controller)        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterroles/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - apps
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+
+# deploy
+kubectl apply -n argo-events -f https://raw.githubusercontent.com/argoproj/argo-events/stable/examples/eventbus/native.yaml
+</code></pre>
+<h1 id="2-argo-workflows-demo">2 Argo workflows demo</h1>
+<h2 id="21-argo-hello-world">2.1 Argo Hello World</h2>
+<pre><code class="language-yaml">apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: hello-world-
+  namespace: argo
+  labels:
+    workflows.argoproj.io/archive-strategy: &quot;false&quot;
+spec:
+  entrypoint: rsqsay
+  templates:
+  - name: rsqsay
+    container: 
+      image: harbor.rsq.cn/busybox/busybox:1.33.1
+      command: [echo]
+      args: [&quot;hello world rsq&quot;]
+  - name: gen-random-int
+    container:
+      image: harbor.rsq.cn/busybox/busybox:1.33.1
+      command: [sh]
+      source: |
+        cat /dev/urandom | od -N2 -An -i | awk -v f=1 -v r=100 '{printf &quot;%i\n&quot;, f + r * $1 / 65536}'
+</code></pre>
+<h2 id="22-argo-artifactory">2.2 Argo Artifactory</h2>
+<pre><code class="language-yaml">apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: artifact-passing-
+spec:
+  entrypoint: artifact-example
+  templates:
+  - name: artifact-example
+    steps:
+    - - name: generate-artifact
+        template: whalesay
+    - - name: consume-artifact
+        template: print-message
+        arguments:
+          artifacts:
+          - name: message
+            from: &quot;{{steps.generate-artifact.outputs.artifacts.hello-art}}&quot;
+
+  - name: whalesay
+    container:
+      image: docker/whalesay:latest
+      command: [sh, -c]
+      args: [&quot;sleep 1; cowsay hello world | tee /tmp/hello_world.txt&quot;]
+    outputs:
+      artifacts:
+      - name: hello-art
+        path: /tmp/hello_world.txt
+
+  - name: print-message
+    inputs:
+      artifacts:
+      - name: message
+        path: /tmp/message
+    container:
+      image: alpine:latest
+      command: [sh, -c]
+      args: [&quot;cat /tmp/message&quot;]
+</code></pre>
+<h2 id="23-argo-cicd">2.3 Argo CICD</h2>
+<p>template workflow: </p>
+<pre><code class="language-yaml">apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  annotations:
+    workflows.argoproj.io/description: |
+      Checkout out from Git, build and deploy application.
+    workflows.argoproj.io/maintainer: '@rsq'
+    workflows.argoproj.io/tags: go, git
+    workflows.argoproj.io/version: '&gt;= 2.9.0'
+  name: devops-go 
+spec:
+  entrypoint: main
+  arguments:
+    parameters:
+      # CI 代码仓库地址
+      - name: repo
+        value: 172.16.0.32/devops/goproj.git
+      # CI 代码仓库branch
+      - name: branch
+        value: main
+      # CI要制作的镜像名
+      - name: image
+        value: harbor.rsq.cn/go/goproj:20220728
+      - name: cache-image
+        value: harbor.rsq.cn/go/golang:1.18.4-centos7.9
+      # CI 指定git仓库中Dockerfile的名字
+      - name: dockerfile
+        value: Dockerfile
+      # CD 的时候指定的仓库
+      - name: devops-cd-repo
+        value: gitlab-test.coolops.cn/root/devops-cd.git
+      - name: gitlabUsername
+        value: devops_001
+      - name: gitlabPassword
+        value: 123456
+  templates:
+    - name: main
+      steps:
+      # 在step类型中，[--]代表顺序执行; [-]代表并行执行
+      - - name: Checkout
+          template: Checkout
+      - - name: Build
+          template: Build
+      - - name: BuildImage
+          template: BuildImage
+      #- - name: Deploy
+      #    template: Deploy
+    # 拉取代码
+    - name: Checkout
+      script:
+        image: harbor.rsq.cn/go/golang:1.18.4-centos7.9
+        workingDir: /work
+        command:
+        - sh
+        source: |
+          git clone --branch {{workflow.parameters.branch}} http://{{workflow.parameters.gitlabUsername}}:{{workflow.parameters.gitlabPassword}}@{{workflow.parameters.repo}} .
+        volumeMounts:
+        - mountPath: /work
+          name: work
+    # 编译打包  
+    - name: Build
+      script:
+        image: harbor.rsq.cn/go/golang:1.18.4-centos7.9
+        workingDir: /work
+        command:
+        - sh
+        source: go build -o goproj 
+        volumeMounts:
+        - mountPath: /work
+          name: work
+    # 构建镜像  
+    - name: BuildImage
+      container:
+        image: harbor.rsq.cn/go/kaniko-executor:v1.5.0
+        workingDir: /work
+        command:
+          - executor
+        args:
+          - --context=.
+          - --dockerfile={{workflow.parameters.dockerfile}}
+          - --destination={{workflow.parameters.image}}
+          - --skip-tls-verify
+          - --reproducible
+          - --cache=true
+          - --cache-repo={{workflow.parameters.cache-image}}
+        volumeMounts:
+        - mountPath: /work
+          name: work
+        - name: docker-config
+          mountPath: /kaniko/.docker/
+      volumes:
+      - name: docker-config
+        secret:
+          secretName: docker-config
+    # 部署  
+    #- name: Deploy
+    #  script:
+    #    image: registry.cn-hangzhou.aliyuncs.com/rookieops/kustomize:v3.8.1
+    #    workingDir: /work
+    #    command:
+    #    - sh
+    #    source: |
+    #       git remote set-url origin http://{{workflow.parameters.gitlabUsername}}:{{workflow.parameters.gitlabPassword}}@{{workflow.parameters.devops-cd-repo}}
+    #       git config --global user.name &quot;Administrator&quot;
+    #       git config --global user.email &quot;songqi.ren@rsq.com&quot;
+    #       git clone http://{{workflow.parameters.gitlabUsername}}:{{workflow.parameters.gitlabPassword}}@{{workflow.parameters.devops-cd-repo}} /work/devops-cd
+    #       cd /work/devops-cd
+    #       git pull
+    #       cd /work/devops-cd/devops-simple-go
+    #       kustomize edit set image {{workflow.parameters.image}}
+    #       git commit -am 'image update'
+    #       git push origin master
+    #    volumeMounts:
+    #      - mountPath: /work
+    #        name: work
+  volumeClaimTemplates:
+  - name: work
+    metadata:
+      name: work
+    spec:
+      storageClassName: nfs-client
+      accessModes: [ &quot;ReadWriteOnce&quot; ]
+      resources:
+        requests:
+          storage: 1Gi 
+</code></pre>
+<p>创建docker-config的secret，这个secret要挂载到BuildImage的容器中，为build镜像准备</p>
+<pre><code class="language-bash"># 1 auth生成base64加密，此用户密码为docker镜像仓库的账号密码
+echo -n &quot;&lt;user&gt;:&lt;password&gt;&quot; | base64
+
+# 2 生成config.json
+mkdir ${HOME}/.docker &amp;&amp; cd ${HOME}/.docker
+vim config.json
+{
+    &quot;auths&quot;: {
+         &quot;http://harbor.rsq.cn&quot;: {
+            &quot;auth&quot;: &quot;dXNlcjpwYXNzd29yZAo=&quot;
+         }
+    }
+}
+
+# 3 创建secret
+kubectl create secret generic docker-config --from-file=/root/.docker/config.json -n argo
+</code></pre>
+<p>创建template，或者直接在web界面点击Workflow Templates --&gt;CREATE NEW TEMPLATE WORKFLOW</p>
+<pre><code class="language-bash">argo template create -n argo cicd.yaml
+</code></pre>
+<p>使用如下命令创建并观察workflow:</p>
+<pre><code class="language-bash">$ argo submit -n argo helloworld.yaml --watch
+</code></pre>
+<p>还可以通过argo list来查看状态，如下：</p>
+<pre><code class="language-bash"># argo list -n argo
+NAME                STATUS      AGE   DURATION   PRIORITY
+hello-world-9pw7v   Succeeded   1m    10s        0
+使用argo logs来查看具体的日志，如下：
+# argo logs -n argo hello-world-9pw7v
+hello-world-9pw7v:  _____________
+hello-world-9pw7v: &lt; hello world &gt;
+hello-world-9pw7v:  -------------
+hello-world-9pw7v:     \
+hello-world-9pw7v:      \
+hello-world-9pw7v:       \     
+hello-world-9pw7v:                     ##        .            
+hello-world-9pw7v:               ## ## ##       ==            
+hello-world-9pw7v:            ## ## ## ##      ===            
+hello-world-9pw7v:        /&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;___/ ===        
+hello-world-9pw7v:   ~~~ {~~ ~~~~ ~~~ ~~~~ ~~ ~ /  ===- ~~~   
+hello-world-9pw7v:        \______ o          __/            
+hello-world-9pw7v:         \    \        __/             
+hello-world-9pw7v:           \____\______/   
+</code></pre>
+<h1 id="_1">参考文章</h1>
+<ul>
+<li><a href="https://blog.csdn.net/qq_29062169/article/details/125486646">Argo Workflows部署</a></li>
+<li><a href="https://www.isolves.com/it/cxkf/kj/2021-11-30/46743.html">Kubernetes 原生 CI/CD 构建框架 Argo</a></li>
+<li><a href="https://blog.csdn.net/a772304419/article/details/125463627">Argo Workflows —— Kubernetes的工作流引擎入门</a></li>
+<li><a href="https://www.jianshu.com/p/f7276c61f072">给Workflow添加参数</a></li>
+</ul>
+<nav class="doc-series">
+  <p class="lb">CI/CD · 同分类笔记</p>
+  <ol>
+<li class="cur"><a href="index.html">Argo CD</a></li>
+<li class=""><a href="../jenkins/index.html">Jenkins</a></li>
+<li class=""><a href="../jenkins/pipeline/pipeline-usages.html">Pipeline Usages</a></li>
+<li class=""><a href="../jenkins/pipeline/share-library.html">Pipeline · Share Library</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

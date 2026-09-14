@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kafka · Deploy · rensongqi</title>
+<meta name="description" content="监控：">
+<link rel="stylesheet" href="../../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../../index.html">首页</a>
+      <a href="../../../../archive.html">归档</a>
+      <a href="../../../../storage.html">存储</a>
+      <a href="../../../../notes/" class="is-active">笔记</a>
+      <a href="../../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../../index.html">首页</a> / <a href="../../../../notes/">笔记</a> / <a href="../../../../notes/ops.html">运维工具</a> / <span>Kafka · Deploy</span></div>
+
+<div class="doc-title">
+  <h1>Kafka · Deploy</h1>
+  <div class="meta">2026-09-14 · 约 1740 字 · 源自 notes-src/ops/elk/kafka/deploy.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#ELK</span><span>#Kafka</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1">1 单节点部署</a></li><li class="l2"><a href="#2">2 多节点部署</a></li><li class="l3"><a href="#21-zookeeper">2.1 基于Zookeeper</a></li><li class="l3"><a href="#22-kraft">2.2 基于Kraft</a></li><li class="l2"><a href="#3-kafka">3 公网访问kafka</a></li><li class="l2"><a href="#4">4 生产者</a></li><li class="l2"><a href="#5">5 消费者</a></li></ul></nav>
+<main>
+<ul>
+<li><a href="#1-单节点部署">1 单节点部署</a></li>
+<li><a href="#2-多节点部署">2 多节点部署</a></li>
+<li><a href="#21-基于zookeeper">2.1 基于Zookeeper</a></li>
+<li><a href="#22-基于kraft">2.2 基于Kraft</a></li>
+<li><a href="#3-公网访问kafka">3 公网访问kafka</a></li>
+<li><a href="#4-生产者">4 生产者</a></li>
+<li><a href="#5-消费者">5 消费者</a></li>
+</ul>
+<h1 id="1">1 单节点部署</h1>
+<pre><code class="language-yaml">version: '3.5'
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    container_name: zookeeper
+    ports:
+      - &quot;2181:2181&quot;
+  kafka:
+    image: wurstmeister/kafka
+    container_name: kafka
+    volumes: 
+        - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - &quot;9092:9092&quot;
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: 172.16.108.89
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_PORT: 9092
+      KAFKA_LOG_RETENTION_HOURS: 120
+      KAFKA_MESSAGE_MAX_BYTES: 10000000
+      KAFKA_REPLICA_FETCH_MAX_BYTES: 10000000
+      KAFKA_GROUP_MAX_SESSION_TIMEOUT_MS: 60000
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DELETE_RETENTION_MS: 1000
+      KAFKA_LISTENERS: PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://172.18.108.89:9092
+      KAFKA_BROKER_ID: 1
+  kafka-manager:
+    image: sheepkiller/kafka-manager
+    container_name: kafka-manager
+    environment:
+        ZK_HOSTS: 172.18.108.89
+    ports:  
+      - &quot;9009:9000&quot;
+</code></pre>
+<h1 id="2">2 多节点部署</h1>
+<h2 id="21-zookeeper">2.1 基于Zookeeper</h2>
+<pre><code class="language-yaml"># 172.18.11.109 节点
+version: '3'
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - 2182:2181
+    restart: always
+
+  kafka1:
+    image: wurstmeister/kafka
+    container_name: kafka1
+    ports:
+      - &quot;9092:9092&quot;
+    environment:
+      KAFKA_BROKER_ID: 0
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+      KAFKA_ZOOKEEPER_CONNECT: 172.18.11.109:2182
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://172.18.11.109:9092
+    volumes:
+      - ./logs:/opt/kafka/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+
+# 172.18.11.110 节点
+version: '3'
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - 2182:2181
+    restart: always
+
+  kafka2:
+    image: wurstmeister/kafka
+    container_name: kafka2
+    ports:
+      - &quot;9092:9092&quot;
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+      KAFKA_ZOOKEEPER_CONNECT: 172.18.11.109:2182
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://172.18.11.110:9092
+    volumes:
+      - ./logs:/opt/kafka/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+
+# 172.18.11.111 节点
+version: '3'
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - 2182:2181
+    restart: always
+
+  kafka3:
+    image: wurstmeister/kafka
+    container_name: kafka3
+    ports:
+      - &quot;9092:9092&quot;
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+      KAFKA_ZOOKEEPER_CONNECT: 172.18.11.109:2182
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://172.18.11.111:9092
+    volumes:
+      - ./logs:/opt/kafka/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+</code></pre>
+<p>监控：</p>
+<pre><code class="language-yml">version: '3'
+services:
+  kafka_exporter:
+    image: kafka-exporter:latest
+    command:
+     - '--kafka.server=172.18.11.109:9092'
+     - '--kafka.server=172.18.11.110:9092'
+     - '--kafka.server=172.18.11.111:9092'
+    restart: always
+    ports:
+    - &quot;9308:9308&quot;
+</code></pre>
+<p>Grafana看板ID
+- <a href="https://grafana.com/grafana/dashboards/7589-kafka-exporter-overview/">7589-kafka-exporter-overview</a></p>
+<h2 id="22-kraft">2.2 基于Kraft</h2>
+<blockquote>
+<p>需要注意的是，基于Kraft的Kafka创建进入容器之后不能像使用zookeeper那样创建topic，具体原因可参考文章：https://github.com/wurstmeister/kafka-docker/issues/390</p>
+<p>解决办法，进入容器之后需要执行命令 <code>unset KAFKA_OPTS</code> ，然后才能执行如下命令</p>
+</blockquote>
+<p>初始化</p>
+<pre><code>mkdir /data/kafka/kraft -p
+
+# 下载jmx_prometheus_javaagent-0.20.0.jar
+cd /data/kafka/
+wget https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.20.0/jmx_prometheus_javaagent-0.20.0.jar
+wget https://raw.githubusercontent.com/prometheus/jmx_exporter/refs/heads/main/examples/kafka-kraft-3_0_0.yml
+</code></pre>
+<p><code>/data/kafka/docker-compose.yml</code></p>
+<pre><code class="language-yaml"># 172.16.10.85
+version: &quot;3&quot;
+services:
+  kafka:
+    image: bitnami/kafka:3.7.0
+    network_mode: host
+    container_name: kafka
+    user: root
+    ports:
+      - 9092:9092
+      - 9093:9093
+    environment:
+      - TZ=Asia/Shanghai
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_LOG_RETENTION_HOURS=72
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_KRAFT_CLUSTER_ID=5L6g3nShT-eMCtK--X86sw
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@172.16.10.85:9093,2@172.16.10.86:9093,3@172.16.10.87:9093
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_HEAP_OPTS=-Xmx10G -Xms10G
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://172.16.10.85:9092
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_OPTS=-javaagent:/opt/jmx_prometheus_javaagent-0.20.0.jar=9999:/opt/kafka-kraft-3_0_0.yml
+    volumes:
+      - ./kraft:/bitnami/kafka/data:rw
+      - ./jmx_prometheus_javaagent-0.20.0.jar:/opt/jmx_prometheus_javaagent-0.20.0.jar
+      - ./kafka-kraft-3_0_0.yml:/opt/kafka-kraft-3_0_0.yml
+
+# 172.16.10.86
+version: &quot;3&quot;
+services:
+  kafka:
+    image: bitnami/kafka:3.7.0
+    network_mode: host
+    container_name: kafka
+    user: root
+    ports:
+      - 9092:9092
+      - 9093:9093
+    environment:
+      - TZ=Asia/Shanghai
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_LOG_RETENTION_HOURS=72
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_KRAFT_CLUSTER_ID=5L6g3nShT-eMCtK--X86sw
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@172.16.10.85:9093,2@172.16.10.86:9093,3@172.16.10.87:9093
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_HEAP_OPTS=-Xmx10G -Xms10G
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://172.16.10.86:9092
+      - KAFKA_CFG_NODE_ID=2
+      - KAFKA_OPTS=-javaagent:/opt/jmx_prometheus_javaagent-0.20.0.jar=9999:/opt/kafka-kraft-3_0_0.yml
+    volumes:
+      - ./kraft:/bitnami/kafka/data:rw
+      - ./jmx_prometheus_javaagent-0.20.0.jar:/opt/jmx_prometheus_javaagent-0.20.0.jar
+      - ./kafka-kraft-3_0_0.yml:/opt/kafka-kraft-3_0_0.yml
+
+# 172.16.10.87
+version: &quot;3&quot;
+services:
+  kafka:
+    image: bitnami/kafka:3.7.0
+    network_mode: host
+    container_name: kafka
+    user: root
+    ports:
+      - 9092:9092
+      - 9093:9093
+    environment:
+      - TZ=Asia/Shanghai
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_LOG_RETENTION_HOURS=72
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_KRAFT_CLUSTER_ID=5L6g3nShT-eMCtK--X86sw
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@172.16.10.85:9093,2@172.16.10.86:9093,3@172.16.10.87:9093
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_HEAP_OPTS=-Xmx10G -Xms10G
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://172.16.10.87:9092
+      - KAFKA_CFG_NODE_ID=3
+      - KAFKA_OPTS=-javaagent:/opt/jmx_prometheus_javaagent-0.20.0.jar=9999:/opt/kafka-kraft-3_0_0.yml
+    volumes:
+      - ./kraft:/bitnami/kafka/data:rw
+      - ./jmx_prometheus_javaagent-0.20.0.jar:/opt/jmx_prometheus_javaagent-0.20.0.jar
+      - ./kafka-kraft-3_0_0.yml:/opt/kafka-kraft-3_0_0.yml
+</code></pre>
+<p>监控：</p>
+<blockquote>
+<p>需要基于jmx_exporter实现kraft的监控指标数据的获取
+- <a href="https://blog.csdn.net/u010533742/article/details/119992040">prometheus监控Kafka (kafka_exporter和 jmx_exporter)</a></p>
+</blockquote>
+<p>Grafana看板ID </p>
+<blockquote>
+<p>下载对应的json文件之后，需要将该文件中所有的 <code>kafka_controller_kafkacontroller_controllerstate</code> 改为 <code>kafka_controller_kafkacontroller_activecontrollercount</code> 后看板才可使用（实际上对应的就是获取看板变量的label），修改的值要保证在对应的exporter metrics中搜索到，不一定非要修改上上述值，了解即可
+- <a href="https://grafana.com/grafana/dashboards/11962-kafka-metrics/">11962-kafka-metrics</a></p>
+</blockquote>
+<h1 id="3-kafka">3 公网访问kafka</h1>
+<p>参考文章：<a href="https://www.cnblogs.com/gentlescholar/p/15179258.html">Kafka内外网访问的设置</a></p>
+<p>如果内网的kafka服务要暴露到公网，需要配置如下</p>
+<p>内网IP：<code>172.18.100.67</code>, 公网IP：<code>123.23.4.5</code></p>
+<pre><code>listener.security.protocol.map=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+listeners=INTERNAL://172.18.100.67:9092,EXTERNAL://172.18.100.67:19092
+advertised.listeners=INTERNAL://172.18.100.67:9092,EXTERNAL://123.23.4.5:19092
+inter.broker.listener.name=INTERNAL
+</code></pre>
+<h1 id="4">4 生产者</h1>
+<pre><code class="language-go">package main
+import (
+   &quot;fmt&quot;
+   &quot;github.com/IBM/sarama&quot;
+   &quot;os&quot;
+)
+func main() {
+   // Kafka broker 地址
+   //brokers := []string{&quot;172.16.100.107:9092&quot;}
+   brokers := []string{&quot;172.18.100.67:9092&quot;}
+   // 新建 sarama 配置实例
+   config := sarama.NewConfig()
+   config.Producer.RequiredAcks = sarama.WaitForAll          // 等待所有副本都保存成功
+   config.Producer.Partitioner = sarama.NewRandomPartitioner // 随机的分区方式
+   config.Producer.Return.Successes = true                   // 成功交付的消息将在 success channel 返回
+   // 使用配置,新建一个异步生产者
+   producer, err := sarama.NewAsyncProducer(brokers, config)
+   if err != nil {
+      fmt.Println(&quot;Failed to start producer:&quot;, err)
+      os.Exit(1)
+   }
+   // 构建发送的消息，
+   msg := &amp;sarama.ProducerMessage{
+      Topic: &quot;ultron&quot;,
+      Value: sarama.StringEncoder(&quot;测试消息&quot;),
+   }
+   // 发送消息
+   producer.Input() &lt;- msg
+   // 等待消息发送完成
+   select {
+   case suc := &lt;-producer.Successes():
+      fmt.Printf(&quot;offset: %d,  timestamp: %s\n&quot;, suc.Offset, suc.Timestamp.String())
+   case fail := &lt;-producer.Errors():
+      fmt.Printf(&quot;err: %s\n&quot;, fail.Err.Error())
+   }
+}
+</code></pre>
+<h1 id="5">5 消费者</h1>
+<pre><code class="language-go">package main
+import (
+   &quot;fmt&quot;
+   &quot;github.com/IBM/sarama&quot;
+   &quot;os&quot;
+   &quot;os/signal&quot;
+   &quot;syscall&quot;
+)
+func saramaKafka() {
+   config := sarama.NewConfig()
+   config.Consumer.Return.Errors = true
+   brokers := []string{&quot;172.18.100.67:9092&quot;}
+   topic := &quot;ultron&quot;
+   // 创建消费者
+   master, err := sarama.NewConsumer(brokers, config)
+   if err != nil {
+      panic(err)
+   }
+   defer func() {
+      if err := master.Close(); err != nil {
+         panic(err)
+      }
+   }()
+   consumer, err := master.ConsumePartition(topic, 0, sarama.OffsetOldest)
+   if err != nil {
+      panic(err)
+   }
+   signals := make(chan os.Signal, 1)
+   signal.Notify(signals, syscall.SIGTERM)
+   consumed := 0
+ConsumerLoop:
+   for {
+      select {
+      case msg := &lt;-consumer.Messages():
+         fmt.Printf(&quot;Consumed message offset %d\n&quot;, string(msg.Value))
+         consumed++
+      case &lt;-signals:
+         break ConsumerLoop
+      }
+   }
+   fmt.Printf(&quot;Consumed: %d\n&quot;, consumed)
+}
+func main() {
+   saramaKafka()
+}
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../../canal/index.html">Canal</a></li>
+<li class=""><a href="../../consul/index.html">Consul</a></li>
+<li class=""><a href="../../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../index.html">ELK</a></li>
+<li class=""><a href="index.html">Kafka</a></li>
+<li class=""><a href="../logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="deploy.html">Kafka · Deploy</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../../feed.xml">RSS</a>
+      <a href="../../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>使用acme.sh生成公网证书 · rensongqi</title>
+<meta name="description" content="https://github.com/acmesh-official/acme.sh/wiki/dns-manual-mode">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>使用acme.sh生成公网证书</span></div>
+
+<div class="doc-title">
+  <h1>使用acme.sh生成公网证书</h1>
+  <div class="meta">2026-09-14 · 约 800 字 · 源自 notes-src/ops/ssl_certs/acme.sh.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#SSL 证书</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#acmesh">使用acme.sh生成公网证书</a></li><li class="l3"><a href="#acmesh_1">安装acme.sh工具</a></li><li class="l3"><a href="#socat">安装socat</a></li><li class="l3"><a href="#ca">配置CA</a></li><li class="l3"><a href="#dns">使用dns的方式签发证书</a></li><li class="l3"><a href="#_1">安装证书</a></li><li class="l3"><a href="#_2">查看所有证书</a></li><li class="l3"><a href="#_3">删除证书</a></li><li class="l3"><a href="#_4">参考文档：</a></li></ul></nav>
+<main>
+<h2 id="acmesh_1">安装acme.sh工具</h2>
+<pre><code class="language-bash">git clone https://gitee.com/neilpang/acme.sh.git
+cd acme.sh
+./acme.sh --install -m songqi.ren@rensongqi.com
+</code></pre>
+<h2 id="socat">安装socat</h2>
+<pre><code class="language-bash"># Centos
+yum -y install socat
+
+# Ubuntu
+apt -y install socat
+</code></pre>
+<h2 id="ca">配置CA</h2>
+<pre><code class="language-bash">./acme.sh --set-default-ca --server letsencrypt
+</code></pre>
+<h2 id="dns">使用dns的方式签发证书</h2>
+<pre><code class="language-bash"># step1: 生成TXT
+# ./acme.sh --issue -d openai.rensongqi.com --dns --yes-I-know-dns-manual-mode-enough-go-ahead-please
+[Wed May 22 10:20:45 CST 2024] Using CA: https://acme-v02.api.letsencrypt.org/directory
+[Wed May 22 10:20:45 CST 2024] Creating domain key
+[Wed May 22 10:20:45 CST 2024] The domain key is here: /root/.acme.sh/openai.rensongqi.com/openai.rensongqi.com.key
+[Wed May 22 10:20:45 CST 2024] Single domain='openai.rensongqi.com'
+[Wed May 22 10:20:45 CST 2024] Getting domain auth token for each domain
+[Wed May 22 10:20:49 CST 2024] Getting webroot for domain='openai.rensongqi.com'
+[Wed May 22 10:20:49 CST 2024] Add the following TXT record:
+[Wed May 22 10:20:49 CST 2024] Domain: '_acme-challenge.openai.rensongqi.com'
+[Wed May 22 10:20:49 CST 2024] TXT value: 'axnHAeLnW8e1wxHVYS2PJqiL8lT0aEYk-G3vIN4CCbE'
+[Wed May 22 10:20:49 CST 2024] Please be aware that you prepend _acme-challenge. before your domain
+[Wed May 22 10:20:49 CST 2024] so the resulting subdomain will be: _acme-challenge.openai.rensongqi.com
+[Wed May 22 10:20:49 CST 2024] Please add the TXT records to the domains, and re-run with --renew.
+[Wed May 22 10:20:49 CST 2024] Please check log file for more details: /root/.acme.sh/acme.sh.log
+
+# step2: Add Txt record
+# 将第一步中的黄色标识的TXT添加至阿里云DNS解析中
+
+# step3: renew cert
+# ./acme.sh --renew -d openai.rensongqi.com --dns --yes-I-know-dns-manual-mode-enough-go-ahead-please
+[Wed May 22 11:18:18 CST 2024] Renew: 'openai.rensongqi.com'
+[Wed May 22 11:18:18 CST 2024] Renew to Le_API=https://acme-v02.api.letsencrypt.org/directory
+[Wed May 22 11:18:22 CST 2024] Using CA: https://acme-v02.api.letsencrypt.org/directory
+[Wed May 22 11:18:22 CST 2024] Single domain='openai.rensongqi.com'
+[Wed May 22 11:18:22 CST 2024] Getting domain auth token for each domain
+[Wed May 22 11:18:22 CST 2024] Verifying: openai.rensongqi.com
+[Wed May 22 11:18:27 CST 2024] Pending, The CA is processing your order, please just wait. (1/30)
+[Wed May 22 11:18:31 CST 2024] Success
+[Wed May 22 11:18:31 CST 2024] Verify finished, start to sign.
+[Wed May 22 11:18:31 CST 2024] Lets finalize the order.
+[Wed May 22 11:18:31 CST 2024] Le_OrderFinalize='https://acme-v02.api.letsencrypt.org/acme/finalize/1739317072/27146xxx'
+[Wed May 22 11:18:33 CST 2024] Downloading cert.
+[Wed May 22 11:18:33 CST 2024] Le_LinkCert='https://acme-v02.api.letsencrypt.org/acme/cert/031f405a7e0a59xxx'
+[Wed May 22 11:18:36 CST 2024] Cert success.
+-----BEGIN CERTIFICATE-----
+MIIE9jCCA96gAwIBAgISAx9AWn4KWRUevkzSqYAU6EfVMA0GCSqGSIb3DQEBCwUA
+MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD
+EwJSMzAeFw0yNDA1MjIwMjE4MzJaFw0yNDA4MjAwMjE4MzFaMB8xHTAbBgNVBAMT
+FG9wZW5haS5jb3dhcm9ib3QuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+CgKCAQEAvtYfa2Eye6mF8LFSvdLPz6QSR087Qufo6aKy7wG1MwCx4X87pZGl6Ex4
+kvKF7sbJ6jBErJe6IfrRmLVRco+3XdI/2Lm4R9KVBDXL59AqlPYcEzou/o+lpg0l
+c9xCPgdxng6J5g5w2IH0vHxo/pKq9a4eLKF4bY09VO/Qt4gqok0TcnW07778Vbdo
+y/u8JXAx0FhaiBVzNthr9cGJXeurme9ToRc2So0lSG73KgNY5MQ9GqNyJ6HPdhwu
+3BHdtKf3oYxgsNSBe5Fh7Bag67HwXiC9lJkgOYT/n11vq1scWgG/tf25TwKlLLnh
+xxxxxxxxxx
+SV25qhsmZIMw6t77KB1YtajG48bwwJHDtBg=
+-----END CERTIFICATE-----
+[Wed May 22 11:18:36 CST 2024] Your cert is in: /root/.acme.sh/openai.rensongqi.com/openai.rensongqi.com.cer
+[Wed May 22 11:18:36 CST 2024] Your cert key is in: /root/.acme.sh/openai.rensongqi.com/openai.rensongqi.com.key
+[Wed May 22 11:18:36 CST 2024] The intermediate CA cert is in: /root/.acme.sh/openai.rensongqi.com/ca.cer
+[Wed May 22 11:18:36 CST 2024] And the full chain certs is there: /root/.acme.sh/openai.rensongqi.com/fullchain.cer
+</code></pre>
+<h2 id="_1">安装证书</h2>
+<pre><code class="language-bash"># ./acme.sh --install-cert -d openai.rensongqi.com --key-file /tmp/nginx/certs/openai.rensongqi.com.key --fullchain-file /tmp/nginx/certs/openai.rensongqi.com.pem --reloadcmd &quot;systemctl reload openresty&quot;
+[Wed May 22 11:24:38 CST 2024] Installing key to: /tmp/nginx/certs/openai.rensongqi.com.key
+[Wed May 22 11:24:38 CST 2024] Installing full chain to: /tmp/nginx/certs/openai.rensongqi.com.pem
+</code></pre>
+<h2 id="_2">查看所有证书</h2>
+<pre><code class="language-bash"># ./acme.sh --list
+Main_Domain                    KeyLength  SAN_Domains  CA               Created               Renew
+openai.rensongqi.com           &quot;2048&quot;     no           LetsEncrypt.org  2024-05-22T03:18:36Z  2024-07-21T03:18:36Z
+</code></pre>
+<h2 id="_3">删除证书</h2>
+<pre><code class="language-bash">./acme.sh --remove -d openai.rensongqi.com
+</code></pre>
+<h2 id="_4">参考文档：</h2>
+<p>https://github.com/acmesh-official/acme.sh/wiki/dns-manual-mode</p>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../elk/index.html">ELK</a></li>
+<li class=""><a href="../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="acme-sh.html">使用acme.sh生成公网证书</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

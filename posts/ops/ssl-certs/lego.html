@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSL 证书 · Lego · rensongqi</title>
+<meta name="description" content="使用github.com/go-acme/lego/v4生成指定域名ssl证书">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>SSL 证书 · Lego</span></div>
+
+<div class="doc-title">
+  <h1>SSL 证书 · Lego</h1>
+  <div class="meta">2026-09-14 · 约 740 字 · 源自 notes-src/ops/ssl_certs/lego.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#SSL 证书</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#getting-started">Getting Started</a></li><li class="l2"><a href="#generate-private-key">Generate private key</a></li><li class="l2"><a href="#code">Code</a></li><li class="l2"><a href="#usage">Usage</a></li></ul></nav>
+<main>
+<h1 id="getting-started">Getting Started</h1>
+<p>使用<code>github.com/go-acme/lego/v4</code>生成指定域名ssl证书</p>
+<pre><code class="language-bash">go get github.com/go-acme/lego/v4
+</code></pre>
+<h1 id="generate-private-key">Generate private key</h1>
+<pre><code class="language-bash"># 使用openssl生成私钥
+openssl ecparam -genkey -name prime256v1 -out private-key.pem
+
+# 查看生成的私钥
+openssl ec -in private-key.pem -text -noout
+
+# 导出私钥为BEGIN EC PRIVATE KEY格式
+openssl ec -in private-key.pem -outform PEM -out private-key.ec.pem
+
+</code></pre>
+<h1 id="code">Code</h1>
+<pre><code class="language-go">package main
+import (
+   &quot;crypto&quot;
+   &quot;crypto/ecdsa&quot;
+   &quot;crypto/x509&quot;
+   &quot;encoding/pem&quot;
+   &quot;fmt&quot;
+   &quot;github.com/gin-gonic/gin&quot;
+   &quot;github.com/go-acme/lego/v4/certcrypto&quot;
+   &quot;github.com/go-acme/lego/v4/certificate&quot;
+   &quot;github.com/go-acme/lego/v4/lego&quot;
+   &quot;github.com/go-acme/lego/v4/providers/dns/alidns&quot;
+   &quot;github.com/go-acme/lego/v4/registration&quot;
+   &quot;github.com/sirupsen/logrus&quot;
+   &quot;io&quot;
+   &quot;net/http&quot;
+   &quot;os&quot;
+   &quot;path&quot;
+   &quot;runtime&quot;
+   &quot;strings&quot;
+)
+// 阿里云token
+const (
+   AliyunRegionID        = &quot;cn-shanghai&quot;
+   AliyunAccessKeyId     = &quot;xxx&quot;
+   AliyunAccessKeySecret = &quot;xxx&quot;
+)
+type MyUser struct {
+   Email        string
+   Registration *registration.Resource
+   key          crypto.PrivateKey
+}
+func (u *MyUser) GetEmail() string {
+   return u.Email
+}
+func (u MyUser) GetRegistration() *registration.Resource {
+   return u.Registration
+}
+func (u *MyUser) GetPrivateKey() crypto.PrivateKey {
+   return u.key
+}
+// loadPrivateKey 读取并解析私钥文件
+func loadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
+   bytes, err := os.ReadFile(path)
+   if err != nil {
+      return nil, fmt.Errorf(&quot;could not read private key file: %w&quot;, err)
+   }
+   block, _ := pem.Decode(bytes)
+   if block == nil || block.Type != &quot;EC PRIVATE KEY&quot; {
+      return nil, fmt.Errorf(&quot;failed to decode PEM block containing private key&quot;)
+   }
+   privateKey, err := x509.ParseECPrivateKey(block.Bytes)
+   if err != nil {
+      return nil, fmt.Errorf(&quot;could not parse private key: %w&quot;, err)
+   }
+   return privateKey, nil
+}
+func generateCertificate(domain string) (err error, pemBody, keyBody []byte) {
+   var sslFilename string
+   if strings.HasPrefix(domain, &quot;*.&quot;) {
+      domainSplit := strings.Split(domain, &quot;*.&quot;)
+      sslFilename = domainSplit[1]
+   } else {
+      sslFilename = domain
+   }
+   keyFileName := fmt.Sprintf(&quot;data/%s.key&quot;, sslFilename)
+   pemFileName := fmt.Sprintf(&quot;data/%s.pem&quot;, sslFilename)
+   privateKey, err := loadPrivateKey(&quot;ssl_ecdsa_private_key.pem&quot;)
+   if err != nil {
+      logrus.Error(err)
+      return
+   }
+   myUser := MyUser{
+      Email: &quot;admin@rensongqi.com&quot;,
+      key:   privateKey,
+   }
+   config := lego.NewConfig(&amp;myUser)
+   // 配置密钥的类型和密钥申请的地址
+   config.CADirURL = lego.LEDirectoryProduction
+   config.Certificate.KeyType = certcrypto.RSA2048
+   // 创建一个client与CA服务器通信
+   client, err := lego.NewClient(config)
+   if err != nil {
+      logrus.Error(err)
+      return
+   }
+   configC := alidns.NewDefaultConfig()
+   configC.RegionID = AliyunRegionID
+   configC.APIKey = AliyunAccessKeyId
+   configC.SecretKey = AliyunAccessKeySecret
+   provider, err := alidns.NewDNSProviderConfig(configC)
+   if err != nil {
+      logrus.Error(err)
+      return
+   }
+   if err = client.Challenge.SetDNS01Provider(provider); err != nil {
+      logrus.Error(&quot;Could not create DNS provider: %v&quot;, err)
+   }
+   reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
+   if err != nil {
+      logrus.Error(err)
+      return
+   }
+   myUser.Registration = reg
+   request := certificate.ObtainRequest{
+      Domains: []string{domain}, // 支持多个域名
+      Bundle:  true,             // 如果是true，将把颁发者证书一起返回: certificates.IssuerCertificate
+   }
+   certs, err := client.Certificate.Obtain(request)
+   if err != nil {
+      logrus.Error(err)
+      return
+   }
+   pemBody = certs.Certificate
+   keyBody = certs.PrivateKey
+   err = os.WriteFile(pemFileName, certs.Certificate, 0600)
+   if err != nil {
+      logrus.Error(err)
+      return
+   }
+   err = os.WriteFile(keyFileName, certs.PrivateKey, 0600)
+   if err != nil {
+      logrus.Error(err)
+      return
+   }
+   return
+}
+type SSLRecord struct {
+   Domain string `json:&quot;domain&quot; binding:&quot;required&quot;`
+}
+func generateSSLCertificate(c *gin.Context) {
+   var sslRecord SSLRecord
+   if err := c.ShouldBindJSON(&amp;sslRecord); err != nil {
+      c.JSON(http.StatusBadRequest, gin.H{
+         &quot;error&quot;: fmt.Sprintf(&quot;%v&quot;, err),
+      })
+      return
+   }
+   err, pemBody, keyBody := generateCertificate(sslRecord.Domain)
+   if err != nil {
+      c.JSON(http.StatusInternalServerError, gin.H{
+         &quot;error&quot;: fmt.Sprintf(&quot;%v&quot;, err),
+      })
+      return
+   }
+   c.JSON(http.StatusOK, gin.H{
+      &quot;ssl_pem&quot;: pemBody,
+      &quot;ssl_key&quot;: keyBody,
+   })
+}
+func init() {
+   // 设置json文本输出
+   logFormat := &amp;logrus.JSONFormatter{
+      TimestampFormat: &quot;2006-01-02 15:04:05.000&quot;,
+      PrettyPrint:     false,
+      CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
+         fileName := fmt.Sprintf(&quot;%v:%v&quot;, path.Base(frame.File), frame.Line)
+         return frame.Function, fileName
+      },
+   }
+   logrus.SetReportCaller(true)
+   logrus.SetFormatter(logFormat)
+   //同时写文件和屏幕
+   stdOutWrite := io.Writer(os.Stdout)
+   //fileAndStdoutWriter := io.MultiWriter(os.Stdout, logrus)
+   logrus.SetOutput(stdOutWrite)
+   //设置最低loglevel
+   logrus.SetLevel(logrus.InfoLevel)
+   logrus.Info(&quot;日志模块初始化完成&quot;)
+}
+func main() {
+   r := gin.Default()
+   {
+      r.POST(&quot;/api/v1/ssl&quot;, generateSSLCertificate) // 生成ssl证书
+   }
+   _ = r.Run(&quot;:6666&quot;)
+}
+</code></pre>
+<h1 id="usage">Usage</h1>
+<pre><code class="language-bash">curl -X POST -d '{&quot;domain&quot;: &quot;*.rsq.com&quot;}' -H &quot;Content-Type: application/json&quot; http://127.0.0.1:6666/api/v1/ssl
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../elk/index.html">ELK</a></li>
+<li class=""><a href="../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="lego.html">SSL 证书 · Lego</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>使用lvm根分区扩容 · rensongqi</title>
+<meta name="description" content="需要把根分区从200G扩容至500G">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>使用lvm根分区扩容</span></div>
+
+<div class="doc-title">
+  <h1>使用lvm根分区扩容</h1>
+  <div class="meta">2026-09-14 · 约 2680 字 · 源自 notes-src/ops/linux/lvm.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#Linux</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#lvm">使用lvm根分区扩容</a></li><li class="l2"><a href="#lvm_1">lvm合并两块物理磁盘</a></li><li class="l2"><a href="#baparted">B盘合并至有数据的A盘(parted)</a></li><li class="l2"><a href="#lvm_2">还原lvm合并的磁盘</a></li><li class="l2"><a href="#_1">问题记录</a></li><li class="l3"><a href="#gpt-pmbr-size-mismatch-will-be-corrected-by-write">GPT PMBR size mismatch will be corrected by write错误</a></li><li class="l3"><a href="#lvextend">lvextend之后发现扩容的文件系统不对，需要还原</a></li></ul></nav>
+<main>
+<ul>
+<li><a href="#使用lvm根分区扩容">使用lvm根分区扩容</a></li>
+<li><a href="#lvm合并两块物理磁盘">lvm合并两块物理磁盘</a></li>
+<li><a href="#b盘合并至有数据的a盘parted">B盘合并至有数据的A盘(parted)</a></li>
+<li><a href="#还原lvm合并的磁盘">还原lvm合并的磁盘</a></li>
+<li><a href="#问题记录">问题记录</a></li>
+<li><a href="#gpt-pmbr-size-mismatch-will-be-corrected-by-write错误">GPT PMBR size mismatch will be corrected by write错误</a></li>
+<li><a href="#lvextend之后发现扩容的文件系统不对需要还原">lvextend之后发现扩容的文件系统不对，需要还原</a></li>
+</ul>
+
+<blockquote>
+<p>需要把根分区从200G扩容至500G</p>
+</blockquote>
+<pre><code class="language-bash">root@SHJDSMAPGROUP:~# df -h​
+Filesystem                         Size  Used Avail Use% Mounted on​
+udev                                32G     0   32G   0% /dev​
+tmpfs                              6.3G  1.3M  6.3G   1% /run​
+/dev/mapper/ubuntu--vg-ubuntu--lv  196G  6.4G  181G   4% /​
+tmpfs                               32G     0   32G   0% /dev/shm​
+tmpfs                              5.0M     0  5.0M   0% /run/lock​
+tmpfs                               32G     0   32G   0% /sys/fs/cgroup​
+/dev/sda2                          976M   80M  829M   9% /boot​
+tmpfs                              6.3G     0  6.3G   0% /run/user/1002​
+tmpfs                              6.3G     0  6.3G   0% /run/user/1001
+</code></pre>
+<p>创建新分区</p>
+<pre><code class="language-bash"># fdisk 创建一个lvm格式分区
+root@SHJDSMAPGROUP:~# fdisk /dev/sda
+ Command (m for help): n
+Partition number (4-128, default 4):  
+First sector (419428352-1048575966, default 419428352): 
+Last sector, +sectors or +size{K,M,G,T,P} (419428352-1048575966, default 1048575966): 
+
+Created a new partition 4 of type 'Linux filesystem' and of size 300 GiB.
+
+Command (m for help): p
+Disk /dev/sda: 500 GiB, 536870912000 bytes, 1048576000 sectors
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disklabel type: gpt
+Disk identifier: 1F724393-C34E-404D-8560-CB85D9F719E4
+
+Device         Start        End   Sectors  Size Type
+/dev/sda1       2048       4095      2048    1M BIOS boot
+/dev/sda2       4096    2101247   2097152    1G Linux filesystem
+/dev/sda3    2101248  419428351 417327104  199G Linux filesystem
+/dev/sda4  419428352 1048575966 629147615  300G Linux filesystem
+
+Command (m for help): t
+Partition number (1-4, default 4): 4
+Partition type (type L to list all types): 31  # ubuntu选31，centos选8e
+
+Changed type of partition 'Linux filesystem' to 'Linux LVM'.
+
+Command (m for help): w
+GPT PMBR size mismatch (419430399 != 1048575999) will be corrected by w(rite).
+
+The partition table has been altered.
+Syncing disks.
+
+# 重读分区表
+root@SHJDSMAPGROUP:~# partprobe 
+
+# 格式化新分区 Ubuntu18.04
+root@SHJDSMAPGROUP:~# mkfs.ext4 /dev/sda4
+
+# 格式化新分区 Centos7(具体还是看文件系统类型，默认centos是xfs)
+root@SHJDSMAPGROUP:~# mkfs.xfs /dev/sda4
+</code></pre>
+<p>磁盘扩容</p>
+<pre><code class="language-bash"># 1 查看vgdisplay
+root@SHJDSMAPGROUP:~# vgdisplay 
+  --- Volume group ---
+  VG Name               ubuntu-vg
+  System ID             
+  Format                lvm2
+  Metadata Areas        1
+  Metadata Sequence No  18
+  VG Access             read/write
+  VG Status             resizable
+  MAX LV                0
+  Cur LV                1
+  Open LV               1
+  Max PV                0
+  Cur PV                1
+  Act PV                1
+  VG Size               &lt;199.00 GiB
+  PE Size               4.00 MiB
+  Total PE              50943
+  Alloc PE / Size       50943 / &lt;199.00 GiB
+  Free  PE / Size       0 / 0   
+  VG UUID               F0Fpo3-nX8V-UhvF-2B4A-YlLc-w5mo-XsrE1K
+
+# 2 创建pv，把刚才创建的新分区创建为pv
+root@SHJDSMAPGROUP:~# pvcreate /dev/sda4
+  Physical volume &quot;/dev/sda4&quot; successfully created.
+
+# 3 将新的pv加入到此vg中
+root@SHJDSMAPGROUP:~# vgextend ubuntu-vg /dev/sda4
+  Volume group &quot;ubuntu-vg&quot; successfully extended
+
+# 4 扩展逻辑虚拟卷lv的容量
+root@SHJDSMAPGROUP:~# lvextend -l +100%FREE /dev/mapper/ubuntu--vg-ubuntu--lv
+  Size of logical volume ubuntu-vg/ubuntu-lv changed from &lt;199.00 GiB (50943 extents) to 498.99 GiB (127742 extents).
+  Logical volume ubuntu-vg/ubuntu-lv successfully resized.
+
+# 5 上述只是对卷扩容，还需要对文件系统实现真正的扩容
+# CentOS 7 下面 由于使用的是 XFS，所以要用
+xfs_growfs /dev/mapper/centos-root
+
+# Ubuntu18.04 下面 要用
+resize2fs /dev/mapper/ubuntu--vg-ubuntu--lv
+
+# 6 查看扩容后的分区
+root@SHJDSMAPGROUP:~# df -h
+Filesystem                         Size  Used Avail Use% Mounted on
+udev                                32G     0   32G   0% /dev
+tmpfs                              6.3G  1.3M  6.3G   1% /run
+/dev/mapper/ubuntu--vg-ubuntu--lv  491G  6.4G  464G   2% /
+tmpfs                               32G     0   32G   0% /dev/shm
+tmpfs                              5.0M     0  5.0M   0% /run/lock
+tmpfs                               32G     0   32G   0% /sys/fs/cgroup
+/dev/sda2                          976M   80M  829M   9% /boot
+tmpfs                              6.3G     0  6.3G   0% /run/user/1002
+tmpfs                              6.3G     0  6.3G   0% /run/user/1001
+</code></pre>
+<h1 id="lvm_1">lvm合并两块物理磁盘</h1>
+<blockquote>
+<p>合并<code>/dev/sda</code>和<code>/dev/sdb</code></p>
+</blockquote>
+<p>安装lvm2工具包(如果尚未安装)</p>
+<pre><code class="language-bash">sudo apt install lvm2   # Debian/Ubuntu系统
+# 或
+sudo yum install lvm2   # RHEL/CentOS系统
+</code></pre>
+<p>将硬盘格式化为LVM格式：</p>
+<pre><code class="language-bash"># 使用fdisk创建LVM分区
+sudo fdisk /dev/sda
+# 输入n新建分区
+# 输入p创建主分区
+# 分区号使用默认的1
+# 其他选项使用默认值
+# 输入t更改分区类型
+# 输入8e选择Linux LVM类型
+# 输入w保存更改
+
+# 对sdb重复相同操作
+sudo fdisk /dev/sdb
+
+</code></pre>
+<p>创建物理卷(PV):</p>
+<pre><code class="language-bash">sudo pvcreate /dev/sda1
+sudo pvcreate /dev/sdb1
+
+# 检查物理卷
+sudo pvs
+</code></pre>
+<p>创建卷组(VG):</p>
+<pre><code class="language-bash"># 创建名为vg_data的卷组，并将第一个物理卷添加进去
+sudo vgcreate vg_data /dev/sda1
+
+# 将第二个物理卷扩展到卷组中
+sudo vgextend vg_data /dev/sdb1
+
+# 检查卷组
+sudo vgs
+</code></pre>
+<p>创建逻辑卷(LV):</p>
+<pre><code class="language-bash"># 创建使用全部空间的逻辑卷
+sudo lvcreate -l 100%VG -n lv_data vg_data
+
+# 检查逻辑卷
+sudo lvs
+</code></pre>
+<p>格式化逻辑卷：</p>
+<pre><code class="language-bash"># 使用ext4文件系统格式化
+sudo mkfs.ext4 /dev/vg_data/lv_data
+</code></pre>
+<p>创建挂载点并挂载：</p>
+<pre><code class="language-bash"># 创建挂载点
+sudo mkdir /data
+
+# 挂载逻辑卷
+sudo mount /dev/vg_data/lv_data /data
+
+# 检查挂载情况
+df -h
+</code></pre>
+<p>设置开机自动挂载：</p>
+<pre><code class="language-bash"># 编辑/etc/fstab文件
+sudo nano /etc/fstab
+
+# 添加以下行
+/dev/vg_data/lv_data /data ext4 defaults 0 0
+
+</code></pre>
+<h1 id="baparted">B盘合并至有数据的A盘(parted)</h1>
+<blockquote>
+<p>/dev/sdc 合并至 /dev/sdb</p>
+</blockquote>
+<p>模拟数据，对/dev/sdb格式化并写入测试数据</p>
+<pre><code class="language-bash"># 分区
+parted /dev/sdb 
+(parted) mklabel gpt            # GPT（即GUID分区表） ， 突破MBR 4个主分区限制
+(parted) mkpart p 0% 100%       # 主分区
+(parted) print
+(parted) toggle 1 lvm           # 将分区打上lvm标签 
+(parted) print               
+(parted) q
+partprobe    # 重读分区表
+
+# 创建pv、vg和lv
+pvcreate /dev/sdb1
+pvs
+vgcreate vg_data /dev/sdb1
+vgs
+sudo lvcreate -l 100%VG -n lv_data vg_data
+lvs
+mkfs.xfs /dev/vg_data/lv_data
+
+# 挂载
+mkdir /data
+mount /dev/vg_data/lv_data /data/
+</code></pre>
+<p>格式化 /dev/sdc</p>
+<pre><code class="language-bash"># 分区
+parted /dev/sdc
+(parted) mklabel gpt            # GPT（即GUID分区表） ， 突破MBR 4个主分区限制
+(parted) mkpart p 0% 100%       # 主分区
+(parted) print
+(parted) toggle 1 lvm           # 将分区打上lvm标签 
+(parted) print               
+(parted) q
+partprobe    # 重读分区表
+
+pvcreate /dev/sdc1                # 创建pv
+vgextend vg_data /dev/sdc1        # 把sdc添加上此前创建的vg中
+lvextend -l +100%FREE /dev/mapper/vg_data-lv_data    # 扩展lv
+resize2fs /dev/mapper/vg_data-lv_data   # 在线对逻辑卷进行调整
+</code></pre>
+<h1 id="lvm_2">还原lvm合并的磁盘</h1>
+<ol>
+<li>卸载逻辑卷</li>
+</ol>
+<pre><code class="language-bash"># 确保没有进程在使用该挂载点
+sudo fuser -km /data
+# 卸载逻辑卷
+sudo umount /data
+</code></pre>
+<ol start="2">
+<li>/etc/fstab中删除自动挂载项</li>
+</ol>
+<pre><code class="language-bash"># 删除包含目标逻辑卷的数据行
+</code></pre>
+<ol start="3">
+<li>删除逻辑卷(LV)</li>
+</ol>
+<pre><code class="language-bash"># 查看逻辑卷
+sudo lvs
+# 删除逻辑卷
+sudo lvremove /dev/vg_data/lv_data
+# 确认删除时输入y
+</code></pre>
+<ol start="4">
+<li>删除卷组(VG)</li>
+</ol>
+<pre><code class="language-bash"># 查看卷组
+sudo vgs
+# 删除卷组
+sudo vgremove vg_data
+</code></pre>
+<ol start="5">
+<li>删除物理卷(PV)</li>
+</ol>
+<pre><code class="language-bash"># 查看物理卷
+sudo pvs
+# 删除物理卷
+sudo pvremove /dev/sda1
+sudo pvremove /dev/sdb1
+</code></pre>
+<ol start="6">
+<li>清除硬盘分区表</li>
+</ol>
+<pre><code class="language-bash"># 对sda进行操作
+sudo fdisk /dev/sda
+# 输入d删除分区
+# 输入w保存并退出
+
+# 对sdb进行操作
+sudo fdisk /dev/sdb
+# 输入d删除分区
+# 输入w保存并退出
+</code></pre>
+<h1 id="_1">问题记录</h1>
+<h2 id="gpt-pmbr-size-mismatch-will-be-corrected-by-write">GPT PMBR size mismatch will be corrected by write错误</h2>
+<blockquote>
+<p>原因：在对虚拟机扩容时候，由于linux系统没有对其磁盘信息进行更新，导致了磁盘实际容量和linux系统容量不一致
+修复</p>
+</blockquote>
+<pre><code class="language-bash"># 执行命令：
+sudo parted -l
+
+# 然后输入：
+Fix
+</code></pre>
+<h2 id="lvextend">lvextend之后发现扩容的文件系统不对，需要还原</h2>
+<blockquote>
+<p>根分区有1.75TB实际可用空间，需要把多余的两块8T的盘加入根分区，在lvextend之后发现原来8T的盘被格式化为ext4，然后根分区是xfs文件系统，这会导致xfs_growfs resizefs的时候报错，所以需要把加入的两个pv，分别是/dev/sda1和/dev/sdb1给删掉。</p>
+</blockquote>
+<p>修复</p>
+<blockquote>
+<p>需要按照以下步骤严格执行，否则会造成文件系统错误
+1. 查看现有vg状态，使用命令：vgdisplay</p>
+</blockquote>
+<pre><code class="language-bash">[root@hadoop111 ~]# vgdisplay                                             
+  --- Volume group ---
+  VG Name               centos
+  System ID             
+  Format                lvm2
+  Metadata Areas        3
+  Metadata Sequence No  6
+  VG Access             read/write
+  VG Status             resizable
+  MAX LV                0
+  Cur LV                2
+  Open LV               2
+  Max PV                0
+  Cur PV                3
+  Act PV                3
+  VG Size               &lt;15.72 TiB
+  PE Size               4.00 MiB
+  Total PE              4120269
+  Alloc PE / Size       4120269 / &lt;15.72 TiB
+  Free  PE / Size       0 / 0   
+  VG UUID               3Z4pzJ-iXuk-RuhH-UU2w-JCZR-1Khy-ir35yb
+</code></pre>
+<ol start="2">
+<li>需要找出之前的状态，查看之前的数据盘大小，翻历史记录发现之前的大小是1.75TB，这时候需要缩小lv的大小为1.7TB，保证有充足的扇区可以还原给/dev/sda1和/dev/sdb1</li>
+</ol>
+<pre><code class="language-bash">  [root@hadoop112 ~]# vgdisplay 
+  --- Volume group ---
+  VG Name               centos
+  System ID             
+  Format                lvm2
+  Metadata Areas        1
+  Metadata Sequence No  3
+  VG Access             read/write
+  VG Status             resizable
+  MAX LV                0
+  Cur LV                2
+  Open LV               2
+  Max PV                0
+  Cur PV                1
+  Act PV                1
+  VG Size               &lt;1.75 TiB
+  PE Size               4.00 MiB
+  Total PE              457445
+  Alloc PE / Size       457445 / &lt;1.75 TiB
+  Free  PE / Size       0 / 0   
+  VG UUID               xDwaya-VH9C-wqLh-m2I3-j0SB-7Obe-cH53fK
+</code></pre>
+<ol start="3">
+<li>缩小根分区lv大小，使用命令：lvreduce -L 1.7T /dev/mapper/centos-root
+执行完命令之后再查看下vg，需要保证Alloc PE / Size的值小于等于原来的457445</li>
+</ol>
+<pre><code class="language-bash">[root@hadoop111 ~]# lvreduce -L 1.7T /dev/mapper/centos-root
+  Rounding size to boundary between physical extents: 1.70 TiB.
+  WARNING: Reducing active and open logical volume to 1.70 TiB.
+  THIS MAY DESTROY YOUR DATA (filesystem etc.)
+Do you really want to reduce centos/root? [y/n]: y
+  Size of logical volume centos/root changed from &lt;1.75 TiB (457445 extents) to 1.70 TiB (445645 extents).
+  Logical volume centos/root successfully resized.
+
+
+[root@hadoop111 ~]# vgdisplay 
+  --- Volume group ---
+  VG Name               centos
+  System ID             
+  Format                lvm2
+  Metadata Areas        2
+  Metadata Sequence No  16
+  VG Access             read/write
+  VG Status             resizable
+  MAX LV                0
+  Cur LV                2
+  Open LV               2
+  Max PV                0
+  Cur PV                2
+  Act PV                2
+  VG Size               8.73 TiB
+  PE Size               4.00 MiB
+  Total PE              2288857
+  Alloc PE / Size       446669 / 1.70 TiB
+  Free  PE / Size       1842188 / &lt;7.03 TiB
+  VG UUID               3Z4pzJ-iXuk-RuhH-UU2w-JCZR-1Khy-ir35yb
+</code></pre>
+<ol start="4">
+<li>还原/dev/sda1和/dev/sdb1的pv大小为默认的</li>
+</ol>
+<pre><code class="language-bash">[root@hadoop111 ~]# pvresize /dev/sda1
+  Physical volume &quot;/dev/sda1&quot; changed
+  1 physical volume(s) resized or updated / 0 physical volume(s) not resized
+[root@hadoop111 ~]# pvresize /dev/sdb1
+  Physical volume &quot;/dev/sdb1&quot; changed
+  1 physical volume(s) resized or updated / 0 physical volume(s) not resized
+</code></pre>
+<ol start="5">
+<li>把原来vgextend的两块盘去掉</li>
+</ol>
+<pre><code class="language-bash">[root@hadoop111 ~]# vgreduce centos /dev/sda1
+  Removed &quot;/dev/sda1&quot; from volume group &quot;centos&quot;
+[root@hadoop111 ~]# vgreduce centos /dev/sdb1
+  Removed &quot;/dev/sdb1&quot; from volume group &quot;centos&quot;
+</code></pre>
+<ol start="6">
+<li>删除pv</li>
+</ol>
+<pre><code class="language-bash">[root@hadoop111 ~]# pvremove /dev/sda1
+  Labels on physical volume &quot;/dev/sda1&quot; successfully wiped.
+[root@hadoop111 ~]# pvremove /dev/sdb1
+  Labels on physical volume &quot;/dev/sdb1&quot; successfully wiped.
+</code></pre>
+<ol start="7">
+<li>扩容根分区为它原本的最大空间</li>
+</ol>
+<pre><code class="language-bash">[root@hadoop111 ~]# lvextend -l +100%FREE /dev/mapper/centos-root
+  Size of logical volume centos/root changed from 1.70 TiB (445645 extents) to 1.74 TiB (456421 extents).
+  Logical volume centos/root successfully resized.
+[root@hadoop111 ~]# vgdisplay 
+  --- Volume group ---
+  VG Name               centos
+  System ID             
+  Format                lvm2
+  Metadata Areas        1
+  Metadata Sequence No  18
+  VG Access             read/write
+  VG Status             resizable
+  MAX LV                0
+  Cur LV                2
+  Open LV               2
+  Max PV                0
+  Cur PV                1
+  Act PV                1
+  VG Size               &lt;1.75 TiB
+  PE Size               4.00 MiB
+  Total PE              457445
+  Alloc PE / Size       457445 / &lt;1.75 TiB
+  Free  PE / Size       0 / 0   
+  VG UUID               3Z4pzJ-iXuk-RuhH-UU2w-JCZR-1Khy-ir35yb
+# 对文件系统实现真正的扩容
+[root@hadoop112 ~]# xfs_growfs /dev/mapper/centos-root
+meta-data=/dev/mapper/centos-root isize=512    agcount=32, agsize=14605504 blks
+         =                       sectsz=512   attr=2, projid32bit=1
+         =                       crc=1        finobt=0 spinodes=0
+data     =                       bsize=4096   blocks=467375104, imaxpct=5
+         =                       sunit=64     swidth=64 blks
+naming   =version 2              bsize=4096   ascii-ci=0 ftype=1
+log      =internal               bsize=4096   blocks=228224, version=2
+         =                       sectsz=512   sunit=64 blks, lazy-count=1
+realtime =none                   extsz=4096   blocks=0, rtextents=0
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../elk/index.html">ELK</a></li>
+<li class=""><a href="../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="lvm.html">使用lvm根分区扩容</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>通过Ollama管理本地大模型 · rensongqi</title>
+<meta name="description" content="运行ollama">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/llm.html">LLM</a> / <span>通过Ollama管理本地大模型</span></div>
+
+<div class="doc-title">
+  <h1>通过Ollama管理本地大模型</h1>
+  <div class="meta">2026-09-14 · 约 200 字 · 源自 notes-src/llm/ollama/README.md</div>
+  <div class="doc-tags"><span>#LLM</span><span>#Ollama</span></div>
+</div>
+
+<div class="layout no-toc">
+
+<main>
+<p>运行ollama</p>
+<pre><code class="language-bash">docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
+</code></pre>
+<p>安装<code>llama3.1:8b</code>模型</p>
+<pre><code class="language-bash">docker exec -it ollama bash
+ollama run llama3.1:8b
+</code></pre>
+<p>IDE安装<code>Continue</code>插件，修改模型为本地模型</p>
+<pre><code class="language-json">{
+  &quot;models&quot;: [
+    {
+      &quot;model&quot;: &quot;claude-3-5-sonnet-latest&quot;,
+      &quot;provider&quot;: &quot;anthropic&quot;,
+      &quot;apiKey&quot;: &quot;&quot;,
+      &quot;title&quot;: &quot;Claude 3.5 Sonnet&quot;
+    },
+    {
+      &quot;apiBase&quot;: &quot;https://chat.rsq.cn&quot;,
+      &quot;title&quot;: &quot;Llama3.1 8B&quot;,
+      &quot;provider&quot;: &quot;ollama&quot;,
+      &quot;model&quot;: &quot;llama3.1:8b&quot;
+    },
+    {
+      &quot;apiBase&quot;: &quot;https://chat.rsq.cn&quot;,
+      &quot;title&quot;: &quot;Deepseek-coder:6.7b&quot;,
+      &quot;provider&quot;: &quot;ollama&quot;,
+      &quot;model&quot;: &quot;deepseek-coder:6.7b&quot;
+    }
+  ],
+  &quot;tabAutocompleteModel&quot;: {
+    &quot;apiBase&quot;: &quot;https://chat.rsq.cn&quot;,
+    &quot;title&quot;: &quot;Llama3.1 8B&quot;,
+    &quot;provider&quot;: &quot;ollama&quot;,
+    &quot;model&quot;: &quot;llama3.1:8b&quot;
+  },
+  &quot;contextProviders&quot;: [
+    {
+      &quot;name&quot;: &quot;code&quot;,
+      &quot;params&quot;: {}
+    },
+    {
+      &quot;name&quot;: &quot;docs&quot;,
+      &quot;params&quot;: {}
+    },
+    {
+      &quot;name&quot;: &quot;diff&quot;,
+      &quot;params&quot;: {}
+    },
+    {
+      &quot;name&quot;: &quot;terminal&quot;,
+      &quot;params&quot;: {}
+    },
+    {
+      &quot;name&quot;: &quot;problems&quot;,
+      &quot;params&quot;: {}
+    },
+    {
+      &quot;name&quot;: &quot;folder&quot;,
+      &quot;params&quot;: {}
+    },
+    {
+      &quot;name&quot;: &quot;codebase&quot;,
+      &quot;params&quot;: {}
+    }
+  ],
+  &quot;slashCommands&quot;: [
+    {
+      &quot;name&quot;: &quot;share&quot;,
+      &quot;description&quot;: &quot;Export the current chat session to markdown&quot;
+    },
+    {
+      &quot;name&quot;: &quot;cmd&quot;,
+      &quot;description&quot;: &quot;Generate a shell command&quot;
+    },
+    {
+      &quot;name&quot;: &quot;commit&quot;,
+      &quot;description&quot;: &quot;Generate a git commit message&quot;
+    }
+  ],
+  &quot;embeddingsProvider&quot;: {
+    &quot;provider&quot;: &quot;ollama&quot;
+  },
+  &quot;reranker&quot;: {
+    &quot;name&quot;: &quot;llm&quot;,
+    &quot;params&quot;: {
+      &quot;modelTitle&quot;: &quot;Llama3.1 8B&quot;
+    }
+  }
+}
+</code></pre>
+<p>效果示例
+<img alt="Llama3.1:8b" src="../../../assets/images/notes/Llama3.18b.jpg" /></p>
+<ul>
+<li>slashCommands: 支持快捷操作</li>
+</ul>
+<nav class="doc-series">
+  <p class="lb">LLM · 同分类笔记</p>
+  <ol>
+<li class="cur"><a href="index.html">通过Ollama管理本地大模型</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

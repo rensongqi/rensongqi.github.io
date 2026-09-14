@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Usages · rensongqi</title>
+<meta name="description" content="用if也可以实现条件判断">
+<link rel="stylesheet" href="../../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../../index.html">首页</a>
+      <a href="../../../../archive.html">归档</a>
+      <a href="../../../../storage.html">存储</a>
+      <a href="../../../../notes/" class="is-active">笔记</a>
+      <a href="../../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../../index.html">首页</a> / <a href="../../../../notes/">笔记</a> / <a href="../../../../notes/cicd.html">CI/CD</a> / <span>Pipeline Usages</span></div>
+
+<div class="doc-title">
+  <h1>Pipeline Usages</h1>
+  <div class="meta">2026-09-14 · 约 900 字 · 源自 notes-src/cicd/jenkins/pipeline/pipeline_usages.md</div>
+  <div class="doc-tags"><span>#CI/CD</span><span>#Jenkins</span><span>#Pipeline</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1-pipeline-pull-code">1 Pipeline 批量pull code</a></li><li class="l2"><a href="#2-pipeline-for-kubernetes-pod">2 Pipeline for Kubernetes pod</a></li><li class="l2"><a href="#3-pipeline-parallel">3 Pipeline 并行parallel</a></li><li class="l2"><a href="#4-pipeline">4 Pipeline 条件控制</a></li><li class="l2"><a href="#5-pipeline-switch-case">5 Pipeline switch-case</a></li><li class="l2"><a href="#6-pipeline-for">6 Pipeline for循环</a></li><li class="l2"><a href="#_1">注意事项</a></li></ul></nav>
+<main>
+<h2 id="1-pipeline-pull-code">1 Pipeline 批量pull code</h2>
+<pre><code class="language-groovy">#!/usr/bin/env groovy
+def gitclone(String gitrepo, String gitbranch, String credential) {
+    checkout(
+        [   
+            $class: 'GitSCM', 
+            branches: [[name: gitbranch]], 
+            doGenerateSubmoduleConfigurations: false, 
+            extensions: [
+                [$class: 'CheckoutOption', timeout: 60],
+                [$class: 'GitLFSPull'],
+                [$class: 'CloneOption', noTags: false, reference: '', shallow: false, timeout: 60],
+                [$class: 'SubmoduleOption', timeout: 60, disableSubmodules: false, parentCredentials: true, recursiveSubmodules: true, reference: '', trackingSubmodules: false]
+            ], 
+            submoduleCfg: [], 
+            userRemoteConfigs: [[credentialsId: credential, 
+            url: gitrepo]]
+        ]
+    )
+}
+
+node(env.BuildMachineLabel){
+    stage(&quot;Pull Code on win&quot;) {
+        dir(env.ws_win + 'CloudRendererAgentEdge'){
+            gitclone(env.CloudRendererAgentEdge, env.cloud_branch, env.cloud_credential)
+        }
+
+        dir(env.ws_win + 'TileService'){
+            gitclone(env.TileService, env.master_branch, env.credential_id)
+        }
+
+        dir(env.ws_win + 'AES_data_service'){
+            gitclone(env.AES_data_service, env.master_branch, env.credential_id)
+        }
+
+        dir(env.ws_win + 'std'){
+            gitclone(env.std, env.master_branch, env.credential_id)
+        }
+
+        dir(env.ws_win + 'AesFramework'){
+            gitclone(env.AesFramework, env.master_branch, env.credential_id)
+        }
+
+        dir(env.ws_win + 'AES_Common'){
+            gitclone(env.AES_Common, env.master_branch, env.credential_id)
+        }
+
+    } //  stage
+
+} // node
+</code></pre>
+<h2 id="2-pipeline-for-kubernetes-pod">2 Pipeline for Kubernetes pod</h2>
+<pre><code class="language-groovy">def is_docker_pull = false
+if (env.docker_pull == &quot;yes&quot;) {is_docker_pull = true}
+
+podTemplate(
+    inheritFrom: '51vr-jenkins-slave',
+    containers: [
+        containerTemplate(
+            name: 'xenial-cis', alwaysPullImage: is_docker_pull, workingDir: '/home/jenkins', \
+            image: 'images.rsq.local:5000/ubuntu:xenial-cis', ttyEnabled: true, command: 'cat'
+        ),
+        containerTemplate(
+            name: '51vr-docker', workingDir: '/home/jenkins', \
+            image: 'images.rsq.local:5000/docker:17.03.2-ce', ttyEnabled: true, command: 'cat'
+        )
+    ], // containers
+    volumes: [
+        hostPathVolume(hostPath: env.cis_linux, mountPath: '/home/jenkins/workspace'),
+        hostPathVolume(hostPath: '/var/run/docker.sock', mountPath: '/var/run/docker.sock'),
+        hostPathVolume(hostPath: '/datadisk/cis', mountPath: '/mnt')
+    ],
+    imagePullSecrets: [ 'images-docker-51vr' ]
+)
+
+{   
+    echo '===========================================================\nChange Set Start\n==========================================================='
+    if(env.change_set != '' &amp;&amp; env.change_set != null){
+      for (item in env.change_set.split(';')){
+          echo item
+      }
+    }
+    echo '===========================================================\nChange Set End\n==========================================================='
+
+    parallel(
+        'win10':{
+            try{
+                if (env.platform_win10 == 'true'){
+                    node(env.BuildMachineLabel){
+                         stage('Build'){
+                            dir(env.ws_win + '\\Tools\\tools'){
+                                bat '''
+                                    echo &quot;test1&quot;
+                                '''
+                            }
+                            dir(env.ws_win + '\\Tools\\build'){
+                                bat '''
+                                    echo &quot;test2&quot;
+                                '''
+                            }
+                        }
+                    } // node - WIN
+                } // if
+            } // try
+            catch (e){
+                emailext attachLog: true, 
+                body: '''
+                &lt;!DOCTYPE html&gt;
+                &lt;html&gt;
+                &lt;head&gt;
+                &lt;meta charset=&quot;UTF-8&quot;&gt;
+                &lt;title&gt;ALPHA - Please ignore - ${ENV, var=&quot;JOB_NAME&quot;}- Build Number: ${BUILD_NUMBER}&lt;/title&gt;
+                &lt;/head&gt;
+                &lt;body&gt;
+                    &lt;div&gt;${JELLY_SCRIPT,template=&quot;html&quot;}&lt;/div&gt;
+                &lt;/body&gt;
+                &lt;/html&gt;''', 
+                subject: 'Build - ${JOB_NAME} is failed', to: env.mail_list
+                throw e
+            } //catch
+        }, // win10
+
+        'ubuntu16':{
+            try{
+                if (env.platform_ubuntu16 == 'true'){
+                    node(POD_LABEL){
+                         stage('Build'){
+                            container('xenial-cis-realtoedit'){
+                                dir('../Tools/RealToEdit/tools'){
+                                    sh '''
+                                        echo &quot;widnows stage&quot;
+                                    '''
+                                }
+                            }
+                        } // stage - Clean Build - ubuntu16
+                    }
+                }
+            } //try
+        }, // ubuntu16
+
+    ) // parallel
+
+} //end
+</code></pre>
+<h2 id="3-pipeline-parallel">3 Pipeline 并行parallel</h2>
+<pre><code class="language-groovy">stage(&quot;Copy stage&quot;){
+    parallel{
+        stage(&quot;stage-1&quot;){
+            steps{
+                script{
+                    sh '''
+                        echo &quot;stage-1&quot;
+                    '''
+                } //script
+            } //steps
+        } //stage-1
+
+        stage(&quot;stage-2&quot;){
+            steps{
+                script{
+                    sh '''
+                        echo &quot;stage-2&quot;
+                    '''
+                } // script
+            } //steps
+
+        } //stage-2
+
+        stage(&quot;stage-3&quot;){
+            steps{
+                script{
+                    if (! fileExists(&quot;${work_space}/dockerfiles/core/Core.tar.gz&quot;)) {
+                        echo &quot;ERROR: core tar package is missing!&quot;
+                    }
+                    else {
+                        sh &quot;rm -f ${work_space}/dockerfiles/core/Core.tar.gz&quot;   
+                    }
+                    sh '''
+                        echo &quot;stage-3&quot;
+                    '''
+                } //script
+            } //steps
+        } //stage-3
+    } //parallel
+} //copy stage
+</code></pre>
+<h2 id="4-pipeline">4 Pipeline 条件控制</h2>
+<pre><code class="language-groovy">//params.copy_to_dst在jenkins job中需要定义为Bool值
+stage('Copy To Dst'){
+    when{
+        //判定条件为真时
+        expression{ params.copy_to_dst.toBoolean() }
+    }
+    steps{
+        script{
+            sh '''
+                echo &quot;copying....&quot;
+            '''
+        }
+    }
+}
+
+
+stage('Copy To Dst'){
+    when{
+        //判定条件为假时
+        expression{ ! params.copy_to_dst.toBoolean() }
+    }
+    steps{
+        script{
+            sh '''
+                echo &quot;copying....&quot;
+            '''
+        }
+    }
+}
+</code></pre>
+<p>用if也可以实现条件判断</p>
+<pre><code class="language-groovy">stage('Copy To Dst'){
+    when{
+        //判定条件为假时
+        expression{ ! params.copy_to_dst.toBoolean() }
+    }
+    steps{
+        script{
+            dir(&quot;$env.ws_win&quot;){
+                if (params.copy_to_nas) {
+                    bat'''
+                        echo &quot;test&quot;
+                    '''
+                }
+            } //dir
+        }//script
+    }//steps
+}
+</code></pre>
+<h2 id="5-pipeline-switch-case">5 Pipeline switch-case</h2>
+<pre><code class="language-groovy">stage('UE Packing'){
+    steps{
+        script{
+            if (env.make_windows_ue == 'true') {
+                switch(env.ue_cook){
+                    case 'cook':
+                        if(cook_config == 'Shipping') {
+                            echo &quot;cook&quot;
+                        }
+                    break   
+                    case 'clean_cook':
+                        // clean up output folder
+                        bat 'if exist UnrealEngine\\Output rd /s /q UnrealEngine\\Output'
+
+                        if(env.ue_pack_config.contains('Development')) {
+                            echo &quot;clean cook&quot;
+                        }
+                    break
+                } //switch
+            } //if
+        } //script 
+    } // steps
+} //stage
+
+</code></pre>
+<h2 id="6-pipeline-for">6 Pipeline for循环</h2>
+<pre><code class="language-groovy">stage('UE Packing'){
+    steps{
+        script{
+            for (cook_config in env.ue_pack_config.split(',')) {
+                if(cook_config == 'Shipping') {
+                    echo &quot;Shipping&quot;
+                }
+            }
+        } //script 
+    } // steps
+} //stage
+</code></pre>
+<h2 id="_1">注意事项</h2>
+<p>1 <code>customWorkspace</code>如果跟jenkins 配置中的<code>Pipeline SCM</code>一块混用，那么流水线后边checkout代码时候要跟上绝对路径，否则会出现代码紊乱的现象。如果用了Pipeline SCM，那么jenkins会先在workspace目录下pull SCM里边定义的git仓库，由于我们用了customWorkspace，那么SCM的仓库就会被pull到customWorkspace目录下边。</p>
+<pre><code class="language-groovy">pipeline {
+    agent{
+        node{
+            label &quot;node01&quot;
+            customWorkspace env.work_space 
+            }  
+    } // agent
+    stages{
+        stage(&quot;Checkout Codes &quot;){
+            steps{
+                script{
+                    //这里的env.BUILD_TOOLS_DIR需要在jenkins job中传参
+                    dir(&quot;$env.BUILD_TOOLS_DIR&quot;){
+                        checkout(
+                            [   
+                                $class: 'GitSCM', 
+                                branches: [[name: &quot;${params.BUILD_TOOLS_BRANCH}&quot;]], 
+                                doGenerateSubmoduleConfigurations: false, 
+                                extensions: [
+                                    [$class: 'CheckoutOption', timeout: 60],
+                                    [$class: 'GitLFSPull'],
+                                    [$class: 'CloneOption', noTags: false, reference: '', shallow: false, timeout: 60],
+                                    [$class: 'SubmoduleOption', timeout: 60, disableSubmodules: false, parentCredentials: true, recursiveSubmodules: true, reference: '', trackingSubmodules: false]
+                                ], 
+                                submoduleCfg: [], 
+                                userRemoteConfigs: [[credentialsId: 'tmpdevops', url: 'http://git.rsq.local/rsq/auto-builder.git']]
+                            ]
+                        )
+                    }
+                } //script
+            } // steps
+        } // stage
+
+        stage(&quot;make&quot;){
+            steps{
+                script{
+                    sh '''
+                        echo nihao
+                    '''
+                }
+            } // steps
+        } // stage
+
+    } // stages
+} // pipeline
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">CI/CD · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../../argo/index.html">Argo CD</a></li>
+<li class=""><a href="../index.html">Jenkins</a></li>
+<li class="cur"><a href="pipeline-usages.html">Pipeline Usages</a></li>
+<li class=""><a href="share-library.html">Pipeline · Share Library</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../../feed.xml">RSS</a>
+      <a href="../../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../../assets/js/main.js"></script>
+</body>
+</html>

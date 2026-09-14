@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vdbench · rensongqi</title>
+<meta name="description" content="vdbench是一个I/O工作负载生成器，通常用于验证数据完整性和度量直接附加（或网络连接）存储性能。它可以运行在windows、linux环境，可用于测试文件系统或块设备基准性能。">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>Vdbench</span></div>
+
+<div class="doc-title">
+  <h1>Vdbench</h1>
+  <div class="meta">2026-09-14 · 约 1910 字 · 源自 notes-src/ops/vdbench/README.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#Vdbench</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#vdbench">vdbench</a></li><li class="l2"><a href="#1">1 多节点测试</a></li><li class="l3"><a href="#11">1.1 顺序测试</a></li><li class="l3"><a href="#12">1.2 随机读写</a></li><li class="l3"><a href="#13">1.3 混合读写</a></li><li class="l2"><a href="#2">2 单节点测试</a></li><li class="l3"><a href="#21">2.1 顺序测试</a></li><li class="l3"><a href="#22">2.2 随机读写</a></li><li class="l3"><a href="#23">2.3 混合读写</a></li></ul></nav>
+<main>
+<ul>
+<li><a href="#vdbench">vdbench</a></li>
+<li><a href="#1-多节点测试">1 多节点测试</a></li>
+<li><a href="#11-顺序测试">1.1 顺序测试</a></li>
+<li><a href="#12-随机读写">1.2 随机读写</a></li>
+<li><a href="#13-混合读写">1.3 混合读写</a></li>
+<li><a href="#2-单节点测试">2 单节点测试</a></li>
+<li><a href="#21-顺序测试">2.1 顺序测试</a></li>
+<li><a href="#22-随机读写">2.2 随机读写</a></li>
+<li><a href="#23-混合读写">2.3 混合读写</a></li>
+</ul>
+<h1 id="vdbench">vdbench</h1>
+<p>vdbench是一个I/O工作负载生成器，通常用于验证数据完整性和度量直接附加（或网络连接）存储性能。它可以运行在windows、linux环境，可用于测试文件系统或块设备基准性能。</p>
+<p>参考：</p>
+<ul>
+<li><a href="https://www.cnblogs.com/luxf0/p/13321077.html">vdbench存储性能测试工具</a></li>
+<li><a href="http://download.oracle.com/otn/utilities_drivers/vdbench/vdbench50406.zip">vdbench下载地址</a></li>
+<li><a href="https://download.oracle.com/otn/java/jdk/8u251-b08/3d5a2bb8f8d4428bbe94aed7ec7ae784/jdk-8u251-windows-x64.exe?AuthParam=1590741958_7a95bcd255b6fd15a5a1217c7317fe14">windows jdk</a></li>
+<li><a href="https://download.oracle.com/otn/java/jdk/8u251-b08/3d5a2bb8f8d4428bbe94aed7ec7ae784/jdk-8u251-linux-x64.tar.gz?AuthParam=1590742346_3243bad9a4f1a3147c170be345a4f972">linux jdk</a></li>
+</ul>
+<p>准备
+1. 部署jdk
+2. 配置免密
+3. 配置/etc/hosts</p>
+<h1 id="1">1 多节点测试</h1>
+<p>脚本只需要在一台机器上存放即可，每台机器vdbench对应的目录<code>/home/vdbench</code>下需要有vdbench的可执行程序。测试机器master1~node01四台机器之间需要做互相免密认证，否则不能同时配置多台机器同时压测</p>
+<h2 id="11">1.1 顺序测试</h2>
+<p><code>vim sequntial.file</code></p>
+<pre><code>messagescan=no
+hd=default,vdbench=/home/vdbench,user=root,shell=ssh
+hd=hd1,system=master1
+hd=hd2,system=master2
+hd=hd3,system=master3
+hd=hd4,system=node01
+
+fsd=fsd1,anchor=/gpfs/MaGW01,depth=1,width=1,shared=yes
+fsd=fsd2,anchor=/gpfs/MaGW02,depth=1,width=1,shared=yes
+fsd=fsd3,anchor=/gpfs/MaGW03,depth=1,width=1,shared=yes
+fsd=fsd4,anchor=/gpfs/MaGW04,depth=1,width=1,shared=yes
+
+fwd=fwd1,fsd=fsd1,hd=hd1,fileio=sequntial,fileselect=sequntial
+fwd=fwd2,fsd=fsd2,hd=hd2,fileio=sequntial,fileselect=sequntial
+fwd=fwd3,fsd=fsd3,hd=hd3,fileio=sequntial,fileselect=sequntial
+fwd=fwd4,fsd=fsd4,hd=hd4,fileio=sequntial,fileselect=sequntial
+
+rd=rd1,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=5120,size=1g,warmup=6,elapsed=666,interval=1,operation=write,threads=8
+rd=rd2,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=5120,size=1g,warmup=6,elapsed=666,interval=1,operation=read,threads=8
+rd=rd3,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=5120,size=2g,warmup=6,elapsed=666,interval=1,operation=write,threads=8
+rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=5120,size=2g,warmup=6,elapsed=666,interval=1,operation=read,threads=8
+rd=rd5,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=5120,size=1g,warmup=6,elapsed=666,interval=1,operation=write,threads=8
+rd=rd6,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=5120,size=1g,warmup=6,elapsed=666,interval=1,operation=read,threads=8
+rd=rd7,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=5120,size=2g,warmup=6,elapsed=666,interval=1,operation=write,threads=8
+rd=rd8,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=5120,size=2g,warmup=6,elapsed=666,interval=1,operation=read,threads=8
+</code></pre>
+<p>执行测试程序</p>
+<pre><code class="language-bash">./vdbench -f sequntial.file
+
+# 默认执行完会在当前目录下生成output文件，查看平均信息
+grep avg_7 output/summary.html
+</code></pre>
+<h2 id="12">1.2 随机读写</h2>
+<pre><code>messagescan=no
+hd=default,vdbench=/home/vdbench,user=root,shell=ssh
+hd=hd1,system=master1
+hd=hd2,system=master2
+hd=hd3,system=master3
+hd=hd4,system=node01
+
+fsd=fsd1,anchor=/gpfs/random/MaGW01,depth=1,width=1,shared=yes
+fsd=fsd2,anchor=/gpfs/random/MaGW02,depth=1,width=1,shared=yes
+fsd=fsd3,anchor=/gpfs/random/MaGW03,depth=1,width=1,shared=yes
+fsd=fsd4,anchor=/gpfs/random/MaGW04,depth=1,width=1,shared=yes
+
+fwd=fwd1,fsd=fsd1,hd=hd1,fileio=random,fileselect=random
+fwd=fwd2,fsd=fsd2,hd=hd2,fileio=random,fileselect=random
+fwd=fwd3,fsd=fsd3,hd=hd3,fileio=random,fileselect=random
+fwd=fwd4,fsd=fsd4,hd=hd4,fileio=random,fileselect=random
+
+rd=rd5,fwd=(fwd*),fwdrate=max,format=restart,xfersize=4k,files=512000,size=4k,warmup=6,elapsed=666,interval=1,operation=write,threads=32
+rd=rd1,fwd=(fwd*),fwdrate=max,format=restart,xfersize=4k,files=512000,size=4k,warmup=6,elapsed=666,interval=1,operation=read,threads=32
+rd=rd6,fwd=(fwd*),fwdrate=max,format=restart,xfersize=64k,files=512000,size=64k,warmup=6,elapsed=666,interval=1,operation=write,threads=32
+rd=rd2,fwd=(fwd*),fwdrate=max,format=restart,xfersize=64k,files=512000,size=64k,warmup=6,elapsed=666,interval=1,operation=read,threads=32
+rd=rd7,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=512000,size=1m,warmup=6,elapsed=666,interval=1,operation=write,threads=32
+rd=rd3,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=512000,size=1m,warmup=6,elapsed=666,interval=1,operation=read,threads=32
+rd=rd8,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512000,size=2m,warmup=6,elapsed=666,interval=1,operation=write,threads=32
+rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512000,size=2m,warmup=6,elapsed=666,interval=1,operation=read,threads=32
+</code></pre>
+<h2 id="13">1.3 混合读写</h2>
+<pre><code>messagescan=no
+hd=default,vdbench=/home/vdbench,user=root,shell=ssh
+hd=hd1,system=master1
+hd=hd2,system=master2
+hd=hd3,system=master3
+hd=hd4,system=node01
+
+fsd=fsd1,anchor=/gpfs/mix/MaGW01,depth=1,width=1,shared=yes
+fsd=fsd2,anchor=/gpfs/mix/MaGW02,depth=1,width=1,shared=yes
+fsd=fsd3,anchor=/gpfs/mix/MaGW03,depth=1,width=1,shared=yes
+fsd=fsd4,anchor=/gpfs/mix/MaGW04,depth=1,width=1,shared=yes
+
+fwd=fwd1,fsd=fsd1,hd=hd1,fileio=random,fileselect=random
+fwd=fwd2,fsd=fsd2,hd=hd2,fileio=random,fileselect=random
+fwd=fwd3,fsd=fsd3,hd=hd3,fileio=random,fileselect=random
+fwd=fwd4,fsd=fsd4,hd=hd4,fileio=random,fileselect=random
+
+rd=rd1,fwd=(fwd*),fwdrate=max,format=restart,xfersize=4k,files=512000,size=4k,warmup=6,elapsed=666,interval=1,operation=read,rdpct=70,threads=32
+rd=rd2,fwd=(fwd*),fwdrate=max,format=restart,xfersize=64k,files=512000,size=64k,warmup=6,elapsed=666,interval=1,operation=read,rdpct=70,threads=32
+rd=rd3,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=512000,size=1m,warmup=6,elapsed=666,interval=1,operation=read,rdpct=70,threads=32
+rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512000,size=2m,warmup=6,elapsed=666,interval=1,operation=read,rdpct=70,threads=32
+</code></pre>
+<h1 id="2">2 单节点测试</h1>
+<ul>
+<li>rd中files数量 * width = 生成文件总数</li>
+<li>depth: 目录深度</li>
+<li>直通模式：openflags=o_direct</li>
+</ul>
+<h2 id="21">2.1 顺序测试</h2>
+<pre><code>messagescan=no
+hd=default,vdbench=/home/vdbench,user=root
+hd=hd1,system=train-4090x4-amd-1-246
+
+fsd=fsd1,anchor=/disk/deepdata/test_io/sequntial,depth=1,width=1,shared=yes
+
+fwd=fwd1,fsd=fsd1,hd=hd1,fileio=sequntial,fileselect=sequntial
+
+rd=rd1,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=512,size=1g,warmup=6,elapsed=60,interval=1,operation=write,threads=8
+rd=rd2,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=512,size=1g,warmup=6,elapsed=60,interval=1,operation=read,threads=8
+rd=rd5,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512,size=1g,warmup=6,elapsed=60,interval=1,operation=write,threads=8
+rd=rd6,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512,size=1g,warmup=6,elapsed=60,interval=1,operation=read,threads=8
+rd=rd3,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=512,size=2g,warmup=6,elapsed=60,interval=1,operation=write,threads=8
+rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=512,size=2g,warmup=6,elapsed=60,interval=1,operation=read,threads=8
+rd=rd7,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512,size=2g,warmup=6,elapsed=60,interval=1,operation=write,threads=8
+rd=rd8,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512,size=2g,warmup=6,elapsed=60,interval=1,operation=read,threads=8
+</code></pre>
+<h2 id="22">2.2 随机读写</h2>
+<pre><code>messagescan=no
+hd=default,vdbench=/home/vdbench,user=root
+hd=hd1,system=train-4090x4-amd-1-246
+
+fsd=fsd1,anchor=/disk/deepdata/test_io/random,depth=1,width=1,shared=yes
+fwd=fwd1,fsd=fsd1,hd=hd1,fileio=random,fileselect=random
+
+rd=rd5,fwd=(fwd*),fwdrate=max,format=restart,xfersize=4k,files=51200,size=4k,warmup=6,elapsed=60,interval=1,operation=write,threads=32
+rd=rd1,fwd=(fwd*),fwdrate=max,format=restart,xfersize=4k,files=51200,size=4k,warmup=6,elapsed=60,interval=1,operation=read,threads=32
+rd=rd6,fwd=(fwd*),fwdrate=max,format=restart,xfersize=64k,files=51200,size=64k,warmup=6,elapsed=60,interval=1,operation=write,threads=32
+rd=rd2,fwd=(fwd*),fwdrate=max,format=restart,xfersize=64k,files=51200,size=64k,warmup=6,elapsed=60,interval=1,operation=read,threads=32
+rd=rd7,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=51200,size=1m,warmup=6,elapsed=60,interval=1,operation=write,threads=32
+rd=rd3,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=51200,size=1m,warmup=6,elapsed=60,interval=1,operation=read,threads=32
+rd=rd8,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=51200,size=2m,warmup=6,elapsed=60,interval=1,operation=write,threads=32
+rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=51200,size=2m,warmup=6,elapsed=60,interval=1,operation=read,threads=32
+</code></pre>
+<h2 id="23">2.3 混合读写</h2>
+<pre><code>messagescan=no
+hd=default,vdbench=/home/vdbench,user=root
+hd=hd1,system=train-4090x4-amd-1-246
+
+# 带缓存
+# fsd=fsd1,anchor=/disk/deepdata/test_io/mix,depth=32,width=1,shared=yes
+# 不使用缓存
+fsd=fsd1,anchor=/disk/deepdata/test_io/mix,depth=32,width=1,shared=yes,openflags=o_direct
+
+fwd=fwd1,fsd=fsd1,hd=hd1,fileio=random,fileselect=random
+
+rd=rd1,fwd=(fwd*),fwdrate=max,format=restart,xfersize=4k,files=51200,size=4k,warmup=6,elapsed=60,interval=1,operation=read,rdpct=70,threads=32
+rd=rd2,fwd=(fwd*),fwdrate=max,format=restart,xfersize=64k,files=51200,size=64k,warmup=6,elapsed=60,interval=1,operation=read,rdpct=70,threads=32
+rd=rd3,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=51200,size=1m,warmup=6,elapsed=60,interval=1,operation=read,rdpct=70,threads=32
+rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=51200,size=2m,warmup=6,elapsed=60,interval=1,operation=read,rdpct=70,threads=32
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../elk/index.html">ELK</a></li>
+<li class=""><a href="../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="index.html">Vdbench</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

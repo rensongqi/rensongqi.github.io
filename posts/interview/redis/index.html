@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一致性Hash · rensongqi</title>
+<meta name="description" content="以Redis集群为例，集群中有三台节点，我们的数据以hash格式存储，当client访问某一个数据的时候，集群会随机调度一个集群节点响应client，这里就牵扯到一致性hash算法。">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/interview.html">面试</a> / <span>一致性Hash</span></div>
+
+<div class="doc-title">
+  <h1>一致性Hash</h1>
+  <div class="meta">2026-09-14 · 约 1170 字 · 源自 notes-src/interview/redis/README.md</div>
+  <div class="doc-tags"><span>#面试</span><span>#Redis</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#hash">一致性Hash</a></li><li class="l3"><a href="#_1">算法的容错性和可扩展性</a></li><li class="l3"><a href="#_2">数据倾斜问题</a></li><li class="l3"><a href="#hash_1">Hash冲突</a></li><li class="l2"><a href="#redis">Redis优化</a></li><li class="l2"><a href="#redis-70">Redis 7.0</a></li></ul></nav>
+<main>
+<ul>
+<li><a href="#一致性hash">一致性Hash</a></li>
+<li><a href="#算法的容错性和可扩展性">算法的容错性和可扩展性</a></li>
+<li><a href="#数据倾斜问题">数据倾斜问题</a></li>
+<li><a href="#hash冲突">Hash冲突</a></li>
+<li><a href="#redis优化">Redis优化</a></li>
+<li><a href="#redis-70">Redis 7.0</a></li>
+</ul>
+
+<p>以Redis集群为例，集群中有三台节点，我们的数据以hash格式存储，当client访问某一个数据的时候，集群会随机调度一个集群节点响应client，这里就牵扯到一致性hash算法。</p>
+<p><img alt="redis" src="../../../assets/images/notes/redis_hash1.jpg" /></p>
+<p>一致性hash会生成一个hash环，redis会把集群对象映射到此hash环中，Hash函数的值空间为0 ~ 2^32 - 1(一个32位无符号整型)，当有数据key请求过来，将数据Key使用相同的函数Hash计算出哈希值，并确定此数据在环上的位置，从此位置沿环顺时针查找，遇到的服务器就是其应该定位到的服务器。</p>
+<h2 id="_1">算法的容错性和可扩展性</h2>
+<p>当有一个集群节点宕机了，但并不影响其他节点的使用。在一致性Hash算法中，如果一台服务器不可用，受影响的数据仅仅是此服务器到其环空间前一台服务器之间的数据（这里为Node C到Node B之间的数据），其他不会受到影响。</p>
+<p>如果系统增加了一个节点，此节点的hash位置在NodeC和ObjectC中间位置，那么对于A和B节点并没有影响，影响的只是ObjectC。</p>
+<p>一致性Hash算法对于节点的增减都只需重定位环空间中的一小部分数据，有很好的容错性和可扩展性。</p>
+<h2 id="_2">数据倾斜问题</h2>
+<p>在一致性Hash算法服务节点太少的情况下，容易因为节点分布不均匀面造成数据倾斜（被缓存的对象大部分缓存在某一台服务器上）问题。</p>
+<p><img alt="" src="../../../assets/images/notes/redis_hash2.jpg" /></p>
+<p>这时我们发现有大量数据集中在节点A上，而节点B只有少量数据。为了解决数据倾斜问题，一致性Hash算法引入了虚拟节点机制，即对每一个服务器节点计算多个哈希，每个计算结果位置都放置一个此服务节点，称为虚拟节点</p>
+<p>数据定位算法不变，只需要增加一步：虚拟节点到实际点的映射。 所以加入虚拟节点之后，即使在服务节点很少的情况下，也能做到数据的均匀分布。</p>
+<h2 id="hash_1">Hash冲突</h2>
+<p>Redis hash表初始化多大（4 bucket） 静态表
+多个key取模后的值落到redis的同一个bucket里，就是hash冲突</p>
+<h1 id="redis">Redis优化</h1>
+<p>1、尽量使用短的key
+- 当然在精简的同时，不要为了key的“见名知意”。对于value有些也可精简，比如性别使用0、1。</p>
+<p>2、避免使用keys *
+- keys *, 这个命令是阻塞的，即操作执行期间，其它任何命令在你的实例中都无法执行。当redis中key数据量小时到无所谓，数据量大就很糟糕了。所以我们应该避免去使用这个命令。可以去使用SCAN,来代替。</p>
+<p>3、在存到Redis之前先把你的数据压缩下
+- redis为每种数据类型都提供了两种内部编码方式，在不同的情况下redis会自动调整合适的编码方式。</p>
+<p>4、设置key有效期
+- 我们应该尽可能的利用key有效期。比如一些临时数据（短信校验码），过了有效期Redis就会自动为你清除！</p>
+<p>5、选择回收策略(maxmemory-policy)</p>
+<p>6、尽可能的使用hash存储</p>
+<p>7、限制redis内存大小
+- 64位系统不限制内存，32位系统默认最多使用3GB内存</p>
+<p>8、修改linux中TCP监听的最大容纳数量</p>
+<p>9、修改linux内核内存分配策略
+- redis在备份数据的时候，会fork出一个子进程，理论上child进程所占用的内存和parent是一样的，比如parent占用的内存为8G，这个时候也要同样分配8G的内存给child,如果内存无法负担，往往会造成redis服务器的down机或者IO负载过高，效率下降</p>
+<p>10、关闭THE
+- THP会造成内存锁影响redis性能，建议关闭</p>
+<h1 id="redis-70">Redis 7.0</h1>
+<ul>
+<li>Cluster: 支持域名（之前仅支持ip）</li>
+<li>将 AOF 作为多个文件存储在一个文件夹中</li>
+<li>对 RDB 文件使用了新版本格式（10），与旧版本不兼容</li>
+</ul>
+<nav class="doc-series">
+  <p class="lb">面试 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../go/index.html">Golang面试题</a></li>
+<li class=""><a href="../index.html">面试</a></li>
+<li class=""><a href="../linux/index.html">遇到过比较深刻的问题记录</a></li>
+<li class=""><a href="../mysql/index.html">MySQL</a></li>
+<li class="cur"><a href="index.html">一致性Hash</a></li>
+<li class=""><a href="../docker/docker-shim.html">Docker Shim</a></li>
+<li class=""><a href="../go/coding.html">Go · Coding</a></li>
+<li class=""><a href="../go/escape-analysis.html">Go · Escape Analysis</a></li>
+<li class=""><a href="../go/gc.html">Go · GC</a></li>
+<li class=""><a href="../go/goroutine-safety.html">Goroutine Safety</a></li>
+<li class=""><a href="../go/injection.html">依赖注入</a></li>
+<li class=""><a href="../go/memory-management.html">Go · Memory Management</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

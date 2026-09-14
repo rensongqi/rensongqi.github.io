@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mysqldump备份及还原 · rensongqi</title>
+<meta name="description" content="锁表导出指定库">
+<link rel="stylesheet" href="../../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../../index.html">首页</a>
+      <a href="../../../../archive.html">归档</a>
+      <a href="../../../../storage.html">存储</a>
+      <a href="../../../../notes/" class="is-active">笔记</a>
+      <a href="../../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../../index.html">首页</a> / <a href="../../../../notes/">笔记</a> / <a href="../../../../notes/ops.html">运维工具</a> / <span>mysqldump备份及还原</span></div>
+
+<div class="doc-title">
+  <h1>mysqldump备份及还原</h1>
+  <div class="meta">2026-09-14 · 约 200 字 · 源自 notes-src/ops/database/mysql/mysqldump.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#数据库</span><span>#MySQL</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#mysqldump">mysqldump备份及还原</a></li><li class="l3"><a href="#_1">备份</a></li><li class="l3"><a href="#_2">还原</a></li></ul></nav>
+<main>
+<h2 id="_1">备份</h2>
+<p>锁表导出指定库</p>
+<pre><code class="language-bash">mysqldump -h 172.16.1.104 -u root -p&lt;PASSWORD&gt; --max_allowed_packet=1024M --databases &lt;DATABASE_NAME&gt; &gt; backup.sql 
+</code></pre>
+<p>不锁表导出指定库</p>
+<pre><code class="language-bash">mysqldump -h 172.16.1.104 -u root -p&lt;PASSWORD&gt; --max_allowed_packet=1024M --single-transaction --databases &lt;DATABASE_NAME&gt; &gt; backup.sql
+</code></pre>
+<p>仅导出表结构</p>
+<pre><code class="language-bash">mysqldump -h 172.16.1.104 -P 13306 -u readonly --single-transaction --no-data -p promise &gt; backup.sql
+</code></pre>
+<p>仅导出INSERT插入数据，不需要drop和create table的语句</p>
+<pre><code class="language-bash">mysqldump -h 172.16.1.104 -P 13306 -u readonly --single-transaction --skip-add-drop-table --no-create-info -p promise &gt; backup.sql
+</code></pre>
+<p>不锁表导出指定库中指定表</p>
+<pre><code class="language-bash">mysqldump -h 172.16.1.104 -u root -p&lt;PASSWORD&gt; --tables test1 test2 --single-transaction --databases &lt;DATABASE_NAME&gt; &gt; backup.sql
+</code></pre>
+<h2 id="_2">还原</h2>
+<pre><code class="language-bash"># 方法 一
+mysql -u root -p &lt;DATABASE_NAME&gt; &lt; backup.sql
+
+# 方法 二
+mysql -u root -p
+mysql&gt; USE your_database;
+mysql&gt; SOURCE /path/to/backup.sql;
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../../canal/index.html">Canal</a></li>
+<li class=""><a href="../../consul/index.html">Consul</a></li>
+<li class=""><a href="../mongo/index.html">MongoDB</a></li>
+<li class=""><a href="index.html">MySQL</a></li>
+<li class=""><a href="../pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../redis/index.html">Redis</a></li>
+<li class=""><a href="../../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../../elk/index.html">ELK</a></li>
+<li class=""><a href="../../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="mysqldump.html">mysqldump备份及还原</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../../feed.xml">RSS</a>
+      <a href="../../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../../assets/js/main.js"></script>
+</body>
+</html>

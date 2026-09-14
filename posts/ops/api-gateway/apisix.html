@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APISIX · rensongqi</title>
+<meta name="description" content="Centos7 安装APISIX">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>APISIX</span></div>
+
+<div class="doc-title">
+  <h1>APISIX</h1>
+  <div class="meta">2026-09-14 · 约 1080 字 · 源自 notes-src/ops/api_gateway/apisix.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#API 网关</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1">1 安装</a></li><li class="l3"><a href="#11-install-dependencies">1.1 Install dependencies</a></li><li class="l3"><a href="#12-install-apache-apisix">1.2 Install Apache APISIX</a></li><li class="l3"><a href="#13-manage-apache-apisix-server">1.3 Manage Apache APISIX Server</a></li><li class="l3"><a href="#initializing-dependencies">Initializing Dependencies</a></li><li class="l3"><a href="#start-apache-apisix">Start Apache APISIX</a></li><li class="l3"><a href="#stop-apache-apisix">Stop Apache APISIX</a></li><li class="l3"><a href="#view-other-operations">View Other Operations</a></li><li class="l2"><a href="#step-4-run-test-cases">Step 4: Run Test Cases</a></li><li class="l3"><a href="#troubleshoot-testing">Troubleshoot Testing</a></li><li class="l2"><a href="#step-5-update-admin-api-token-to-protect-apache-apisix">Step 5: Update Admin API token to Protect Apache APISIX</a></li><li class="l2"><a href="#step-6-build-openresty-for-apache-apisix">Step 6: Build OpenResty for Apache APISIX</a></li><li class="l2"><a href="#step-7-add-systemd-unit-file-for-apache-apisix">Step 7: Add Systemd Unit File for Apache APISIX</a></li></ul></nav>
+<main>
+<p>Centos7 安装APISIX </p>
+<p><a href="https://github.com/apache/apisix/blob/master/docs/en/latest/install-dependencies.md">各类操作系统依赖安装</a>
+<a href="https://github.com/apache/apisix/blob/master/docs/en/latest/how-to-build.md">官方安装手册</a></p>
+<h2 id="1">1 安装</h2>
+<h3 id="11-install-dependencies">1.1 Install dependencies</h3>
+<pre><code class="language-bash"># install etcd
+wget https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz
+tar -xvf etcd-v3.4.13-linux-amd64.tar.gz &amp;&amp; \
+    cd etcd-v3.4.13-linux-amd64 &amp;&amp; \
+    sudo cp -a etcd etcdctl /usr/bin/
+
+# add OpenResty source
+sudo yum install yum-utils
+sudo yum-config-manager --add-repo https://openresty.org/package/centos/openresty.repo
+
+# install OpenResty and some compilation tools
+sudo yum install -y openresty curl git gcc openresty-openssl111-devel unzip
+
+# install LuaRocks
+curl https://raw.githubusercontent.com/apache/apisix/master/utils/linux-install-luarocks.sh -sL | bash -
+
+# start etcd server
+nohup etcd &amp;
+</code></pre>
+<h3 id="12-install-apache-apisix">1.2 Install Apache APISIX</h3>
+<p><strong>RPM</strong></p>
+<pre><code class="language-bash">sudo yum install -y https://github.com/apache/apisix/releases/download/2.7/apisix-2.7-0.x86_64.rpm
+</code></pre>
+<p><strong>Docker</strong></p>
+<pre><code>https://hub.docker.com/r/apache/apisix
+</code></pre>
+<p><strong>Helm Chart</strong></p>
+<pre><code>https://github.com/apache/apisix-helm-chart
+</code></pre>
+<h3 id="13-manage-apache-apisix-server">1.3 Manage Apache APISIX Server</h3>
+<p>We can initialize dependencies, start service, and stop service with commands in the Apache APISIX directory, we can also view all commands and their corresponding functions with the <code>make help</code> command.</p>
+<h3 id="initializing-dependencies">Initializing Dependencies</h3>
+<p>Run the following command to initialize the NGINX configuration file and etcd.</p>
+<pre><code class="language-shell"># initialize NGINX config file and etcd
+make init
+</code></pre>
+<h3 id="start-apache-apisix">Start Apache APISIX</h3>
+<p>Run the following command to start Apache APISIX.</p>
+<pre><code class="language-shell"># start Apache APISIX server
+make run
+</code></pre>
+<h3 id="stop-apache-apisix">Stop Apache APISIX</h3>
+<p>Both <code>make quit</code> and <code>make stop</code> can stop Apache APISIX. The main difference is that <code>make quit</code> stops Apache APISIX gracefully, while <code>make stop</code> stops Apache APISIX immediately.</p>
+<p>It is recommended to use gracefully stop command <code>make quit</code> because it ensures that Apache APISIX will complete all the requests it has received before stopping down. In contrast, <code>make stop</code> will trigger a forced shutdown, it stops Apache APISIX immediately, in which case the incoming requests will not be processed before the shutdown.</p>
+<p>The command to perform a graceful shutdown is shown below.</p>
+<pre><code class="language-shell"># stop Apache APISIX server gracefully
+make quit
+</code></pre>
+<p>The command to perform a forced shutdown is shown below.</p>
+<pre><code class="language-shell"># stop Apache APISIX server immediately
+make stop
+</code></pre>
+<h3 id="view-other-operations">View Other Operations</h3>
+<p>Run the <code>make help</code> command to see the returned results and get commands and descriptions of other operations.</p>
+<pre><code class="language-shell"># more actions find by `help`
+make help
+</code></pre>
+<h2 id="step-4-run-test-cases">Step 4: Run Test Cases</h2>
+<ol>
+<li>
+<p>Install <code>cpanminus</code>, the package manager for <code>perl</code>.</p>
+</li>
+<li>
+<p>Then install the test-nginx dependencies via <code>cpanm</code>:</p>
+</li>
+</ol>
+<p><code>shell
+  sudo cpanm --notest Test::Nginx IPC::Run &gt; build.log 2&gt;&amp;1 || (cat build.log &amp;&amp; exit 1)</code></p>
+<ol start="3">
+<li>Run the <code>git clone</code> command to clone the latest source code locally, please use the version we forked out：</li>
+</ol>
+<p><code>shell
+  git clone https://github.com/iresty/test-nginx.git</code></p>
+<ol start="4">
+<li>Load the test-nginx library with the <code>prove</code> command in <code>perl</code> and run the test case set in the <code>/t</code> directory.</li>
+</ol>
+<ul>
+<li>
+<p>Append the current directory to the perl module directory: <code>export PERL5LIB=.:$PERL5LIB</code>, then run <code>make test</code> command.</p>
+</li>
+<li>
+<p>Or you can specify the NGINX binary path by running this command: <code>TEST_NGINX_BINARY=/usr/local/bin/openresty prove -Itest-nginx/lib -r t</code>.</p>
+</li>
+</ul>
+<p>:::note Note
+  Some of the tests rely on external services and system configuration modification. For a complete test environment build, you can refer to <code>ci/linux_openresty_common_runner.sh</code>.
+  :::</p>
+<h3 id="troubleshoot-testing">Troubleshoot Testing</h3>
+<p><strong>Configuring NGINX Path</strong></p>
+<p>The solution to the <code>Error unknown directive "lua_package_path" in /API_ASPIX/apisix/t/servroot/conf/nginx.conf</code> error is as shown below.</p>
+<p>Ensure that Openresty is set to the default NGINX, and export the path as follows:</p>
+<ul>
+<li><code>export PATH=/usr/local/openresty/nginx/sbin:$PATH</code></li>
+<li>Linux default installation path:<ul>
+<li><code>export PATH=/usr/local/openresty/nginx/sbin:$PATH</code></li>
+</ul>
+</li>
+<li>MacOS default installation path via homebrew:<ul>
+<li><code>export PATH=/usr/local/opt/openresty/nginx/sbin:$PATH</code></li>
+</ul>
+</li>
+</ul>
+<p><strong>Run a Single Test Case</strong></p>
+<p>Run the specified test case using the following command.</p>
+<pre><code class="language-shell">prove -Itest-nginx/lib -r t/plugin/openid-connect.t
+</code></pre>
+<h2 id="step-5-update-admin-api-token-to-protect-apache-apisix">Step 5: Update Admin API token to Protect Apache APISIX</h2>
+<p>You need to modify the Admin API key to protect Apache APISIX.</p>
+<p>Please modify <code>apisix.admin_key</code> in <code>conf/config.yaml</code> and restart the service as shown below.</p>
+<pre><code class="language-yaml">apisix:
+  # ... ...
+  admin_key
+    -
+      name: &quot;admin&quot;
+      key: abcdefghabcdefgh # Modify the original key to abcdefghabcdefgh
+      role: admin
+</code></pre>
+<p>When we need to access the Admin API, we can use the key above, as shown below.</p>
+<pre><code class="language-shell">curl http://127.0.0.1:9080/apisix/admin/routes?api_key=abcdefghabcdefgh -i
+</code></pre>
+<p>The status code 200 in the returned result indicates that the access was successful, as shown below.</p>
+<pre><code class="language-shell">HTTP/1.1 200 OK
+Date: Fri, 28 Feb 2020 07:48:04 GMT
+Content-Type: text/plain
+... ...
+{&quot;node&quot;:{...},&quot;action&quot;:&quot;get&quot;}
+</code></pre>
+<p>At this point, if the key you enter does not match the value of <code>apisix.admin_key</code> in <code>conf/config.yaml</code>, for example, we know that the correct key is <code>abcdefghabcdefgh</code>, but we enter an incorrect key, such as <code>wrong- key</code>, as shown below.</p>
+<pre><code class="language-shell">curl http://127.0.0.1:9080/apisix/admin/routes?api_key=wrong-key -i
+</code></pre>
+<p>The status code <code>401</code> in the returned result indicates that the access failed because the <code>key</code> entered was incorrect and did not pass authentication, triggering an <code>Unauthorized</code> error, as shown below.</p>
+<pre><code class="language-shell">HTTP/1.1 401 Unauthorized
+Date: Fri, 28 Feb 2020 08:17:58 GMT
+Content-Type: text/html
+... ...
+{&quot;node&quot;:{...},&quot;action&quot;:&quot;get&quot;}
+</code></pre>
+<h2 id="step-6-build-openresty-for-apache-apisix">Step 6: Build OpenResty for Apache APISIX</h2>
+<p>Some features require additional NGINX modules to be introduced into OpenResty. If you need these features, you can build OpenResty with <a href="https://raw.githubusercontent.com/api7/apisix-build-tools/master/build-apisix-openresty.sh">this script</a>.</p>
+<h2 id="step-7-add-systemd-unit-file-for-apache-apisix">Step 7: Add Systemd Unit File for Apache APISIX</h2>
+<p>If you are using CentOS 7 and you installed Apache APISIX via the RPM package in step 2, the configuration file is already in place automatically and you can run the following command directly.</p>
+<pre><code class="language-shell">systemctl start apisix
+systemctl stop apisix
+</code></pre>
+<p>If you installed Apache APISIX by other methods, you can refer to the <a href="https://github.com/api7/apisix-build-tools/blob/master/usr/lib/systemd/system/apisix.service">configuration file template</a> for modification and put it in the <code>/usr/lib/systemd/system/apisix.service</code> path.</p>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../elk/index.html">ELK</a></li>
+<li class=""><a href="../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="apisix.html">APISIX</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Index相关操作 · rensongqi</title>
+<meta name="description" content="使用 Index Template 设定默认分片数">
+<link rel="stylesheet" href="../../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../../index.html">首页</a>
+      <a href="../../../../archive.html">归档</a>
+      <a href="../../../../storage.html">存储</a>
+      <a href="../../../../notes/" class="is-active">笔记</a>
+      <a href="../../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../../index.html">首页</a> / <a href="../../../../notes/">笔记</a> / <a href="../../../../notes/ops.html">运维工具</a> / <span>Index相关操作</span></div>
+
+<div class="doc-title">
+  <h1>Index相关操作</h1>
+  <div class="meta">2026-09-14 · 约 670 字 · 源自 notes-src/ops/elk/es/api.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#ELK</span><span>#Elasticsearch</span></div>
+</div>
+
+<div class="layout no-toc">
+
+<main>
+<pre><code class="language-yaml"># Click the Variables button, above, to create your own variables.
+GET ${exampleVariable1} // _search
+{
+  &quot;query&quot;: {
+    &quot;${exampleVariable2}&quot;: {} // match_all
+  }
+}
+
+# 查看集群健康状态
+GET /_cluster/health
+
+# reindex，类似拷贝index
+POST _reindex
+{
+  &quot;source&quot;: {
+    &quot;index&quot;: &quot;system-2025.01.17&quot;
+  },
+  &quot;dest&quot;: {
+    &quot;index&quot;: &quot;system-2025.01.14&quot;
+  }
+}
+
+# 创建模板
+PUT _index_template/kubernetes_template
+{
+  &quot;index_patterns&quot;: [&quot;kubernetes-*&quot;],
+  &quot;template&quot;: {
+    &quot;settings&quot;: {
+      &quot;index.number_of_shards&quot;: 5,
+      &quot;index.number_of_replicas&quot;: 1
+    }
+  },
+  &quot;priority&quot;: 100
+}
+
+# 取消配置，如下所示，值为null即可
+PUT _cluster/settings
+{
+  &quot;persistent&quot;: {
+    &quot;cluster.routing.allocation.awareness.attributes&quot;: null
+  }
+}
+
+# 创建一个指定类型的index
+PUT test2
+{
+  &quot;mappings&quot;: {
+    &quot;properties&quot;: {
+      &quot;name&quot;: {
+        &quot;type&quot;: &quot;text&quot;
+      },
+      &quot;age&quot;: {
+        &quot;type&quot;: &quot;long&quot;
+      },
+      &quot;addr&quot;: {
+        &quot;type&quot;: &quot;text&quot;
+      }
+    }
+  }
+}
+
+# 创建index
+# &lt;index_name&gt;/_doc/&lt;doc_key&gt;
+PUT test2/_doc/1
+{
+  &quot;name&quot;: &quot;rsq&quot;,
+  &quot;age&quot;: 12,
+  &quot;addr&quot;: &quot;cdscd&quot;
+}
+
+# 获取指定document值
+GET test2/_doc/1
+
+# 通过_cat可以查看es当前的很多信息
+GET _cat/health
+GET _cat/indices
+
+# 修改一个document的值
+# method1: 覆盖原来的值
+POST test2/_doc/1
+{
+  &quot;name&quot;: &quot;rsq1111&quot;,
+  &quot;age&quot;: 11,
+  &quot;addr&quot;: &quot;axc&quot;
+}
+
+POST test2/_doc/2
+{
+  &quot;name&quot;: &quot;rsq1111&quot;,
+  &quot;age&quot;: 22,
+  &quot;addr&quot;: &quot;awx&quot;
+}
+
+# method2: 更新指定的值
+POST test2/_update/1
+{
+  &quot;doc&quot;: {
+      &quot;name&quot;: &quot;rsq111&quot;
+  }
+}
+
+# 删除索引
+DELETE test3
+
+# 删除dockument
+DELETE test2/_doc/2
+
+# 搜索指定key，精确匹配
+GET test2/_search?q=name:rsq111
+
+# 使用对象查询
+# &quot;_source&quot;过滤指定的字段
+GET test2/_search
+{
+  &quot;query&quot;: {
+    &quot;match&quot;: {
+      &quot;name&quot;: &quot;rsq1111&quot;
+    }
+  },
+  &quot;_source&quot;: [&quot;age&quot;, &quot;addr&quot;]
+}
+
+# 排序
+# &quot;order&quot;: &quot;asc&quot; 升序， desc 降序
+GET test2/_search
+{
+  &quot;query&quot;: {
+    &quot;match&quot;: {
+      &quot;name&quot;: &quot;rsq1111&quot;
+    }
+  },
+  &quot;sort&quot;: [
+    {
+      &quot;age&quot;: {
+        &quot;order&quot;: &quot;asc&quot;
+      }
+    }
+  ]
+}
+
+# 分页查询
+# &quot;from&quot;: 0,
+# &quot;size&quot;: 1
+GET test2/_search
+{
+  &quot;query&quot;: {
+    &quot;match&quot;: {
+      &quot;name&quot;: &quot;rsq1111&quot;
+    }
+  },
+  &quot;sort&quot;: [
+    {
+      &quot;age&quot;: {
+        &quot;order&quot;: &quot;asc&quot;
+      }
+    }
+  ],
+  &quot;from&quot;: 0,
+  &quot;size&quot;: 1
+}
+
+# bool查询
+# must: and
+# should: or
+# not: !
+# must_not: !
+GET test2/_search
+{
+  &quot;query&quot;: {
+    &quot;bool&quot;: {
+      &quot;must&quot;: [
+        {
+          &quot;match&quot;: {
+            &quot;name&quot;: &quot;rsq1111&quot;
+          }
+        },
+        {
+          &quot;match&quot;: {
+            &quot;age&quot;: &quot;22&quot;
+          }
+        }
+      ]
+    }
+  }
+}
+
+
+# 查询结果过滤
+# lt: 小于, lte: 小于等于, gt: 大于, gte: 大于等于, 
+GET test2/_search
+{
+  &quot;query&quot;: {
+    &quot;bool&quot;: {
+      &quot;must&quot;: [
+        {
+          &quot;match&quot;: {
+            &quot;name&quot;: &quot;rsq1111&quot;
+          }
+        }
+      ],
+      &quot;filter&quot;: [
+        {
+          &quot;range&quot;: {
+            &quot;age&quot;: {
+              &quot;gt&quot;: 20
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
+# 构造新的数据
+
+POST test3/_doc/1
+{
+  &quot;name&quot;: &quot;rsq1111&quot;,
+  &quot;age&quot;: 22,
+  &quot;addr&quot;: &quot;awx&quot;,
+  &quot;hobby&quot;: [&quot;旅游&quot;, &quot;睡觉&quot;, &quot;吃饭&quot;]
+}
+
+POST test3/_doc/2
+{
+  &quot;name&quot;: &quot;zhangsan1111&quot;,
+  &quot;age&quot;: 11,
+  &quot;addr&quot;: &quot;awc&quot;,
+  &quot;hobby&quot;: [&quot;睡觉&quot;, &quot;吃饭&quot;]
+}
+
+POST test3/_doc/3
+{
+  &quot;name&quot;: &quot;lisi1111&quot;,
+  &quot;age&quot;: 121,
+  &quot;addr&quot;: &quot;awxc&quot;,
+  &quot;hobby&quot;: [&quot;吃饭&quot;, &quot;唱歌&quot;]
+}
+
+# 支持在数组中查找，多个条件以空格为分隔符
+GET test3/_search
+{
+  &quot;query&quot;: {
+    &quot;match&quot;: {
+      &quot;hobby&quot;: &quot;旅 唱&quot;
+    }
+  }
+}
+
+# term查询时是通过倒排索引进行精确查询
+GET test3/_search
+{
+  &quot;query&quot;: {
+    &quot;term&quot;: {
+      &quot;age&quot;: 121
+    }
+  }
+}
+
+# text类型会被分词器解析，keyword类型是不会被分词器解析的
+GET _analyze
+{
+  &quot;analyzer&quot;: &quot;standard&quot;,
+  &quot;text&quot;: &quot;我爱学习 golang&quot;
+}
+
+GET _analyze
+{
+  &quot;analyzer&quot;: &quot;keyword&quot;,
+  &quot;text&quot;: &quot;我爱学习 golang&quot;
+}
+
+
+# 查询高亮
+GET test3/_search
+{
+  &quot;query&quot;: {
+    &quot;match&quot;: {
+      &quot;name&quot;: &quot;lisi1111&quot;
+    }
+  },
+  &quot;highlight&quot;: {
+    &quot;pre_tags&quot;: &quot;&lt;p class='key' style'color:red'&gt;&quot;,
+    &quot;post_tags&quot;: &quot;&lt;/p&gt;&quot;,
+    &quot;fields&quot;: {
+      &quot;name&quot;: {}
+    }
+  }
+}
+</code></pre>
+<p>使用 Index Template 设定默认分片数</p>
+<pre><code>PUT _index_template/docker_template
+{
+  &quot;index_patterns&quot;: [&quot;docker-*&quot;],   // 匹配所有 docker-* 开头的索引
+  &quot;template&quot;: {
+    &quot;settings&quot;: {
+      &quot;index.number_of_shards&quot;: 5,  // 设置主分片数为 5
+      &quot;index.number_of_replicas&quot;: 1 // 设置副本分片数（可调整）
+    }
+  },
+  &quot;priority&quot;: 100  // 设定模板优先级，确保不会被其他模板覆盖
+}
+</code></pre>
+<p>Filebeat使用自定义的模板</p>
+<pre><code class="language-yaml">// 禁用 Filebeat 自带的模板：
+setup.template.enabled: false
+
+//让 Filebeat 使用你自定义的模板：
+setup.template.name: &quot;docker_template&quot;
+setup.template.pattern: &quot;docker-*&quot;
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../../canal/index.html">Canal</a></li>
+<li class=""><a href="../../consul/index.html">Consul</a></li>
+<li class=""><a href="../../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../../database/redis/index.html">Redis</a></li>
+<li class=""><a href="index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../index.html">ELK</a></li>
+<li class=""><a href="../kafka/index.html">Kafka</a></li>
+<li class=""><a href="../logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="api.html">Index相关操作</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../../feed.xml">RSS</a>
+      <a href="../../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../../assets/js/main.js"></script>
+</body>
+</html>

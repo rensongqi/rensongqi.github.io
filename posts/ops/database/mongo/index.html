@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MongoDB · rensongqi</title>
+<meta name="description" content="mongodb-rs.yaml">
+<link rel="stylesheet" href="../../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../../index.html">首页</a>
+      <a href="../../../../archive.html">归档</a>
+      <a href="../../../../storage.html">存储</a>
+      <a href="../../../../notes/" class="is-active">笔记</a>
+      <a href="../../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../../index.html">首页</a> / <a href="../../../../notes/">笔记</a> / <a href="../../../../notes/ops.html">运维工具</a> / <span>MongoDB</span></div>
+
+<div class="doc-title">
+  <h1>MongoDB</h1>
+  <div class="meta">2026-09-14 · 约 760 字 · 源自 notes-src/ops/database/mongo/README.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#数据库</span><span>#MongoDB</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#mongo-cluster">Mongo Cluster部署</a></li><li class="l2"><a href="#k8s">K8s</a></li><li class="l2"><a href="#docker-compose">docker-compose</a></li></ul></nav>
+<main>
+<h1 id="mongo-cluster">Mongo Cluster部署</h1>
+<h1 id="k8s">K8s</h1>
+<p>mongodb-rs.yaml</p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-rs-cm
+  namespace: mongo
+data:
+  keyfile: |
+        dGhpcyBpcyBycyBzdXBlciBzZWNyZXQga2V5Cg==
+  mongod_rs.conf: |+
+    systemLog:
+      destination: file
+      logAppend: true
+      path: /data/mongod.log
+    storage:
+      dbPath: /data
+      journal:
+        enabled: true
+      directoryPerDB: true
+      wiredTiger:
+        engineConfig:
+          cacheSizeGB: 2
+          directoryForIndexes: true
+    processManagement:
+      fork: true
+      pidFilePath: /data/mongod.pid
+    net:
+      port: 27017
+      bindIp: 0.0.0.0
+      maxIncomingConnections: 5000
+    security:
+      keyFile: /data/configdb/keyfile
+      authorization: enabled
+    replication:
+      oplogSizeMB: 1024
+      replSetName: rs0    
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb-rs
+  namespace: mongo
+spec:
+  serviceName: mongodb-rs
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongodb-rs
+  template:
+    metadata:
+      labels:
+        app: mongodb-rs
+    spec:
+      containers:
+      - name: mongo
+        image: harbor.rsq.cn/mongo/mongo:4.4.1
+        ports:
+        - containerPort: 27017
+          name: client
+        command: [&quot;sh&quot;]
+        args:
+        - &quot;-c&quot;
+        - |
+          set -ex
+          mongod --config /data/configdb/mongod_rs.conf
+          sleep infinity              
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        volumeMounts:
+        - name: conf
+          mountPath: /data/configdb
+          readOnly: false
+        - name: data
+          mountPath: /data
+          readOnly: false
+      volumes:
+      - name: conf
+        configMap:
+          name: mongodb-rs-cm
+          defaultMode: 0600
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [&quot;ReadWriteOnce&quot;]
+      resources:
+        requests:
+          storage: 100Gi
+      storageClassName: local-storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-rs
+  labels:
+    app: mongodb-rs
+  namespace: mongo
+spec:
+  ports:
+    - port: 27017
+      targetPort: 27017
+      nodePort: 30717
+  selector:
+    app: mongodb-rs
+  type: NodePort
+</code></pre>
+<p>mongodb-pv.yaml</p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv.mongodb.cluster01
+spec:
+  capacity:
+    storage: 200Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: /data/mongodb/data
+  nodeAffinity:
+     required:
+       nodeSelectorTerms:
+       - matchExpressions:
+         - key: kubernetes.io/hostname
+           operator: In
+           values:
+           - master1
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv.mongodb.cluster02
+spec:
+  capacity:
+    storage: 200Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: /data/mongodb/data
+  nodeAffinity:
+     required:
+       nodeSelectorTerms:
+       - matchExpressions:
+         - key: kubernetes.io/hostname
+           operator: In
+           values:
+           - master2
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv.mongodb.cluster03
+spec:
+  capacity:
+    storage: 200Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: /data/mongodb/data
+  nodeAffinity:
+     required:
+       nodeSelectorTerms:
+       - matchExpressions:
+         - key: kubernetes.io/hostname
+           operator: In
+           values:
+           - master3
+</code></pre>
+<h1 id="docker-compose">docker-compose</h1>
+<p>创建mongo-keyfile</p>
+<pre><code class="language-bash">mkdir /data/mongodb/mongo/{data,configdb} -p
+cd /data/mongodb/mongo
+
+openssl rand -base64 745 &gt; mongo-keyfile
+echo &quot;rsq&quot; | sudo -S chmod 600 mongo-keyfile
+echo &quot;rsq&quot; | sudo -S chown 999 mongo-keyfile
+</code></pre>
+<p>docker-compose.yml</p>
+<pre><code class="language-bash">version: &quot;3&quot;
+
+services:
+  #主节点
+  mongodb1:
+    image: harbor.rsq.cn/library/mongo/mongo:5.0.6
+    container_name: mongo1
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=123456
+    command: mongod --replSet rs0 --keyFile /mongo-keyfile
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /data/mongodb/mongo/data:/data/db
+      - /data/mongodb/mongo/configdb:/data/configdb
+      - /data/mongodb/mongo/mongo-keyfile:/mongo-keyfile
+    entrypoint:
+      - bash
+      - -c
+      - |
+        chmod 400 /mongo-keyfile
+        chown 999:999 /mongo-keyfile
+        exec docker-entrypoint.sh $$@
+  # 副节点
+  mongodb2:
+    image: harbor.rsq.cn/library/mongo/mongo:5.0.6
+    container_name: mongo2
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=123456
+    command: mongod --replSet rs0 --keyFile /mongo-keyfile
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /data/mongodb/mongo/data:/data/db
+      - /data/mongodb/mongo/configdb:/data/configdb
+      - /data/mongodb/mongo/mongo-keyfile:/mongo-keyfile
+    entrypoint:
+      - bash
+      - -c
+      - |
+        chmod 400 /mongo-keyfile
+        chown 999:999 /mongo-keyfile
+        exec docker-entrypoint.sh $$@
+  # 副节点
+  mongodb3:
+    image: harbor.rsq.cn/library/mongo/mongo:5.0.6
+    container_name: mongo3
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=123456
+    command: mongod --replSet rs0 --keyFile /mongo-keyfile
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /data/mongodb/mongo/data:/data/db
+      - /data/mongodb/mongo/configdb:/data/configdb
+      - /data/mongodb/mongo/mongo-keyfile:/mongo-keyfile
+    entrypoint:
+      - bash
+      - -c
+      - |
+        chmod 400 /mongo-keyfile
+        chown 999:999 /mongo-keyfile
+        exec docker-entrypoint.sh $$@
+</code></pre>
+<p>在不同节点执行如下命令启动容器</p>
+<pre><code class="language-bash"># node1
+docker-compose up -d mongodb1
+# node2
+docker-compose up -d mongodb2
+# node3
+docker-compose up -d mongodb3
+</code></pre>
+<p>初始化mongodb cluster</p>
+<pre><code class="language-bash"># 1.进入容器
+docker exec -it mongo1 bash
+
+# 2.进入数据库
+mongo -u root -p 123456
+
+# 3.集群init
+config={_id:&quot;rs0&quot;,members:[ 
+    {_id:0,host:&quot;172.16.100.107:27017&quot;}, 
+    {_id:1,host:&quot;172.16.100.108:27017&quot;}, 
+    {_id:2,host:&quot;172.16.100.109:27017&quot;}] 
+}
+
+rs.initiate(config);
+
+# 4.查看集群状态
+rs.status();
+
+# 5.增加节点的权重
+cfg = rs.conf()
+# 修改权重
+cfg.members[0].priority=5
+cfg.members[1].priority=3
+# 从新配置
+rs.reconfig(cfg)
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../../canal/index.html">Canal</a></li>
+<li class=""><a href="../../consul/index.html">Consul</a></li>
+<li class="cur"><a href="index.html">MongoDB</a></li>
+<li class=""><a href="../mysql/index.html">MySQL</a></li>
+<li class=""><a href="../pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../redis/index.html">Redis</a></li>
+<li class=""><a href="../../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../../elk/index.html">ELK</a></li>
+<li class=""><a href="../../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../../elk/logstash/index.html">修改logstash配置</a></li>
+<li class=""><a href="../../git/index.html">Git</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../../feed.xml">RSS</a>
+      <a href="../../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../../assets/js/main.js"></script>
+</body>
+</html>

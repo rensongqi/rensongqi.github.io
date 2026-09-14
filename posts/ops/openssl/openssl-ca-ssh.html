@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenSSL CA SSH · rensongqi</title>
+<meta name="description" content="基于SSH CA进行ssh远程登录校验流程图：">
+<link rel="stylesheet" href="../../../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../../../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../../../index.html">首页</a>
+      <a href="../../../archive.html">归档</a>
+      <a href="../../../storage.html">存储</a>
+      <a href="../../../notes/" class="is-active">笔记</a>
+      <a href="../../../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../../../index.html">首页</a> / <a href="../../../notes/">笔记</a> / <a href="../../../notes/ops.html">运维工具</a> / <span>OpenSSL CA SSH</span></div>
+
+<div class="doc-title">
+  <h1>OpenSSL CA SSH</h1>
+  <div class="meta">2026-09-14 · 约 1250 字 · 源自 notes-src/ops/openssl/openssl_ca_ssh.md</div>
+  <div class="doc-tags"><span>#运维工具</span><span>#OpenSSL</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1-ssh">1 SSH 登录</a></li><li class="l3"><a href="#11-ca">1.1 创建CA</a></li><li class="l3"><a href="#12-ssh">1.2 配置SSH服务端</a></li><li class="l3"><a href="#13">1.3 客户端生成证书请求</a></li><li class="l3"><a href="#14-ca">1.4 CA给客户端签发证书</a></li><li class="l3"><a href="#15-ssh">1.5 客户端SSH访问服务端</a></li><li class="l2"><a href="#2">2 包签名与离线验签</a></li><li class="l3"><a href="#21">2.1 包签名</a></li><li class="l3"><a href="#22">2.2 离线验签</a></li></ul></nav>
+<main>
+<h2 id="1-ssh">1 SSH 登录</h2>
+<p>基于SSH CA进行ssh远程登录校验流程图：
+<img alt="流程图" src="https://internal-api-drive-stream.feishu.cn/space/api/box/stream/download/preview/EQObbGAurohYC8xK4ercLRyHnVf/?preview_type=16" /></p>
+<h3 id="11-ca">1.1 创建CA</h3>
+<p>生成CA的key和自签证书</p>
+<pre><code class="language-bash"># 1. 生成CA的key
+mkdir ~/openssl &amp;&amp; cd ~/openssl
+(umask 077; openssl genrsa -out ca.key 2048)
+
+# 2. CA自签证书
+openssl req -new -x509 -key ca.key -days 7300 -out ca.crt
+
+# 3. 从ca.key文件中SSH PKC8私钥
+openssl pkcs8 -topk8 -inform PEM -in ca.key -nocrypt -out ca_ssh.key
+
+# 4. 从ca_ssh.key私钥文件中提取出公钥
+ssh-keygen -y -f ca_ssh.key &gt; ca_ssh.pub
+</code></pre>
+<h3 id="12-ssh">1.2 配置SSH服务端</h3>
+<p>ssh服务端需要授信CA的公钥文件，把CA的公钥文件ca_ssh.pub拷贝到服务端，然后修改sshd的配置文件</p>
+<pre><code class="language-bash"># 1. 修改sshd的配置文件
+vim /etc/ssh/sshd_config
+TrustedUserCAKeys /etc/pki/CA/certs/ca_ssh.pub
+
+# 2. 检测sshd配置文件语法是否正确
+sshd -t
+
+# 3. restart sshd
+systemctl restart sshd
+</code></pre>
+<h3 id="13">1.3 客户端生成证书请求</h3>
+<pre><code class="language-bash"># 1. 客户端生成key文件
+mkdir ~/openssl &amp;&amp; cd mkdir ~/openssl
+(umask 077; openssl genrsa -out client.key 2048)
+
+# 2. 客户端生成证书签名请求
+openssl req -new -key client.key -days 3650 -out client.csr
+
+# 3. 把client.csr发送给CA，进行签名
+...
+</code></pre>
+<h3 id="14-ca">1.4 CA给客户端签发证书</h3>
+<p>CA给客户端签发证书，该证书是由CA签发生成的公钥</p>
+<pre><code class="language-bash"># 1. 将client.csr 放在~/openssl/client目录下
+mkdir ~/openssl/client &amp;&amp; cd ~/openssl/client
+
+# 2. 签发客户端证书
+openssl ca -in client.csr -out client.crt -cert ../ca.crt -keyfile ../ca.key
+
+# 3. 从客户端的证书中提取出公钥文件
+openssl x509 -in client.crt -pubkey -noout &gt; client.pub
+
+# 4. 将客户端公钥文件转为openssh格式
+ssh-keygen -f client.pub -i -m PKCS8 &gt; client_ssh.pub
+
+# 5. CA使用从ca.key文件中提取出来的ca_ssh.key私钥文件对client_ssh.pub进行公钥签发
+cd ~/openssl
+ssh-keygen \
+  -s ./ca_ssh.key \
+  -I rensongqi \
+  -n root,guest \
+  -V +24h \
+  client/client_ssh.pub
+# 执行完命令会输出如下信息
+# Signed user key client/client_ssh-cert.pub: id &quot;rensongqi&quot; serial 0 for root valid from 2023-12-13T14:37:00 to 2023-12-14T14:38:52
+
+# 6. 将CA签发的公钥证书client.crt及ssh的公钥文件client_ssh-cert.pub返回给客户端
+# 文件在 ~/openssl/client/client_ssh-cert.pub
+</code></pre>
+<p>ssh-keygen签发证书参数解析：
+- -s ./ca_ssh.key - 指定CA签名的私钥 。
+- -I rensongqi - 客户证书的密钥标识信息，可写写客户端的主机名。
+- -n root,guest - 客户端可用于登录主机的用户名（多个用户以逗号分隔）。
+- -V +24h - 证书有效期，从现在起24个小时（可选）。
+- client/client_ssh.pub - 客户端的公钥。</p>
+<h3 id="15-ssh">1.5 客户端SSH访问服务端</h3>
+<p>从CA返回的证书需要跟客户端的私钥存放在同一级目录</p>
+<pre><code class="language-bash"># 1. 进入客户端key所在的目录
+cd ~/openssl
+
+# 2. 把从CA端接收的签发公钥文件命名前缀要跟key文件保持一致，最终的目录结构如下
+.
+├── client.csr
+├── client.key
+└── client.key-cert.pub # CA签发的公钥文件，前缀一定要跟key保持一致，否则不能免密登录
+
+
+# 2. 指定私钥远程到目标服务器
+[root@localhost openssl]# ssh -i ./client.key root@172.16.100.151
+Last login: Wed Dec 13 14:51:32 2023 from test.rsq.cn
+[root@SHJDS-OSSTEST ~]# 
+
+# 查看客户端的公钥信息
+[root@localhost openssl]# ssh-keygen -L -f client.key-cert.pub
+client.key-cert.pub:
+        Type: ssh-rsa-cert-v01@openssh.com user certificate
+        Public key: RSA-CERT SHA256:MNVDGNGwAGpFrFhRZNA65SR38TS6029igd3SpaS5VNQ
+        Signing CA: RSA SHA256:UyypRoY992V9UoStLAZm3cjoaSFRRuSXgVlmQGDrXoo
+        Key ID: &quot;rensongqi&quot;
+        Serial: 0
+        Valid: from 2023-12-13T14:49:00 to 2023-12-14T14:50:24
+        Principals: 
+                root
+                guest
+        Critical Options: (none)
+        Extensions: 
+                permit-X11-forwarding
+                permit-agent-forwarding
+                permit-port-forwarding
+                permit-pty
+                permit-user-rc
+</code></pre>
+<h2 id="2">2 包签名与离线验签</h2>
+<h3 id="21">2.1 包签名</h3>
+<p><img alt="openssl sign" src="../../../assets/images/notes/openssl_ca_sign.png" /></p>
+<p>PS：上图中的操作都在客户端进行模拟测试：</p>
+<p>客户端使用自己的私钥client.key对文件进行加密，然后使用签发的证书中提取出来的公钥进行解密</p>
+<pre><code class="language-bash"># 1. 提取CA签发的客户端证书中的公钥
+cd ~/openssl
+openssl x509 -in client.crt -pubkey -noout &gt; client.pub
+
+# 2. 客户端使用私钥加密文件，生成加密的文件 test-A.desc
+openssl rsautl -sign -inkey client.key -in test-A.txt -out test-A.desc
+
+# 3. 客户端使用client.pub对文件进行解密，输出新文件 test-B.txt
+openssl rsautl -verify -pubin -inkey client.pub -in test-A.desc -out test-B.txt
+
+# 目录结构
+.
+├── client.crt   # CA签发的证书
+├── client.csr   # 客户端生成的证书请求文件
+├── client.key   # 客户端key私钥文件
+├── client.key-cert.pub   # CA签发的SSH公钥文件
+├── client.pub   # 使用openssl x509从crt中提取出来的公钥文件
+├── test-A.desc  # 加密文件
+├── test-A.txt   # 原始文件
+└── test-B.txt   # 解密文件
+</code></pre>
+<h3 id="22">2.2 离线验签</h3>
+<p>ssh服务端需要实现预埋CA的根证书ca.crt</p>
+<pre><code class="language-bash"># CA - 验证客户端证书的有效性
+openssl verify -CAfile ca.crt client.crt
+client.crt: OK
+
+# 使用client.pub对文件进行解密，输出新文件 test-B.txt
+openssl rsautl -verify -pubin -inkey client.pub -in test-A.desc -out test-B.txt
+</code></pre>
+<nav class="doc-series">
+  <p class="lb">运维工具 · 同分类笔记</p>
+  <ol>
+<li class=""><a href="../ansible/automation-jobs/index.html">自动化任务</a></li>
+<li class=""><a href="../canal/index.html">Canal</a></li>
+<li class=""><a href="../consul/index.html">Consul</a></li>
+<li class=""><a href="../database/mongo/index.html">MongoDB</a></li>
+<li class=""><a href="../database/mysql/index.html">MySQL</a></li>
+<li class=""><a href="../database/pgsql/index.html">PostgreSQL</a></li>
+<li class=""><a href="../database/redis/index.html">Redis</a></li>
+<li class=""><a href="../elk/es/index.html">三节点ES集群(带密码校验)</a></li>
+<li class=""><a href="../elk/index.html">ELK</a></li>
+<li class=""><a href="../elk/kafka/index.html">Kafka</a></li>
+<li class=""><a href="../elk/logstash/index.html">修改logstash配置</a></li>
+<li class="cur"><a href="openssl-ca-ssh.html">OpenSSL CA SSH</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../../../feed.xml">RSS</a>
+      <a href="../../../notes/">笔记</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../../../assets/js/main.js"></script>
+</body>
+</html>
