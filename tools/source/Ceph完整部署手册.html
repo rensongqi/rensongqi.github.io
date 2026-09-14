@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="6RlZh9hFYgpGsUd9v7EjMk">
+<head data-page-node-id="073bNgWRmQE9gllVwRa1zf">
+<meta charset="UTF-8" data-page-node-id="oH7sKJDrLpBeFgwzmJvgnw">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="4d2CDF41u5APgCTmRNq2WN">
+<title>Ceph 完整部署手册 · 手动部署 + Ansible 自动部署</title>
+<style>
+:root{
+  --bg:#f5f7fa; --card:#ffffff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+  --accent:#0e7490; --accent-soft:#e0f2f7; --amber:#b45309; --amber-soft:#fef3c7;
+  --green:#15803d; --green-soft:#dcfce7; --red:#b91c1c; --red-soft:#fee2e2;
+  --purple:#6d28d9; --purple-soft:#ede9fe; --code-bg:#f6f8fa;
+}
+*{box-sizing:border-box;} html{scroll-behavior:smooth;}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.8;}
+.layout{display:flex;max-width:1400px;margin:0 auto;gap:24px;padding:0 16px;}
+.toc{position:sticky;top:0;align-self:flex-start;width:270px;flex:0 0 270px;height:100vh;
+  overflow-y:auto;padding:24px 12px 60px 0;border-right:1px solid var(--line);}
+.toc h4{margin:0 0 12px;font-size:13px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+.toc a{display:block;text-decoration:none;color:#374151;font-size:13.5px;padding:5px 10px;
+  border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.toc a:hover{background:var(--accent-soft);color:var(--accent);}
+.toc a.sub{padding-left:26px;font-size:12.5px;color:var(--muted);}
+.toc .part{margin:14px 0 6px;font-weight:700;color:var(--accent);font-size:12.5px;}
+main{flex:1;min-width:0;padding:24px 0 100px;}
+header.hero{background:linear-gradient(135deg,#155e75 0%,#0e7490 45%,#1d4ed8 100%);
+  color:#fff;border-radius:16px;padding:38px 40px;margin-bottom:28px;}
+header.hero h1{margin:0 0 10px;font-size:30px;}
+header.hero p{margin:0;opacity:.92;font-size:15px;}
+header.hero .tags{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px;}
+header.hero .tags span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);
+  padding:3px 12px;border-radius:999px;font-size:12.5px;}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px 32px;margin-bottom:22px;}
+h2{font-size:23px;margin:0 0 6px;padding-bottom:12px;border-bottom:2px solid var(--accent-soft);color:#0f172a;}
+h2 .num{display:inline-block;background:var(--accent);color:#fff;font-size:14px;width:30px;height:30px;
+  line-height:30px;text-align:center;border-radius:8px;margin-right:10px;vertical-align:2px;}
+h3{font-size:18px;margin:30px 0 10px;color:#0e7490;border-left:4px solid var(--accent);padding-left:10px;}
+h4{font-size:15.5px;margin:20px 0 8px;color:#334155;}
+p{margin:10px 0;} ul,ol{padding-left:22px;margin:10px 0;} li{margin:5px 0;}
+code{background:var(--code-bg);color:#b91c1c;padding:1.5px 5px;border-radius:4px;
+  font-family:Consolas,"Courier New",monospace;font-size:13px;}
+pre{background:var(--code-bg);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:8px;padding:14px 16px;overflow-x:auto;font-size:12.8px;line-height:1.65;color:#243b53;}
+pre code{background:none;color:inherit;padding:0;font-size:12.8px;}
+pre.cmd{background:#1e293b;color:#e2e8f0;border-left-color:#38bdf8;}
+pre.cmd code{color:#e2e8f0;}
+pre.cmd .c{color:#94a3b8;}
+pre.cmd .o{color:#86efac;}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+th{background:#eef2f7;color:#0f172a;text-align:left;padding:9px 12px;border:1px solid var(--line);font-weight:600;}
+td{padding:8px 12px;border:1px solid var(--line);vertical-align:top;}
+tbody tr:nth-child(even){background:#fafbfc;}
+.note,.warn,.good,.tip{border-radius:10px;padding:12px 16px;margin:16px 0;font-size:14px;border-left:4px solid;}
+.note{background:var(--accent-soft);border-color:var(--accent);}
+.warn{background:var(--amber-soft);border-color:var(--amber);}
+.good{background:var(--green-soft);border-color:var(--green);}
+.tip{background:var(--purple-soft);border-color:var(--purple);}
+figure{margin:20px 0;text-align:center;} figure svg{max-width:100%;height:auto;}
+figcaption{font-size:13px;color:var(--muted);margin-top:8px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#fcfdfe;}
+.card h5{margin:0 0 6px;font-size:14.5px;color:#0f172a;}
+.card p{margin:0;font-size:13.3px;color:#475569;line-height:1.7;}
+.step{display:flex;gap:12px;margin:14px 0;}
+.step .n{flex:0 0 28px;height:28px;background:var(--accent);color:#fff;border-radius:50%;
+  text-align:center;line-height:28px;font-size:13px;font-weight:700;}
+.step .b{flex:1;}
+.footer{text-align:center;color:var(--muted);font-size:13px;padding:30px 0;}
+@media(max-width:1080px){.toc{display:none}.layout{padding:0 10px}}
+@media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}section{padding:20px 16px}}
+</style>
+</head>
+<body data-page-node-id="zBJDQgqszd55Nwchi96vU2">
+<div class="layout" data-page-node-id="pBcIYWwCMBagumoxqekSO0">
+<nav class="toc" data-page-node-id="lualKNQv0LB9voqpDZCCBj">
+  <h4 data-page-node-id="3vbsqMJV2wOl6Gb0F0Ew7c">目录 · Contents</h4>
+  <a href="#ch0" data-page-node-id="KbpGAPnIzuDEquBEHzxiVv">0. 版本与工具选型</a>
+  <div class="part" data-page-node-id="Ely0qzOJl6uBE6DjwCeL2b">第一部分 · 规划与准备</div>
+  <a href="#ch1" data-page-node-id="ue2seqI7s1mxi01VKzGh5a">1. 部署前规划</a>
+  <a href="#ch2" data-page-node-id="ZqT1o80BpjHdEbhA1gYUdN">2. 操作系统初始化</a>
+  <a href="#ch3" data-page-node-id="QywS7bKAHVysI9cSVf8vza">3. 磁盘规划与准备</a>
+  <div class="part" data-page-node-id="lfvOYlC9avPApKZmvBKJVx">第二部分 · 手动部署</div>
+  <a href="#ch4" data-page-node-id="8mArLtcmbLE0Ar81W3oanC">4. 安装 Ceph 软件包</a>
+  <a href="#ch5" data-page-node-id="1wTvwRVd9j3n4V0ovY6EOy">5. 部署 MON</a>
+  <a href="#ch6" data-page-node-id="dsKQGrVlW12p1LRd4I2227">6. 部署 MGR</a>
+  <a href="#ch7" data-page-node-id="mx4JFFLbvkiEBJdSFtKW69">7. 部署 OSD</a>
+  <a href="#ch8" data-page-node-id="kxUnoyGDD1RugXYlLdSBz5">8. 部署 MDS + CephFS</a>
+  <a href="#ch9" data-page-node-id="XksComnAIkI7SAXdh20RIB">9. 部署 RGW 对象网关</a>
+  <a href="#ch10" data-page-node-id="aIGUx3GpE18UUg1HbwP0P3">10. Dashboard 与客户端配置</a>
+  <a href="#ch11" data-page-node-id="7QyIJ3loqBSpnLYMCxfFAw">11. 手动扩容 / 换盘 / 缩容</a>
+  <div class="part" data-page-node-id="wWy8l2zeCXi9GOGf7E3nxo">第三部分 · Ansible 部署</div>
+  <a href="#ch12" data-page-node-id="BgCHm9Pax96mgDukJ6Ez8I">12. 控制节点准备</a>
+  <a href="#ch13" data-page-node-id="mOquJ4xUzAb80DxPyRpWP2">13. 编写 Inventory</a>
+  <a href="#ch14" data-page-node-id="m48aqPTgCpOEGxQgrci55v">14. 编写 group_vars</a>
+  <a href="#ch15" data-page-node-id="DwBc1tAs94XVp526sfNFY4">15. 执行部署与验证</a>
+  <a href="#ch16" data-page-node-id="KcIhqcihFEoCrgSyDeIdX6">16. Ansible 扩缩容运维</a>
+  <a href="#ch17" data-page-node-id="GGhGRLutETDTT6hYcRq5p6">17. Ansible 常见报错</a>
+  <div class="part" data-page-node-id="MWUNUPX8EXqnjpCFelHj2t">第四部分 · 收尾</div>
+  <a href="#ch18" data-page-node-id="rXfhALpytTjiXGUmcJ4GCe">18. 部署后必做清单</a>
+  <a href="#ch19" data-page-node-id="HEt7E2eGOwr6PXPesdWlAU">19. 附录：端口 / 目录 / 命令</a>
+  <a href="#ch20" data-page-node-id="cQXr7vHpIMEL51l7pYg2DM">A. 附：cephadm 快速方案</a>
+</nav>
+<main data-page-node-id="NN2iwjALCRfuc9gos7iwtu">
+
+<header class="hero" data-page-node-id="lYYpEgersXOhYphpFF5orX">
+  <h1 data-page-node-id="hC7YQ7sa4bplQwYz7ALASl">Ceph 完整部署手册</h1>
+  <p data-page-node-id="VbjreHOUGZllG9eSGNZ3p7">手动部署（全程可控 · 理解原理）+ Ansible 自动部署（批量 · 可复现）两种模式全收录</p>
+  <div class="tags" data-page-node-id="aZXsiqOzRt3s2YOoSatxtR">
+    <span data-page-node-id="uURlYOAe7FEKjf3SGwlS25">基线版本：Squid 19.2 / Tentacle 20.2</span>
+    <span data-page-node-id="RVu7cj30WXRqcmF34eEqsO">OS：RHEL 9 系 / Ubuntu 22.04+</span>
+    <span data-page-node-id="lmjh7eFEeDjCvIOloFy0bE">ceph-ansible stable-9.0</span>
+    <span data-page-node-id="A4IkbhARKgk5Cb2RyT1Pxn">3 MON + 4 OSD 节点示例</span>
+  </div>
+</header>
+
+<section id="ch0" data-page-node-id="BEjEVugHZSZZEr1PSuxiX4">
+<h2 data-page-node-id="JO6rBwMuOUIdMZtYOUPO2E"><span class="num" data-page-node-id="nnJrMDNWtBUYErAAsNOorm">0</span>版本与工具选型</h2>
+
+<h3 data-page-node-id="0Bped3ShGV9JIVTl8TulMc">0.1 版本选择</h3>
+<table data-page-node-id="boQr1PlZzBsZ0dzIOGDajD">
+<thead data-page-node-id="rv1ez9IresZRsA2zqmke0y"><tr data-page-node-id="OioPHcBm42NvAE16o7rDhz"><th style="width:14%" data-page-node-id="V0zANiwEFb79GQYe6Pnx7T">版本</th><th style="width:12%" data-page-node-id="13qP5BrKPzScVfBj3KNs5N">代号</th><th style="width:16%" data-page-node-id="tINUTQmQdJJ2PWJA3VG6L5">最新</th><th style="width:16%" data-page-node-id="nHv5jQnK1ca9vtT7HjGBSp">EOL</th><th data-page-node-id="iUCEuMOCglBy8lIdYCeZVh">建议</th></tr></thead>
+<tbody data-page-node-id="TysvIVcjYyMUSH7cOBI8yH">
+<tr data-page-node-id="aMlAhiwtsedBUFsJ4qpGG2"><td data-page-node-id="40mQOisloWDsD4DeHaXFyQ"><b data-page-node-id="DH1HvqAX9yRBtc2f0CYbig">Tentacle</b></td><td data-page-node-id="uqUnxGlBUNqeilEGNTUqZM">20.2.x</td><td data-page-node-id="YjgU2GfUf1TnJxrD6sJWLv">20.2.4</td><td data-page-node-id="z2EMvtpo6hmsaM6uCjCi5b">2027-11</td><td data-page-node-id="sIRnn8fCy52yqOAyIGjZvQ"><b data-page-node-id="bXTrDb8YMQMYWiZ6i4F23K">新部署首选</b>（最活跃维护，Crimson/EC 有改进）</td></tr>
+<tr data-page-node-id="sRggUOKCAB13SlA1SaFYYU"><td data-page-node-id="11vYt7SM0dhh9PwsROlKqW"><b data-page-node-id="Y81WACIx7ZmcZhcJJ7LtUy">Squid</b></td><td data-page-node-id="yQDWQESwN8PiHCE9z6cfj0">19.2.x</td><td data-page-node-id="0Zp1VtUFicZJvsYLWdFneX">19.2.6</td><td data-page-node-id="YKSr7M5K39cRtUboRkKyuH">2026-10-31</td><td data-page-node-id="7Dh2vtwK7HrjbqB6KfQEX1"><b data-page-node-id="0WyN7HCsxTqPbROktmMT0M">本手册基线</b>。生态最成熟，ceph-ansible stable-9.0 官方支持</td></tr>
+<tr data-page-node-id="SdQubWPQysu02bSvn8CPGf"><td data-page-node-id="hIa4Zpt6G4y68XKayVg43J">Reef</td><td data-page-node-id="SlQjAM5IPsWY8zdOrZaEC2">18.2.x</td><td data-page-node-id="e0zj2iIWyDw0G3roP8oi0u">18.2.8</td><td data-page-node-id="JE9DrRiUCDOCtre167mPL5">2026-03-31（已归档）</td><td data-page-node-id="wKPIRiV5D94eoKlJSXfjIF">不建议新部署，仅存量维护</td></tr>
+<tr data-page-node-id="rO0qK3hpPoX1dQ2HaxZzzW"><td data-page-node-id="z5Tb2vrgyv81OkGnQLzqQD">Quincy 及更早</td><td data-page-node-id="HEOoZwAfGDaYfyZjHN6M5E">17.x ↓</td><td data-page-node-id="U1LAuXzDqYWGuQvYag6Qut">—</td><td data-page-node-id="h5iqCxzQtAKcSJDc9tGCSv">已 EOL</td><td data-page-node-id="jPGcn7Q8hODVl433g9Hi7B">尽快规划升级（<b data-page-node-id="Znpw0rigaraTBKimN6ZDcC">只能逐级升级，不可跨版本</b>）</td></tr>
+</tbody>
+</table>
+<div class="warn" data-page-node-id="qYj29jWa8VwIF83IVUDrGZ">
+<b data-page-node-id="K21nsH6kfgNgKes4KgG10P">升级路径不可跳跃：</b>Quincy → Reef → Squid → Tentacle，必须逐级来。所以现在做版本规划时，请直接选 Tentacle 或 Squid，避免一年后被迫做两次升级。
+</div>
+
+<h3 data-page-node-id="htvh49KkVIoiCb99vFAA1I">0.2 三种部署工具怎么选</h3>
+<table data-page-node-id="X76uKw0Ctl9DenCJ6qqvYL">
+<thead data-page-node-id="y7lifuxOUgcLWubsyARwbj"><tr data-page-node-id="mfpgxRvcmWFGdvRiRIMJhJ"><th style="width:16%" data-page-node-id="14ZQ2OPxikVg1MoYL8ogKQ">工具</th><th style="width:16%" data-page-node-id="8213Fp1mtemxMhQAHZ7Pd1">官方态度</th><th style="width:32%" data-page-node-id="OHyVv4WE13turAaVg70ZmP">特点</th><th data-page-node-id="7QF1QZseQdJlIMEFnYmzTM">推荐场景</th></tr></thead>
+<tbody data-page-node-id="wIIOZtTBUj4Nbaggp88W2a">
+<tr data-page-node-id="fLkUuMaVrOXDvZfwGz5GW4"><td data-page-node-id="aOoRC7oFUTfyHGalAxCt2B"><b data-page-node-id="sQFyp2w97h2hJUVtJpkoeG">cephadm</b></td><td data-page-node-id="FFyXeVq7ZBaLfMe6zI3i4N"><span style="color:#15803d" data-page-node-id="5142IevnLvPb7UeZR7Oz0b">官方主推</span></td><td data-page-node-id="ZHbUuSYruNULRtnyDtLhdD">容器化部署（podman/docker），自带编排、升级、OSD 自动发现；但对网络/镜像源有要求，排障需要懂容器</td><td data-page-node-id="eVcxEkOVNEryFrxHFAOjAb"><b data-page-node-id="j67HMKy11vptZiXlOYXABU">新集群首选</b>（如果你能接受容器化）</td></tr>
+<tr data-page-node-id="GLHRTXNmpKBMsjqb1juZ4b"><td data-page-node-id="dgT25oZJfhsyxdngxsadaG"><b data-page-node-id="zZsFRo1PNEPOnForQcTZE7">ceph-ansible</b></td><td data-page-node-id="zR70V1HqL4wvz05DVVqHFW"><span style="color:#b45309" data-page-node-id="qt8QelZxkyqJnGUwJlFYwO">社区维护</span></td><td data-page-node-id="YxqYcwTCmkVRoWYSf4tFBr">传统裸机部署，Playbook 清晰可读，变量丰富；仍是大量存量集群的事实标准</td><td data-page-node-id="NgKtMKuj5Ls94uEJBrm6LB"><b data-page-node-id="0xm7o4OFs3I7pVMCWe25gF">本手册重点</b>。已有 Ansible 体系、要求裸机部署、需要完全掌控</td></tr>
+<tr data-page-node-id="GYknUQ4JHdYgD0S2QZtdLw"><td data-page-node-id="d0pbzjfIiCj6vmPJSCNqNC"><b data-page-node-id="bDtOSlRxDrOKifF8HhGpJE">手动部署</b></td><td data-page-node-id="Rh5ViZ09nq9n9ZzKJ502G4">官方不推荐日常使用</td><td data-page-node-id="FGXwhNxjehgBqZD3lUu66q">一步步敲命令，每一步都看得见</td><td data-page-node-id="Mvpg2lGA9qPpWVFZdAclTT"><b data-page-node-id="LFCS7SH9WVr0Hr9wy92o55">学习原理、排障、小规模/特殊环境</b>。本手册第二部分</td></tr>
+</tbody>
+</table>
+<div class="note" data-page-node-id="LUhPX4edif7LQFzCZ4tssO">
+<b data-page-node-id="FBHqgHOn5j7Zs8UKTEuzFG">本手册的组织方式：</b>第二部分用<b data-page-node-id="i3KjB0tWxz1co24px1MbFH">手动部署</b>让你看清"每一步到底做了什么"（这也是 Ansible 在背后做的事）；第三部分用 <b data-page-node-id="0ntKbvs9tLcJ6hTSboAZDF">ceph-ansible</b> 把它工程化。附录 A 给出 cephadm 的极简方案。<br data-page-node-id="SpTCnLveRpQzGJXRpcgZ9O">
+建议顺序：<b data-page-node-id="GqupbB6u9tk1FbuAM0Wggg">先按第二部分完整手动跑一遍（哪怕是虚拟机），再用 Ansible 部署生产环境。</b>
+</div>
+
+<h3 data-page-node-id="NbvAm3FGrJRUCa6W8cJO2s">0.3 示例环境（全文通用）</h3>
+<table data-page-node-id="VpTAT3MaywYIxFxGuta4tB">
+<thead data-page-node-id="jL2Xlmx4iS6XFMouecrp5T"><tr data-page-node-id="6Meq3vQoscU9HshIUlLfz8"><th style="width:16%" data-page-node-id="rqWDHOON9A4D1j3H0grSGs">主机名</th><th style="width:16%" data-page-node-id="lKyTdDElQjBiK82LlPsEgg">public IP</th><th style="width:16%" data-page-node-id="vU7w1xbXqk99PtBeiGscYh">cluster IP</th><th style="width:22%" data-page-node-id="VbEadYYybULyT6eD3vSL4a">角色</th><th data-page-node-id="hiQYAalHH2XsC3gaQRADOu">硬件</th></tr></thead>
+<tbody data-page-node-id="m1A5wn6P3nFc7btKevOZJk">
+<tr data-page-node-id="xFJcBupHW4HGWgQMVp1zz6"><td data-page-node-id="beo5qbPzYnDRL0cMRpca1g"><code data-page-node-id="bkPsiFJ13w27G6LH2pSogF">ceph-mon1</code></td><td data-page-node-id="GMOtq45oiDvPuM0L0Vog1L">10.10.10.11</td><td data-page-node-id="GcXWfOtyAxASGeggOO2rpG">192.168.100.11</td><td data-page-node-id="Ic9q0k0gDrCqLNeMfh9ZDp">MON、MGR、MDS、RGW</td><td data-page-node-id="7ZH05tL7NOzBEdm0AHxLEn">8C/16G + 2×480G SSD(系统 RAID1)</td></tr>
+<tr data-page-node-id="2QHEccZAswmoJexSGf2FqD"><td data-page-node-id="v6pHIs8rjvofneBwDwf3pS"><code data-page-node-id="bmJ0sryGlRk4TZjJ1de2LD">ceph-mon2</code></td><td data-page-node-id="0Vi023O1joSprjHmiQ8AIq">10.10.10.12</td><td data-page-node-id="GOjmFpNLB0V4hoZ9FLxgFQ">192.168.100.12</td><td data-page-node-id="BZO3IC1z33gWPNjEYs6YEx">MON、MGR、MDS、RGW</td><td data-page-node-id="57BFSrKsxq2vZh2N1Bs3ZX">同上</td></tr>
+<tr data-page-node-id="LjJuY1I7MAv217nZXzXcGh"><td data-page-node-id="sY5GDxB52HosMLdlfmnDnj"><code data-page-node-id="yG5S5HvQFwZtSlkOZB7OUx">ceph-mon3</code></td><td data-page-node-id="y5W7g8rTRe3lEecMZnWEcG">10.10.10.13</td><td data-page-node-id="Sl6GMByEMaO7mZMERqORuJ">192.168.100.13</td><td data-page-node-id="IEdcoRDacQQB9J9Z1DPFKQ">MON、MGR、MDS</td><td data-page-node-id="oy35uGdnWQldTN6BnKgmwH">同上</td></tr>
+<tr data-page-node-id="a3kewYz3xovxHIAskdE7B4"><td data-page-node-id="B62QxG1Ux1ZjYAb6SYkcrx"><code data-page-node-id="f77n3y8CABCC3AwQHHn6fT">ceph-osd1</code></td><td data-page-node-id="52AjiyZZuLUJdIWs6NyNMx">10.10.10.21</td><td data-page-node-id="ZAVf3PvBANqiv4MwTEU2Kb">192.168.100.21</td><td data-page-node-id="KnJbZRLTwZQNFDkGC84zUq">OSD ×6</td><td data-page-node-id="Ql1rwMcvXEbvoX6J76kCnO">16C/64G + 6×8T HDD + 2×1.6T NVMe</td></tr>
+<tr data-page-node-id="RWg9uLl7o1DddszsCyorzo"><td data-page-node-id="Z6JHu0fEcG1NNFPcVttrZT"><code data-page-node-id="MCFTGBuqeBXKMhX2bAGeib">ceph-osd2</code></td><td data-page-node-id="Mhy8gR5dA9DP3aVi9MBMIe">10.10.10.22</td><td data-page-node-id="KzaKkc5o1BcXJFXZgMuPmb">192.168.100.22</td><td data-page-node-id="e3wdYZX1HzkiohT4HTdx6w">OSD ×6</td><td data-page-node-id="QiQ0oSxRIebQd6Mk7sG1g8">同上</td></tr>
+<tr data-page-node-id="NGTYMzUUYpmS57OEoPY8Qp"><td data-page-node-id="Sy7pI6nIEljrYGNR9vRvTs"><code data-page-node-id="BX6Jz7yNdKojGSgAayPkpD">ceph-osd3</code></td><td data-page-node-id="Af8zZcFPZl0mhr5gn1rpPB">10.10.10.23</td><td data-page-node-id="OQ0xngBeG3emCWPDOYliuj">192.168.100.23</td><td data-page-node-id="Eof1YEZCbJSIDed3rPiG8u">OSD ×6</td><td data-page-node-id="syfSGrIYyI6kVBEJTeKMie">同上</td></tr>
+<tr data-page-node-id="yqFUvoWxfBPFSj77azEUX2"><td data-page-node-id="BxKFM00q6QMpSGORgPUpfV"><code data-page-node-id="lQBtgND55QtwZf2dfKNfva">ceph-osd4</code></td><td data-page-node-id="VV2dYQ8FYY1qQR9PJF0OpA">10.10.10.24</td><td data-page-node-id="9VliGXbuCwG5Vrj6SZ10aW">192.168.100.24</td><td data-page-node-id="Rk6j0mrPoLnp58HzHXq3Ka">OSD ×6</td><td data-page-node-id="qOETxAtCOnhaNDZ9eIuL9k">同上</td></tr>
+</tbody>
+</table>
+<p data-page-node-id="OeRtbF2LkqExYnu7NG3phP">合计：<strong data-page-node-id="VFSwiAMBWRBD0EjkdCAAHu">3 MON + 3 MGR + 3 MDS + 2 RGW + 24 OSD</strong>。裸容量 24 × 8TB = 192TB，3 副本后可用约 <strong data-page-node-id="hpdQaXjulqoxPCej8myGlP">45 TiB</strong>（按第 14 章公式）。</p>
+
+<figure data-page-node-id="D92d8sXXRMEzlWL0k6Kyyb">
+<svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg" data-page-node-id="9DVzT1ZccgLC5FzVvkM6b9">
+  <defs data-page-node-id="AVzvXfhqq56rw2jU8NnIkd"><marker id="b1" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" data-page-node-id="uUBhgi61IhaIH2G8qbRJvP"><path d="M0,0 L0,6 L8,3 z" fill="#0e7490" data-page-node-id="8q2iCG2o0LGQ955GUTpiQv"/></marker></defs>
+  <!-- public switch -->
+  <rect x="330" y="18" width="240" height="46" rx="9" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.8" data-page-node-id="8oJaIrhYkp9DuSCkJ6DlOV"/>
+  <text x="450" y="38" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0c4a6e" data-page-node-id="vuOBOhidh7yZZYZ7pzLfAS">Public Switch · 10.10.10.0/24</text>
+  <text x="450" y="55" text-anchor="middle" font-size="10.5" fill="#0e7490" data-page-node-id="qOlYVE0TrFquPlJzuUUPH9">25 GbE · 业务网（客户端 ↔ 集群）</text>
+
+  <rect x="330" y="278" width="240" height="46" rx="9" fill="#fef3c7" stroke="#b45309" stroke-width="1.8" data-page-node-id="M2ElvUNeLjf3xSwwks5dWm"/>
+  <text x="450" y="298" text-anchor="middle" font-size="12.5" font-weight="700" fill="#78350f" data-page-node-id="qy67XMNJHbHZkDGUZ43kRr">Cluster Switch · 192.168.100.0/24</text>
+  <text x="450" y="315" text-anchor="middle" font-size="10.5" fill="#92400e" data-page-node-id="X2hDoyZbaToEXDLYeTjDfK">25/100 GbE · 复制网（OSD ↔ OSD，物理隔离）</text>
+
+  <!-- mon 节点 -->
+  <rect x="40" y="86" width="170" height="52" rx="9" fill="#fef3c7" stroke="#b45309" stroke-width="1.6" data-page-node-id="ciFP9FlYw9XGd1WGSwHu6u"/>
+  <text x="125" y="106" text-anchor="middle" font-size="12.5" font-weight="700" fill="#78350f" data-page-node-id="B3UvPktyygnh1I55JM1hbW">ceph-mon1</text>
+  <text x="125" y="123" text-anchor="middle" font-size="10" fill="#92400e" data-page-node-id="iClmrG4dXSrMRVfIlIRDTd">MON · MGR · MDS · RGW</text>
+  <text x="125" y="134" text-anchor="middle" font-size="9.5" fill="#92400e" data-page-node-id="vLjFZueGl35XtLYcdIqtYO">10.10.10.11 / 192.168.100.11</text>
+
+  <rect x="40" y="146" width="170" height="52" rx="9" fill="#fef3c7" stroke="#b45309" stroke-width="1.6" data-page-node-id="dSqWQrzeF62w3BtGIagbCY"/>
+  <text x="125" y="166" text-anchor="middle" font-size="12.5" font-weight="700" fill="#78350f" data-page-node-id="goHqXeJhtvEmxHDG5gM8GR">ceph-mon2</text>
+  <text x="125" y="183" text-anchor="middle" font-size="10" fill="#92400e" data-page-node-id="Ha0FJc5jYCeVshmlP6LGGe">MON · MGR · MDS · RGW</text>
+  <text x="125" y="194" text-anchor="middle" font-size="9.5" fill="#92400e" data-page-node-id="yhefjN5cm3NDe5CIqquCrc">10.10.10.12 / 192.168.100.12</text>
+
+  <rect x="40" y="206" width="170" height="52" rx="9" fill="#fef3c7" stroke="#b45309" stroke-width="1.6" data-page-node-id="YMfAEMjD3ySPkePhtU3bIw"/>
+  <text x="125" y="226" text-anchor="middle" font-size="12.5" font-weight="700" fill="#78350f" data-page-node-id="Fi4f97ElwIqWJYXmS3i8k4">ceph-mon3</text>
+  <text x="125" y="243" text-anchor="middle" font-size="10" fill="#92400e" data-page-node-id="J5tx2QvFjJZ9VLCK46TWB6">MON · MGR · MDS</text>
+  <text x="125" y="254" text-anchor="middle" font-size="9.5" fill="#92400e" data-page-node-id="b96jnUfVN404E03OCLA37v">10.10.10.13 / 192.168.100.13</text>
+
+  <!-- osd 节点 -->
+  <rect x="600" y="80" width="280" height="60" rx="9" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.6" data-page-node-id="kE6sbesRFTWKBRYQM0PBDG"/>
+  <text x="740" y="100" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1e3a8a" data-page-node-id="36cEDrBwfTYHxiNCtT6IdX">ceph-osd1 ~ ceph-osd4（4 台）</text>
+  <text x="740" y="117" text-anchor="middle" font-size="10" fill="#1e40af" data-page-node-id="TO81SoIbQ4BjQFdN0iveaq">每台：6 × 8TB HDD（数据）+ 2 × 1.6TB NVMe（db/wal）</text>
+  <text x="740" y="132" text-anchor="middle" font-size="10" fill="#1e40af" data-page-node-id="hDNisgxyXaEiVUroxHPz5l">16C / 64GB RAM · 共 24 个 OSD</text>
+
+  <rect x="600" y="160" width="280" height="98" rx="9" fill="#f8fafc" stroke="#94a3b8" data-page-node-id="4qV0uNpcwNDVpCnpSTxagv"/>
+  <text x="740" y="180" text-anchor="middle" font-size="11.5" font-weight="700" fill="#334155" data-page-node-id="nJFpHukR6cNKelCoO30JiN">单台 OSD 节点的磁盘布局</text>
+  <rect x="615" y="190" width="34" height="20" rx="3" fill="#dbeafe" stroke="#1d4ed8" data-page-node-id="GIbetfLymAKeQcjCCXeao2"/><text x="632" y="204" text-anchor="middle" font-size="8.5" fill="#1e3a8a" data-page-node-id="HIlwhQPRB2d8AYbn9VHyYI">sdb</text>
+  <rect x="655" y="190" width="34" height="20" rx="3" fill="#dbeafe" stroke="#1d4ed8" data-page-node-id="R9C0mte24Jl2cOinDnFYp4"/><text x="672" y="204" text-anchor="middle" font-size="8.5" fill="#1e3a8a" data-page-node-id="GTYSk8TPfKTVDrmyiaiyJ6">sdc</text>
+  <rect x="695" y="190" width="34" height="20" rx="3" fill="#dbeafe" stroke="#1d4ed8" data-page-node-id="Cr1F8lgdKPQVlNTjLqQn4j"/><text x="712" y="204" text-anchor="middle" font-size="8.5" fill="#1e3a8a" data-page-node-id="HrkwNGubceEUG7ALwdXp34">sdd</text>
+  <rect x="735" y="190" width="34" height="20" rx="3" fill="#dbeafe" stroke="#1d4ed8" data-page-node-id="HVO2wFAB26piIad1qPaerY"/><text x="752" y="204" text-anchor="middle" font-size="8.5" fill="#1e3a8a" data-page-node-id="3At7osA7cvfA9r6ANg78tw">sde</text>
+  <rect x="775" y="190" width="34" height="20" rx="3" fill="#dbeafe" stroke="#1d4ed8" data-page-node-id="umuptIAyQTjGHN3tUBhIC0"/><text x="792" y="204" text-anchor="middle" font-size="8.5" fill="#1e3a8a" data-page-node-id="LD3LNNtnut9tqgZJAWB9Ez">sdf</text>
+  <rect x="815" y="190" width="34" height="20" rx="3" fill="#dbeafe" stroke="#1d4ed8" data-page-node-id="ZOMVnqtyij0t1wBm04n1gp"/><text x="832" y="204" text-anchor="middle" font-size="8.5" fill="#1e3a8a" data-page-node-id="imzwOrEkB1wrYVeqyHFPal">sdg</text>
+  <text x="740" y="226" text-anchor="middle" font-size="9.5" fill="#1e40af" data-page-node-id="Kl8ABS0fiE5WPTPYyCr1Eh">↑ 6 × 8TB HDD → block（数据）</text>
+  <rect x="615" y="232" width="118" height="18" rx="3" fill="#a7f3d0" stroke="#059669" data-page-node-id="ZHfQ9Mard5fADAC1aJtGQT"/><text x="674" y="245" text-anchor="middle" font-size="8.5" fill="#065f46" data-page-node-id="Gma3Bx9FSnpm37Hl1qqtCA">nvme0n1 → db/wal ×3</text>
+  <rect x="741" y="232" width="118" height="18" rx="3" fill="#a7f3d0" stroke="#059669" data-page-node-id="23XxsjX0H9GvotArWKDUXE"/><text x="800" y="245" text-anchor="middle" font-size="8.5" fill="#065f46" data-page-node-id="lsfBQWFZCuhfPFdonCrblc">nvme1n1 → db/wal ×3</text>
+
+  <!-- 连线 -->
+  <line x1="210" y1="105" x2="330" y2="40" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b1)" data-page-node-id="KJnGApJwa1HuRcOf5rKDoT"/>
+  <line x1="210" y1="165" x2="330" y2="44" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b1)" data-page-node-id="mifrH7UqR56LlTZzmrMPc6"/>
+  <line x1="210" y1="225" x2="330" y2="48" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b1)" data-page-node-id="CxAEdQRH6IEJitk0j9stjz"/>
+  <line x1="600" y1="105" x2="570" y2="40" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b1)" data-page-node-id="tHNe1vwoIOLRenGSikpDZD"/>
+  <line x1="600" y1="120" x2="570" y2="48" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b1)" data-page-node-id="wCFAN1RiZ7NPAeBfRS7Bhg"/>
+  <line x1="210" y1="132" x2="330" y2="292" stroke="#b45309" stroke-width="1.6" marker-end="url(#b1)" data-page-node-id="PvHISA5NXoFrmrPbybataY"/>
+  <line x1="210" y1="240" x2="330" y2="300" stroke="#b45309" stroke-width="1.6" marker-end="url(#b1)" data-page-node-id="WrEortAg3YCDy7QcknVzWI"/>
+  <line x1="700" y1="258" x2="570" y2="308" stroke="#b45309" stroke-width="1.8" marker-end="url(#b1)" data-page-node-id="Ihv7djDLyMx6LZ93N6B1DS"/>
+  <line x1="800" y1="258" x2="572" y2="314" stroke="#b45309" stroke-width="1.8" marker-end="url(#b1)" data-page-node-id="lvHZNEtz57LQhs802gFJB7"/>
+
+  <rect x="228" y="86" width="86" height="34" rx="7" fill="#f5f3ff" stroke="#6d28d9" data-page-node-id="BXk6PA3a5lABcnoiciuDRl"/>
+  <text x="271" y="107" text-anchor="middle" font-size="11" fill="#5b21b6" data-page-node-id="XCPrJlVMHqnVHoWkgt6A0F">客户端</text>
+  <line x1="271" y1="120" x2="330" y2="52" stroke="#6d28d9" stroke-width="1.6" marker-end="url(#b1)" data-page-node-id="Z6tMSk2tRp2q2bHihwMC2g"/>
+</svg>
+<figcaption data-page-node-id="MPEBUFMpbwGQmCvdqWnYhl">图 0-1　示例部署拓扑：双网分离、MON 与 OSD 分离、db/wal 独立 NVMe。</figcaption>
+</figure>
+</section>
+
+<section id="ch1" data-page-node-id="crGHa6gy7QZbFynaDaSUop">
+<h2 data-page-node-id="JVz1NtLGzzvocwDIN3xZdL"><span class="num" data-page-node-id="mqkx3nXxxhfDIe02CYHO5n">1</span>部署前规划</h2>
+
+<h3 data-page-node-id="IM1A2Q9SLoJW2mHPfiqSRa">1.1 硬件最低要求</h3>
+<table data-page-node-id="celHzm494pUAhDauUjyJQu">
+<thead data-page-node-id="Uyra6KJRrW5hiH46mzB677"><tr data-page-node-id="OsJp0NQfqVKFKrUApvEbNe"><th style="width:18%" data-page-node-id="wFz6OPVjH187jNgZbDFz1q">角色</th><th style="width:14%" data-page-node-id="5RktDxpYM84lRWqWiLgqvC">CPU</th><th style="width:14%" data-page-node-id="oVUF44IU7jeDGoyJKVUrXI">内存</th><th style="width:20%" data-page-node-id="4zfNVYIotPrN7YvjSDqYrw">磁盘</th><th data-page-node-id="Q2yOhOMqxLlROPUjHET1Oq">网络</th></tr></thead>
+<tbody data-page-node-id="vAmXGVJoTZfOOWoSjoWSKv">
+<tr data-page-node-id="sRdijKW9YSchBtOHl0GaPJ"><td data-page-node-id="XyJEHQn3ZXGFypbDS6jmar"><b data-page-node-id="GvZWPpvb0KgUXC5Z2R7Wgg">MON</b></td><td data-page-node-id="wk6887WVU9nNUi9t6UxAYG">4 核</td><td data-page-node-id="mrsjjY40mJr5xD0Yz0MJM4">8 GB</td><td data-page-node-id="xIaroP45yiAAEHiW9mZRJ1">50 GB（OS）+ SSD 存 mon 数据</td><td data-page-node-id="H18eZSpRtQsAlLJFhClz7t">10 GbE</td></tr>
+<tr data-page-node-id="5BdBEwlQHEoAlX8NgqCkSZ"><td data-page-node-id="crPUgPiOTgcQRQW2fbsSzC"><b data-page-node-id="1NwoHznMQdwXTaRDWF16RT">MGR</b></td><td data-page-node-id="2BzgRQmCyHohqEkMbI5CbB">4 核</td><td data-page-node-id="jCLiw7qLkRzxBfYhg2V8kC">8 GB</td><td data-page-node-id="ARfRj2utbfhYPlkDhRHCBn">与 MON 共用</td><td data-page-node-id="FnQD8H6N68LxN4ojW2KYNH">10 GbE</td></tr>
+<tr data-page-node-id="Y5WbJNF9odlkMBo7l8YiWA"><td data-page-node-id="cwre2xxTD1yMx7MjjEMQT4"><b data-page-node-id="Si5PWZxISvIp4I6mZwuE00">OSD（HDD）</b></td><td data-page-node-id="xo44r5wr0vYCHnAjhO533N">1 核 / OSD</td><td data-page-node-id="SVq4hMp5JaP1RrFffwbWsC">4 GB / OSD + 8 GB 系统</td><td data-page-node-id="xSKRJqGqKwJn3LLqYCY6lS">1 盘 1 OSD + 独立 db/wal SSD</td><td data-page-node-id="i8qEYrCY6SxymcZ4gX88UA">25 GbE</td></tr>
+<tr data-page-node-id="rksx4tHzxeuJQ0SFFmopkg"><td data-page-node-id="j18SamG2my4MsZdLfmgpS2"><b data-page-node-id="yY5J9JDUaX4MCF3QaIuemO">OSD（NVMe）</b></td><td data-page-node-id="xRZAOvOYAZntUYdAtnV4Ps"><b data-page-node-id="fkHQJ9tVbYaFJmGHC7ogLi">2~4 核 / OSD</b></td><td data-page-node-id="SKfdBSw8VatD46Z9fMk4Tm">6~8 GB / OSD</td><td data-page-node-id="p1F8kQbm4DK6HDPpHbts1H">高 DWPD 企业级 NVMe</td><td data-page-node-id="cmQRyVEi4ODrDOKoCH8pPB"><b data-page-node-id="1hFt5MxW5neObs76ayK9pc">100 GbE</b></td></tr>
+<tr data-page-node-id="mmZsQtbxCSjLdNiHF8iqDX"><td data-page-node-id="i4xva59Ha2REIAF6aigJve"><b data-page-node-id="eJNSvCCmX21M88aZXpAP3d">MDS</b></td><td data-page-node-id="2SiFv6Np43SUgEqaTzTVgu">4~8 核</td><td data-page-node-id="bzZnBRKzh4TcIROJhaIXEn">16~32 GB</td><td data-page-node-id="cchzl9wSo3WQA3zMYaRSdU">元数据池建议 SSD/NVMe</td><td data-page-node-id="MXcMuszLtHmtXDmiKr442m">10 GbE</td></tr>
+<tr data-page-node-id="sCgDRaBuFLkgedtsWBIQUl"><td data-page-node-id="nHwTOWkHjTuHQcXouCTBk7"><b data-page-node-id="xtaoBBJIz2dBfA6okFAFhN">RGW</b></td><td data-page-node-id="fRwUgQdT5Q5BA9H1HKHFUb">4~8 核</td><td data-page-node-id="VVXj40DeFeFLWSCOQp6F6Z">8~16 GB</td><td data-page-node-id="7nzrJXC8ViMQanAEC0cHCi">—</td><td data-page-node-id="AvHHBXTGDqnVXMnlH1hdtI">10~25 GbE</td></tr>
+</tbody>
+</table>
+
+<h3 data-page-node-id="uyAE698NpDTi3ikOt3Kr5A">1.2 网络规划要点</h3>
+<ul data-page-node-id="ojp2oEzuAUZCPljyxDqBuD">
+  <li data-page-node-id="B1hBwuAB4Sg2EKcaX7HqLS"><strong data-page-node-id="77GblK19cmGs0912zwbhqW">双网分离</strong>：<code data-page-node-id="slQcGSohwkUoyNEeLBbQT3">public_network</code>（业务）+ <code data-page-node-id="NcpgGnaF3Hn0UTMn6Herov">cluster_network</code>（复制），物理或 VLAN 隔离。生产必做。</li>
+  <li data-page-node-id="ZdlAkxiSbbr3NGnX60N2Li"><strong data-page-node-id="QZ0oSykEy549UW2LwCTrc6">万兆起步</strong>：HDD 集群最低 10G，全闪必须 25G/100G。</li>
+  <li data-page-node-id="5C0hp68VOKq5mQGZQsiuCD"><strong data-page-node-id="eFMCn2QPXnjRBEqSfRzXGb">MTU 9000（巨帧）</strong>：交换机、网卡两端都要配，并逐台验证 <code data-page-node-id="PwtX3Hcg6BMJenqzREWAfm">ping -M do -s 8972</code>。</li>
+  <li data-page-node-id="ZICzGuLfqftVBk4j8WmGVO"><strong data-page-node-id="Dg9LEjZelWdpn2ZHXHQLP6">禁止 NIC bonding 的 balance-rr</strong>：推荐 <code data-page-node-id="wte8L3ocApauXoz81AszFq">active-backup</code> 或 <code data-page-node-id="kJdHnHw9D5ObPDVo3NQ1ib">802.3ad(LACP)</code>。</li>
+  <li data-page-node-id="8gJo3hklRGKAIX6YaY6qs3"><strong data-page-node-id="sEkXzKopDSZ7mWbDEYA6g0">防火墙</strong>：开放端口见附录 19.1（MON 3300/6789、OSD 6800-7300、MGR 9283、RGW 7480、Dashboard 8443）。</li>
+</ul>
+
+<h3 data-page-node-id="SECKw9rQQ3CklAWN8PrWPC">1.3 关键规划决策清单</h3>
+<div class="grid2" data-page-node-id="D9zOEU7y0Be4Z72yMlY8si">
+  <div class="card" data-page-node-id="A9IUqJmgcr9j3UhkpeYguO"><h5 data-page-node-id="aUXmK5GNA9UCiZHno6wr6l">副本数 size = ?</h5><p data-page-node-id="JYOlLGHBUWamWxJtfXK6CT">生产推荐 <b data-page-node-id="wkws8Ur73izHmMykZvePT8">3</b>（容忍同时坏 2 个 OSD）；测试用 2。<code data-page-node-id="6FK7YTOwp1F6NylM96DggO">osd_pool_default_size = 3</code>，<code data-page-node-id="ETDu6fDhuDkhzsaYEyOf61">min_size = 2</code>。</p></div>
+  <div class="card" data-page-node-id="c4wTg7Z5nyavB7VuioqnPz"><h5 data-page-node-id="GGVDyFD8obkBkkg3dJN8k0">MON 数量 = ?</h5><p data-page-node-id="nSLXEXPDczoaVj7f1MmOS8"><b data-page-node-id="hDXjZl9HraiUT1B22LO8B8">奇数</b>：3 或 5。跨机柜的大集群用 5。绝不用 4。</p></div>
+  <div class="card" data-page-node-id="BnBzZJMPkikU9HxWlYqb0j"><h5 data-page-node-id="mWbdRXzAzMOc29DJxzD2iw">故障域 = ?</h5><p data-page-node-id="VMOvk5qRKYG3XtWLgrEOYM">默认 <code data-page-node-id="3E5FPldUTA8mCDbyhiLwt1">host</code>。大集群（≥3 机柜）建议 <code data-page-node-id="CyEdCxqMlivhlSgPivCJGi">rack</code>。<b data-page-node-id="tULRQuwEHvMejrvLwYsprz">绝不用 osd</b>。</p></div>
+  <div class="card" data-page-node-id="4m3xoAG4InOerBBLKsVme9"><h5 data-page-node-id="GNHFCNAbHqZsdGPgdIQnhO">PG 数 = ?</h5><p data-page-node-id="josQLNckOT8H3VzXKEiurM">按 200 PG/OSD 预算：<code data-page-node-id="N0ifwTtPLdkxJBzTJyOQk6">(OSD数 × 200) / size</code>，取 2 的幂。或直接开 <b data-page-node-id="IiWsPWuJcf3gOCYqF3WSop">pg_autoscaler</b>。</p></div>
+  <div class="card" data-page-node-id="JD0BP7fqLZAIDafx8O1ntJ"><h5 data-page-node-id="WRK8N7L9RgfI7ZM0qJV5r3">db/wal 是否分离？</h5><p data-page-node-id="0mZE4pAhpXnV7kfQLCB2Iy"><b data-page-node-id="5z9qvWbXghHYKNgPVlXTX7">HDD 集群：必须分离到 SSD/NVMe</b>（性能提升最明显）。全闪：可不分离或只分 wal。</p></div>
+  <div class="card" data-page-node-id="bIOBAt2VthKvBpHMn16ccr"><h5 data-page-node-id="4bQXkL4WLSoSDlbmOGevB1">是否用 EC？</h5><p data-page-node-id="jslAHCpkfwsUP2zUTbBFsT">RBD/CephFS/热数据 → 副本；RGW 冷数据/备份 → EC 4+2 或 8+3。</p></div>
+</div>
+</section>
+
+<section id="ch2" data-page-node-id="DiZ6Ixd8E8RSaABaN9sAQo">
+<h2 data-page-node-id="BkUGoR6R5g6OewMC4rX7qp"><span class="num" data-page-node-id="D5Zfaztj5AdPDKV0hvLC6U">2</span>操作系统初始化（所有节点）</h2>
+<div class="note" data-page-node-id="GHSVPOOXDoiC4azVyuEwC9">以下操作在 <b data-page-node-id="vGfDw9qi13Kt2FlwY1EK6p">全部 7 台节点</b>上执行。示例以 <b data-page-node-id="yLM4DaMLNY9TD6q9m4XlK1">Rocky Linux 9 / AlmaLinux 9 / RHEL 9</b> 为主，Ubuntu 差异在每节末尾给出。</div>
+
+<h3 data-page-node-id="Y6prstzIjDJZevPflVOF6F">2.1 主机名与 hosts</h3>
+<pre class="cmd" data-page-node-id="CJc2AVqTKdtmA1iubwFiw0"><code class="c" data-page-node-id="ID804oJcEv20xcBHw2i5jd"># 每台设置主机名（以 ceph-mon1 为例）</code>
+hostnamectl set-hostname ceph-mon1
+
+cat &gt;&gt; /etc/hosts &lt;&lt;EOF
+10.10.10.11  ceph-mon1
+10.10.10.12  ceph-mon2
+10.10.10.13  ceph-mon3
+10.10.10.21  ceph-osd1
+10.10.10.22  ceph-osd2
+10.10.10.23  ceph-osd3
+10.10.10.24  ceph-osd4
+EOF
+<code class="c" data-page-node-id="jnvA2gvutSAHCPWhX3GCbP"># 注意：主机名不要包含大写，不要写成 ceph_mon1（下划线会导致 MON 命名问题）</code></pre>
+
+<h3 data-page-node-id="okIUpac7bKAzX877a5uXgQ">2.2 时间同步（必须！）</h3>
+<div class="warn" data-page-node-id="r9LiQLV7XcBt3b00sY9HBj"><b data-page-node-id="reghsLwWlNbIBvLTwZUbnw">MON 之间时钟偏差超过 0.05s 会导致集群告警甚至无法工作。</b>务必配置 chrony。</div>
+<pre class="cmd" data-page-node-id="fGzl2okFjl8epLX21vPIuS"><code data-page-node-id="w95y4nYH1EFIkLArdTeokD">dnf install -y chrony
+systemctl enable --now chronyd
+</code><code class="c" data-page-node-id="WdklGppNAemaJC6BB6B2jF"># 编辑 /etc/chrony.conf，指向内网 NTP 服务器</code><code data-page-node-id="FMvZVInBAiZsYadeuWMEVF">
+server 10.10.10.1 iburst
+</code><code class="c" data-page-node-id="xP4YlB48OitDCsSR2p7jFa"># 验证</code><code data-page-node-id="ydSl05G8JsDrPxaA5mBVBm">
+chronyc sources -v
+timedatectl status
+</code><code class="c" data-page-node-id="Uv3Ts1OQyyhEBca2nJ1vFz"># Ubuntu: apt install -y chrony</code></pre>
+
+<h3 data-page-node-id="DfgGVJCKUwqGsYdFh3tGYM">2.3 关闭 SELinux / 防火墙（或放行端口）</h3>
+<pre class="cmd" data-page-node-id="YBvI2qhuSZuekdz9ZR6aJP"><code class="c" data-page-node-id="aZSMH94Uid1NSIx0yYdWJt"># 方式一：测试/内网环境直接关闭（简单）</code>
+setenforce 0
+sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
+systemctl disable --now firewalld
+
+<code class="c" data-page-node-id="eze5SzvI4exfFDvr5Lvkth"># 方式二：生产环境放行端口（推荐）</code>
+firewall-cmd --permanent --add-port=3300/tcp    <code class="c" data-page-node-id="vLmH1Zd0S2xhD33rzkCFFL"># msgr2</code>
+firewall-cmd --permanent --add-port=6789/tcp    <code class="c" data-page-node-id="XVpHqzLbAYSmWxwertSkYt"># msgr1 / legacy</code>
+firewall-cmd --permanent --add-port=6800-7300/tcp  <code class="c" data-page-node-id="IdAZ50soUkHBiA01KB7tsA"># OSD</code>
+firewall-cmd --permanent --add-port=8443/tcp    <code class="c" data-page-node-id="npIdE5s0wX8C2rU9P6Lycf"># Dashboard</code>
+firewall-cmd --permanent --add-port=9283/tcp    <code class="c" data-page-node-id="CZcmtpLneVdlw4FPTxZvdv"># Prometheus</code>
+firewall-cmd --permanent --add-port=7480/tcp    <code class="c" data-page-node-id="m7Fr91gpvVaYEu1GDld3c3"># RGW</code>
+firewall-cmd --reload
+</code><code class="c" data-page-node-id="YPwio8SE6r2GQGLeSuSehV"># Ubuntu: ufw allow 3300/tcp ... 或 ufw disable</code></pre>
+
+<h3 data-page-node-id="NY6qmRex8Fq1CWUMieAbXw">2.4 创建 ceph 用户与免密 sudo</h3>
+<pre class="cmd" data-page-node-id="kB1fFnNB9QVxGW8YK7rTMF"><code data-page-node-id="EObIF49TW8o5cLEMWfNbah">useradd -d /home/ceph -m ceph
+echo "ceph:YourPassword" | chpasswd
+echo "ceph ALL=(ALL) NOPASSWD:ALL" &gt; /etc/sudoers.d/ceph
+chmod 0440 /etc/sudoers.d/ceph
+
+<code class="c" data-page-node-id="BIVvi5W7n73LvYYvORoyhJ"># 从部署机（或第一个 MON 节点）配置到所有节点的 SSH 免密</code>
+<code class="c" data-page-node-id="ydC6CjfkZURDQjSY5vbRVR"># 在 ceph-mon1 上执行：</code>
+su - ceph
+ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa
+for h in ceph-mon1 ceph-mon2 ceph-mon3 ceph-osd1 ceph-osd2 ceph-osd3 ceph-osd4; do
+    ssh-copy-id ceph@$h
+done
+</code></pre>
+
+<h3 data-page-node-id="xzEImoU9cIvwN61QnGko1Q">2.5 内核参数与系统调优</h3>
+<pre class="cmd" data-page-node-id="wjMdMsdQNml9AMMImGtPjZ"><code data-page-node-id="Lvzp2THQa3qIHyX7yaAtk7">cat &gt; /etc/sysctl.d/99-ceph.conf &lt;&lt;EOF
+<code class="c" data-page-node-id="cc5foebh7vZlXXh0IJ3a9q"># 网络</code>
+net.core.rmem_max = 56623104
+net.core.wmem_max = 56623104
+net.core.rmem_default = 56623104
+net.core.wmem_default = 56623104
+net.core.netdev_max_backlog = 250000
+net.core.somaxconn = 65535
+net.ipv4.tcp_rmem = 4096 87380 56623104
+net.ipv4.tcp_wmem = 4096 65536 56623104
+<code class="c" data-page-node-id="gfDP4U1bAiNmKi4iB1tPgp"># 内存</code>
+vm.swappiness = 1
+vm.min_free_kbytes = 1048576
+vm.dirty_ratio = 20
+vm.dirty_background_ratio = 10
+<code class="c" data-page-node-id="Ck56b1QsSvUA1ozrz3v8PF"># 文件句柄</code>
+fs.file-max = 10485760
+fs.aio-max-nr = 1048576
+EOF
+sysctl --system
+
+cat &gt; /etc/security/limits.d/99-ceph.conf &lt;&lt;EOF
+* soft nofile 1048576
+* hard nofile 1048576
+* soft nproc  1048576
+* hard nproc  1048576
+EOF
+
+<code class="c" data-page-node-id="SfsJO4YEUqYQaTGPYXFI0f"># 关闭透明大页（Ceph 强烈建议）</code>
+cat &gt; /etc/systemd/system/disable-thp.service &lt;&lt;EOF
+[Unit]
+Description=Disable Transparent Huge Pages
+[Service]
+Type=simple
+ExecStart=/bin/sh -c "echo never &gt; /sys/kernel/mm/transparent_hugepage/enabled &amp;&amp; echo never &gt; /sys/kernel/mm/transparent_hugepage/defrag"
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload &amp;&amp; systemctl enable --now disable-thp
+
+<code class="c" data-page-node-id="0ZW546iwlyeyYvQ7D9Zlvi"># 关闭 swap</code>
+swapoff -a &amp;&amp; sed -i '/swap/d' /etc/fstab
+
+<code class="c" data-page-node-id="9txH0Sfk0bmKoPJ1XRG6lW"># 磁盘调度器 + tuned</code>
+dnf install -y tuned
+tuned-adm profile latency-performance
+</code></pre>
+
+<h3 data-page-node-id="FzPYap1zvVyit7VGCsEYss">2.6 配置软件源</h3>
+<pre class="cmd" data-page-node-id="WDqTwoJGaZL95BWCeIlZ11"><code class="c" data-page-node-id="ThYFqY1QKMuJSdeGBvgW6c"># ===== RHEL 9 系（Rocky / Alma / CentOS Stream / RHEL）=====</code>
+dnf install -y epel-release
+<code class="c" data-page-node-id="1HFYXMy1eVtFSyODnUiFNs"># Squid 源（如需 Tentacle，把 squid 换成 tentacle）</code>
+dnf install -y https://download.ceph.com/rpm-squid/el9/noarch/ceph-release-1-1.el9.noarch.rpm
+dnf makecache
+
+<code class="c" data-page-node-id="EeyHEOf8itlmqF8BVyt5jV"># ===== Ubuntu 22.04 / 24.04 =====</code>
+apt update &amp;&amp; apt install -y curl gnupg lsb-release
+curl -fsSL https://download.ceph.com/keys/release.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/ceph.gpg
+echo "deb https://download.ceph.com/debian-squid/ $(lsb_release -sc) main" &gt; /etc/apt/sources.list.d/ceph.list
+apt update
+
+<code class="c" data-page-node-id="1Dogt4v9Q0MsEOOH9WYQba"># 若无法访问外网，可先在一台机器下载全部 rpm 做本地源：</code>
+<code class="c" data-page-node-id="OK0GYHSPRoxGGFA1KFoHu9"># reposync --repo=ceph --download-metadata -p /var/www/html/ceph</code>
+</code></pre>
+<div class="warn" data-page-node-id="WmJj8Drn5FvAehzTD4tPf7"><b data-page-node-id="9f86MKIreGsquvxIIVWmY8">离线环境提示：</b>download.ceph.com 的路径可能调整。若 URL 404，请到 <code data-page-node-id="69MlHHySGvhloS0KITftf2">https://download.ceph.com/</code> 索引页确认实际路径，或用一台能联网的机器 <code data-page-node-id="Qk2eRLvcoK99N0F7Cle5aZ">dnf download --resolve ceph</code> 后做本地仓库。</div>
+</section>
+
+<section id="ch3" data-page-node-id="GsGuWlcBwzuA8fCTvDPgJN">
+<h2 data-page-node-id="xdzxRC8vv2I4cowtFNfHfK"><span class="num" data-page-node-id="t1L7hfuR3gxSmnjqfhbKH8">3</span>磁盘规划与准备</h2>
+
+<h3 data-page-node-id="6t186dGiEfZ2iV5smLyfcs">3.1 磁盘布局设计</h3>
+<figure data-page-node-id="mN085kjt3nWCpBMa3jsoYE">
+<svg viewBox="0 0 900 260" xmlns="http://www.w3.org/2000/svg" data-page-node-id="gpCklg6xbU5KawOs0MgrMF">
+  <text x="450" y="18" text-anchor="middle" font-size="13.5" font-weight="700" fill="#0e7490" data-page-node-id="cRCAbfRvBErEAy6o5nDpod">ceph-osd1 的磁盘布局（HDD 数据 + NVMe 元数据，推荐方案）</text>
+
+  <rect x="30" y="36" width="400" height="200" rx="10" fill="#f8fafc" stroke="#94a3b8" data-page-node-id="FLBYFy6lmjBlJcEFRYV967"/>
+  <text x="230" y="58" text-anchor="middle" font-size="12.5" font-weight="700" fill="#334155" data-page-node-id="zi9NI2YuoIv5tU8DSabSSX">NVMe（2 × 1.6TB）承载 block.db + block.wal</text>
+  <g data-page-node-id="2iQFyF4qMEaXjN2Zus6rI1">
+    <rect x="48" y="70" width="88" height="26" rx="4" fill="#a7f3d0" stroke="#059669" data-page-node-id="auVsxTBYFYhFN8EWBFWsic"/><text x="92" y="87" text-anchor="middle" font-size="9" fill="#065f46" data-page-node-id="avm9aEB8t9GxoMh7PN6kSM">db/wal-0  40G</text>
+    <rect x="142" y="70" width="88" height="26" rx="4" fill="#a7f3d0" stroke="#059669" data-page-node-id="KkactkeljEf13vEAMirGE3"/><text x="186" y="87" text-anchor="middle" font-size="9" fill="#065f46" data-page-node-id="a99QbACqOJkWxSxDWEKLuO">db/wal-1  40G</text>
+    <rect x="236" y="70" width="88" height="26" rx="4" fill="#a7f3d0" stroke="#059669" data-page-node-id="wUuEkFNWqOvj4sav0RpXJC"/><text x="280" y="87" text-anchor="middle" font-size="9" fill="#065f46" data-page-node-id="sfyq6TbmDHdfW3TAzCwFOL">db/wal-2  40G</text>
+    <rect x="330" y="70" width="88" height="26" rx="4" fill="#a7f3d0" stroke="#059669" data-page-node-id="LuBAVyudskdtIGEJDp2cUE"/><text x="374" y="87" text-anchor="middle" font-size="9" fill="#065f46" data-page-node-id="UtTOQBRtq4XNVJ33dM4dkQ">db/wal-3  40G</text>
+    <rect x="48" y="104" width="88" height="26" rx="4" fill="#a7f3d0" stroke="#059669" data-page-node-id="YXOf7dhHiGdwMkKGqxQC9M"/><text x="92" y="121" text-anchor="middle" font-size="9" fill="#065f46" data-page-node-id="8EbB8erlk8onGJzHDa5K5Z">db/wal-4  40G</text>
+    <rect x="142" y="104" width="88" height="26" rx="4" fill="#a7f3d0" stroke="#059669" data-page-node-id="aXnp5BXHXLPqRxMe2prL0Z"/><text x="186" y="121" text-anchor="middle" font-size="9" fill="#065f46" data-page-node-id="AbTnAblQEgCNfgj1EbXMBf">db/wal-5  40G</text>
+    <text x="374" y="121" text-anchor="middle" font-size="9" fill="#64748b" data-page-node-id="ZHwXD1OqeEEUtC5HsBIcA6">（nvme1n1 同构）</text>
+  </g>
+  <text x="230" y="152" text-anchor="middle" font-size="10.5" fill="#15803d" data-page-node-id="1tJcXoK9KVBA0eRGzMoWgA">规则：block.db 大小 ≈ 数据盘容量的 4%，且 ≥ 30GB</text>
+  <text x="230" y="170" text-anchor="middle" font-size="10.5" fill="#15803d" data-page-node-id="3LETFjnDOoC9rehwYxPxqi">8TB 盘 → 320GB 理论值，实际 40~80GB 通常够用</text>
+  <text x="230" y="188" text-anchor="middle" font-size="10.5" fill="#b45309" data-page-node-id="qRdAoSBibsw8VTYTAXx61y">⚠ 一块 NVMe 上的 db 数量不宜超过 6~8 个（会成瓶颈）</text>
+  <text x="230" y="206" text-anchor="middle" font-size="10.5" fill="#b45309" data-page-node-id="AmTGIYAZ6N0Wp0WtPIPrpl">⚠ NVMe 损坏 → 上面所有 OSD 同时失效，建议做 RAID1 或交叉分布</text>
+  <text x="230" y="226" text-anchor="middle" font-size="10.5" fill="#64748b" data-page-node-id="qNHLES71HGPvW4PTphfwBV">推荐：2 块 NVMe 各承载 3 个 OSD 的 db，互为冗余风险分散</text>
+
+  <rect x="460" y="36" width="400" height="200" rx="10" fill="#f8fafc" stroke="#94a3b8" data-page-node-id="TgGj1NzdMgOCvJORAlPz1C"/>
+  <text x="660" y="58" text-anchor="middle" font-size="12.5" font-weight="700" fill="#334155" data-page-node-id="onDWuZIJ9GftbE2AwP78WT">HDD（6 × 8TB）承载 block（数据）</text>
+  <g data-page-node-id="ClFnw8r463ix5L6pJXkKa0">
+    <rect x="478" y="70" width="120" height="30" rx="5" fill="#dbeafe" stroke="#1d4ed8" data-page-node-id="8EIFsp7idJVybReiqrVITQ"/><text x="538" y="89" text-anchor="middle" font-size="10" fill="#1e3a8a" data-page-node-id="ehWEnNIjmMEFeorgFkG7yv">/dev/sdb → osd.0</text>
+    <rect x="478" y="108" width="120" height="30" rx="5" fill="#dbeafe" stroke="#1d4ed8" data-page-node-id="a2Q648uHnuBsSWbyJJ8wQm"/><text x="538" y="127" text-anchor="middle" font-size="10" fill="#1e3a8a" data-page-node-id="IHZVJDmCHrRERKONYNCwAK">/dev/sdc → osd.1</text>
+    <rect x="478" y="146" width="120" height="30" rx="5" fill="#dbeafe" stroke="#1d4ed8" data-page-node-id="Q1DbEDPXpHqsLVNBHZBMI7"/><text x="538" y="165" text-anchor="middle" font-size="10" fill="#1e3a8a" data-page-node-id="JOkN6xM840wg9SbAYs01xE">/dev/sdd → osd.2</text>
+    <rect x="612" y="70" width="120" height="30" rx="5" fill="#dbeafe" stroke="#1d4ed8" data-page-node-id="yVVLOUVPKHtoGsZCK8lphQ"/><text x="672" y="89" text-anchor="middle" font-size="10" fill="#1e3a8a" data-page-node-id="yVOX8zFhpjcjfgeDKjrSO1">/dev/sde → osd.3</text>
+    <rect x="612" y="108" width="120" height="30" rx="5" fill="#dbeafe" stroke="#1d4ed8" data-page-node-id="Xl6OODoRhEkbAv5MVntWuB"/><text x="672" y="127" text-anchor="middle" font-size="10" fill="#1e3a8a" data-page-node-id="c02JDx2kNED7UhN276dJmk">/dev/sdf → osd.4</text>
+    <rect x="612" y="146" width="120" height="30" rx="5" fill="#dbeafe" stroke="#1d4ed8" data-page-node-id="P8sdJo1mPUXNqwiewcKxU2"/><text x="672" y="165" text-anchor="middle" font-size="10" fill="#1e3a8a" data-page-node-id="852SHWNPF6QFmKOWVYvstk">/dev/sdg → osd.5</text>
+  </g>
+  <text x="660" y="196" text-anchor="middle" font-size="10.5" fill="#1e40af" data-page-node-id="s3Nb7K47yE6XQFY3Rpg3RZ">要求：JBOD / IT 模式直通，<tspan font-weight="700" data-page-node-id="g3B0OyQegpVm3x2mKjdmes">禁用任何 RAID</tspan></text>
+  <text x="660" y="214" text-anchor="middle" font-size="10.5" fill="#1e40af" data-page-node-id="rXXJwl7whcXzSrIEliN5Ni">要求：无分区、无文件系统、无 LVM 残留</text>
+  <text x="660" y="230" text-anchor="middle" font-size="10.5" fill="#1e40af" data-page-node-id="ctcvqXtpW44T11XXjNpkwy">要求：关闭磁盘写缓存（HDD 有 BBU 的阵列卡除外）</text>
+</svg>
+<figcaption data-page-node-id="oWod7EDVXJk3X833lxEMAd">图 3-1　OSD 节点的磁盘布局设计。<b data-page-node-id="x58OrcpDGXrVFAspxFeFp4">db/wal 分离是 HDD 集群性价比最高的一项优化。</b></figcaption>
+</figure>
+
+<h3 data-page-node-id="K5q4aivWqQeGevLJwMOBdE">3.2 磁盘清理与检查</h3>
+<pre class="cmd" data-page-node-id="Qj4NVAmJBkYrdDLqB6ILUT"><code class="c" data-page-node-id="FBl0wHQwQUw4s6B7p63iUH"># 1. 查看磁盘，确认设备名（务必确认！选错盘会丢数据）</code>
+lsblk -o NAME,SIZE,TYPE,MODEL,SERIAL,WWN
+lsscsi
+
+<code class="c" data-page-node-id="lTApEPhPrPZ6z49cto7F8M"># 2. 检查是否有残留（重要：有 GPT/LVM/RAID 签名会导致 ceph-volume 拒绝）</code>
+wipefs -a /dev/sdb   <code class="c" data-page-node-id="VgYTnhujMZoE0zhzOFyKl8"># 谨慎！只在确认是数据盘时执行</code>
+sgdisk --zap-all /dev/sdb
+dd if=/dev/zero of=/dev/sdb bs=1M count=100 oflag=direct,dsync
+
+<code class="c" data-page-node-id="siUxA0WEzrm7PgiaEPcXo6"># 3. 确认磁盘未被占用</code>
+lsblk -f /dev/sdb
+<code class="c" data-page-node-id="fYSecUXly6jIj8PkEG5QOY"># 正常应无 FSTYPE、无 MOUNTPOINT</code>
+
+<code class="c" data-page-node-id="mXEdc7v9Nx7t4OeyN7u2sy"># 4. 检查磁盘健康</code>
+smartctl -a /dev/sdb | grep -Ei 'reallocated|pending|uncorrectable|wear'
+<code class="c" data-page-node-id="jLUiHhT8Xx0zH8tVtHBfpx"># HDD 看 Reallocated_Sector_Ct、Current_Pending_Sector</code>
+<code class="c" data-page-node-id="D3UoIaiNW976XfTR7yYlrI"># SSD/NVMe 看 Percentage Used、Media_Wearout_Indicator</code>
+
+<code class="c" data-page-node-id="xHN03nZ1BdR1Rs67MQIAdv"># 5. 关闭磁盘写缓存（HDD，防止掉电丢数据）</code>
+hdparm -W 0 /dev/sdb
+
+<code class="c" data-page-node-id="j9Jh6EVUQQYgfAxPHV7zFz"># 6. 设置 IO 调度器</code>
+echo mq-deadline &gt; /sys/block/sdb/queue/scheduler   <code class="c" data-page-node-id="7ttNfWJApzndbBv17leN6E"># HDD</code>
+echo none        &gt; /sys/block/nvme0n1/queue/scheduler  <code class="c" data-page-node-id="Pt7eyPJAesW7u965tfegPY"># NVMe</code>
+</code></pre>
+
+<div class="warn" data-page-node-id="B4ARF2VhlvQV8OZmZ0swIZ"><b data-page-node-id="Dr9H1K071sdQDWo5VkTEX8">生产环境务必用 <code data-page-node-id="50UnCX3dodOVDSd24rrsrn">/dev/disk/by-id/</code> 而不是 <code data-page-node-id="fHPjaxhYUD89M1lu7YmUGU">/dev/sdX</code>！</b>内核重启后 sdb/sdc 的顺序可能变化，导致 OSD 挂载错误的盘。用 <code data-page-node-id="OGkvnBb0uyMEOyzDiDiL5C">wwn-</code> 或 <code data-page-node-id="RKNq3dsL5OgDrBxZ7SEFUH">scsi-</code> 开头的 by-id 链接：<br data-page-node-id="af7lKJ9YtvqTzD6r4KDAPI">
+<pre style="margin-top:6px" data-page-node-id="JzGpkA2vSu5X9MOhdlt2BL">ls -l /dev/disk/by-id/ | grep -v part
+# 例如使用：/dev/disk/by-id/scsi-35000c500a1b2c3d4</pre></div>
+</section>
+
+<section id="ch4" data-page-node-id="dj06wnZiVGwE68kvwGzBW3">
+<h2 data-page-node-id="GAbTVUIGucS9wNH3vPPu58"><span class="num" data-page-node-id="CwIiClh5nwZSDloKfnviFZ">4</span>【手动部署】安装 Ceph 软件包</h2>
+
+<div class="note" data-page-node-id="DDbpzj64cvKc7uiza9YW2Q"><b data-page-node-id="pHIdwkTyC26LIyRObfwkUN">从第 4 章到第 10 章是完整的手动部署流程。</b>每一步都对应 Ansible 在后台做的事。建议按顺序执行。</div>
+
+<h3 data-page-node-id="th2ddTLuh8xDio4IRPy67W">4.1 安装</h3>
+<pre class="cmd" data-page-node-id="RAhxHRuaOuDaBYwW3h9wpE"><code class="c" data-page-node-id="H19VyD9mHaNGQ2D5h7JDTg"># ===== MON / MGR / MDS / RGW 节点 =====</code>
+dnf install -y ceph-mon ceph-mgr ceph-mds ceph-radosgw ceph-common
+
+<code class="c" data-page-node-id="gFRwmo7TdePh98yx72m4Oc"># ===== OSD 节点 =====</code>
+dnf install -y ceph-osd ceph-common ceph-volume lvm2 smartmontools
+
+<code class="c" data-page-node-id="EA7AkyrY9LWcJOQZIrbdrC"># ===== 客户端节点（只需 ceph-common / ceph-fuse）=====</code>
+dnf install -y ceph-common
+
+<code class="c" data-page-node-id="yU5VvzJ4iWNlRXT1EtjfGO"># 验证版本</code>
+ceph --version
+<code class="o" data-page-node-id="n2K1jjtucbMw4nGToY13t0">ceph version 19.2.4 (xxx) squid (stable)</code>
+
+<code class="c" data-page-node-id="F8r15UtVV0EZGA7w3Duwa7"># Ubuntu</code>
+<code class="c" data-page-node-id="KEf08KG6hOzkVPG5OAS8wF"># apt install -y ceph-mon ceph-mgr ceph-mds radosgw ceph-osd ceph-common ceph-volume</code>
+</code></pre>
+
+<h3 data-page-node-id="T4jV7d0eEAB3qO2VmTRpSb">4.2 部署流程总览</h3>
+<figure data-page-node-id="lGUihAnNA3l3KxvBpZEVqi">
+<svg viewBox="0 0 900 150" xmlns="http://www.w3.org/2000/svg" data-page-node-id="tmN9BbA9FRnVuTx7en1bK0">
+  <defs data-page-node-id="JmBwp0RsYEXuz27OKOYwFx"><marker id="b2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" data-page-node-id="t20DlMuTEHDmmHyj5KjyeJ"><path d="M0,0 L0,6 L8,3 z" fill="#0e7490" data-page-node-id="chGGtFsuNZhBQLJ4U3ywby"/></marker></defs>
+  <g font-size="11" text-anchor="middle" data-page-node-id="KrwNzQQ1NRA7hyRFkv31uT">
+    <rect x="10" y="40" width="110" height="50" rx="8" fill="#fef3c7" stroke="#b45309" stroke-width="1.5" data-page-node-id="OU1KHtzwAE3H1KPMMk06Xh"/>
+    <text x="65" y="62" font-weight="700" fill="#78350f" data-page-node-id="64tDhKFVDQ2JGLfEnij8CG">① 建 ceph.conf</text><text x="65" y="78" font-size="9.5" fill="#92400e" data-page-node-id="bB9prQ8MW1dgEJEDXBzUGd">fsid + mon host</text>
+
+    <rect x="130" y="40" width="110" height="50" rx="8" fill="#fef3c7" stroke="#b45309" stroke-width="1.5" data-page-node-id="ojefoIXwEyAZKdfpPeLLH9"/>
+    <text x="185" y="62" font-weight="700" fill="#78350f" data-page-node-id="pcFImjXesfaY4t0mzazE1F">② 生成 keyring</text><text x="185" y="78" font-size="9.5" fill="#92400e" data-page-node-id="pOt3kcqlbY0bHfWNdKL8EL">mon/admin/bootstrap</text>
+
+    <rect x="250" y="40" width="110" height="50" rx="8" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.5" data-page-node-id="eah8cSQ7pKg3AeyFJtDjd4"/>
+    <text x="305" y="62" font-weight="700" fill="#0c4a6e" data-page-node-id="59snZ7v6FElUiSdUw7uHhC">③ 创建 monmap</text><text x="305" y="78" font-size="9.5" fill="#0e7490" data-page-node-id="0SYgB0NOTXwIlC32O2fJKC">monmaptool</text>
+
+    <rect x="370" y="40" width="110" height="50" rx="8" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.5" data-page-node-id="ujvahWSrMX0oEJ7Kl1lNOn"/>
+    <text x="425" y="62" font-weight="700" fill="#0c4a6e" data-page-node-id="SFPgVmCCWLuqO4fDSuzaMF">④ ceph-mon --mkfs</text><text x="425" y="78" font-size="9.5" fill="#0e7490" data-page-node-id="4MS0aEv2iLpGRRev1VZvt6">初始化并启动</text>
+
+    <rect x="490" y="40" width="110" height="50" rx="8" fill="#ede9fe" stroke="#6d28d9" stroke-width="1.5" data-page-node-id="HeaGgSQ6rhYZYu5lgGFRVP"/>
+    <text x="545" y="62" font-weight="700" fill="#5b21b6" data-page-node-id="G1RpvEGVfImEoIWKZiPAsF">⑤ 部署 MGR</text><text x="545" y="78" font-size="9.5" fill="#6d28d9" data-page-node-id="6JyYQXDg8bGmLgEMwydFkw">dashboard/balancer</text>
+
+    <rect x="610" y="40" width="110" height="50" rx="8" fill="#dcfce7" stroke="#15803d" stroke-width="1.5" data-page-node-id="4TFcG76MheRj31jwxOWHFJ"/>
+    <text x="665" y="62" font-weight="700" fill="#14532d" data-page-node-id="PE60PzHqU7HxXN2iRR98wq">⑥ 创建 OSD</text><text x="665" y="78" font-size="9.5" fill="#166534" data-page-node-id="bpU3QabTeK1o06NjYyJgiK">ceph-volume lvm</text>
+
+    <rect x="730" y="40" width="110" height="50" rx="8" fill="#dcfce7" stroke="#15803d" stroke-width="1.5" data-page-node-id="05QLsObLyclGtPhOkxGyAH"/>
+    <text x="785" y="62" font-weight="700" fill="#14532d" data-page-node-id="VDcBm6kfjYoHLcA1C3q15J">⑦ 上层接口</text><text x="785" y="78" font-size="9.5" fill="#166534" data-page-node-id="Jti7MUL7toXfEYGc7AMrJj">MDS/RGW/Pool</text>
+  </g>
+  <line x1="120" y1="65" x2="128" y2="65" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b2)" data-page-node-id="GMsbWnhIsz69FKArkjwdgq"/>
+  <line x1="240" y1="65" x2="248" y2="65" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b2)" data-page-node-id="5h2liBHWzuQP3AFfu5OfCC"/>
+  <line x1="360" y1="65" x2="368" y2="65" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b2)" data-page-node-id="Naj95pknDrTqUZJE76QMdF"/>
+  <line x1="480" y1="65" x2="488" y2="65" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b2)" data-page-node-id="xQZDx1VypZOrJbCjdBr7lM"/>
+  <line x1="600" y1="65" x2="608" y2="65" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b2)" data-page-node-id="zbUgIoXSAIfHDjacifIjVG"/>
+  <line x1="720" y1="65" x2="728" y2="65" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b2)" data-page-node-id="0kHwNKtgSeiAa6e3di2D08"/>
+  <text x="450" y="122" text-anchor="middle" font-size="11.5" fill="#475569" data-page-node-id="MW3Le7WE2BHXkPWzyjZYQE">手动部署七步。<b data-page-node-id="vF9E5RYHAIXsT49TlG0Uhi">核心文件只有三个</b>：<tspan font-family="monospace" data-page-node-id="LRE7CcITiykkiwNgncBSG4">/etc/ceph/ceph.conf</tspan>、<tspan font-family="monospace" data-page-node-id="DmVCbkVjfUelHaHzgGXBsg">keyring</tspan>、<tspan font-family="monospace" data-page-node-id="uEDfecisqI9L3f0e7kH6DR">monmap</tspan>。</text>
+</svg>
+<figcaption data-page-node-id="vEiNKO7HEbiN7hu0pFszZK">图 4-1　手动部署七步流程。</figcaption>
+</figure>
+</section>
+
+<section id="ch5" data-page-node-id="ed4uG7mky7FleQ7Yr71Rq1">
+<h2 data-page-node-id="ks6QHMlZbNqFgy0o57T0HT"><span class="num" data-page-node-id="REYuEo8XzsXBqotafQe787">5</span>【手动部署】部署 MON</h2>
+
+<h3 data-page-node-id="lyCQvYaRj87a6vuHNCFAJm">5.1 生成 fsid 与 ceph.conf</h3>
+<pre class="cmd" data-page-node-id="4bFmLiWM89IgDHPd3EUUHA"><code class="c" data-page-node-id="8Fo6rJ6jo6WdGGehPSAk22"># 在 ceph-mon1 上执行</code>
+UUID=$(uuidgen)
+echo $UUID
+<code class="o" data-page-node-id="MGHxqkbFdm8OEHCuIYfLyM">a7f3c2e8-4b1d-4f9a-9c3e-8d2b5a1f6e70</code>
+
+cat &gt; /etc/ceph/ceph.conf &lt;&lt;EOF
+[global]
+fsid                      = a7f3c2e8-4b1d-4f9a-9c3e-8d2b5a1f6e70
+mon initial members       = ceph-mon1, ceph-mon2, ceph-mon3
+mon host                  = 10.10.10.11, 10.10.10.12, 10.10.10.13
+public network            = 10.10.10.0/24
+cluster network           = 192.168.100.0/24
+
+auth cluster required     = cephx
+auth service required     = cephx
+auth client required      = cephx
+
+osd pool default size     = 3
+osd pool default min size = 2
+osd pool default pg num   = 128
+osd pool default pgp num  = 128
+
+mon allow pool delete     = true
+
+[mon]
+mon clock drift allowed   = 0.5
+mon osd down out interval = 600
+
+[osd]
+osd recovery max active   = 3
+osd max backfills         = 1
+EOF
+</code></pre>
+<div class="tip" data-page-node-id="wZTjXGgisoUF4ddcDHjNlp">
+<b data-page-node-id="LxrzohM1MU8MC0l8c6GOPO">配置项说明：</b><br data-page-node-id="N1vP7pxotGdcWChCnI1HhJ">
+· <code data-page-node-id="EjDsQTTNABK1h5Pf0Xr6Hl">mon initial members</code> / <code data-page-node-id="fTH33iIgC8JmhJHEOshquj">mon host</code>：<b data-page-node-id="1Flq7QtVk9pACyI7QEb4y1">必须写全</b>，这是 bootstrap 时生成 monmap 的依据<br data-page-node-id="ohh065cBD2vxv0HoNPCEgB">
+· <code data-page-node-id="9U62Vd27OOifr7zvamOdIW">public network</code> / <code data-page-node-id="ufHbhGlg4Rb3a2vFzfsyPF">cluster network</code>：双网分离的核心配置<br data-page-node-id="RuiDQU0hegVRBj4OPrhXXP">
+· <code data-page-node-id="2EiZYcYabgONFgv8nbbIKw">osd pool default min size = 2</code>：3 副本下，只剩 1 副本时<b data-page-node-id="ujoYVCEm8XXtIv4uVj3IUN">停止写入</b>（防止脑裂），生产务必设为 2<br data-page-node-id="RWGeX1TZFdSDXmoUnIwJx3">
+· <code data-page-node-id="UWlajkG57Fb221TNeREQ9o">mon allow pool delete = true</code>：允许删池（默认禁止，安全起见；测试环境可开）
+</div>
+
+<h3 data-page-node-id="kGfHBW520L7heKSor0mz0R">5.2 生成 keyring（密钥环）</h3>
+<pre class="cmd" data-page-node-id="JMbhHIkj3MDD0qr7FYu4Eo"><code class="c" data-page-node-id="fzrFKFChNhM9GMQDwO4Zbs"># ① MON 自身的 keyring（mon. 对 MON 有全部权限）</code>
+ceph-authtool --create-keyring /tmp/ceph.mon.keyring --gen-key -n mon. --cap mon 'allow *'
+
+<code class="c" data-page-node-id="DT2kNyA9nyzg6tPVIBFqyo"># ② client.admin（管理员，最高权限）</code>
+ceph-authtool --create-keyring /etc/ceph/ceph.client.admin.keyring \
+  --gen-key -n client.admin \
+  --cap mon 'allow *' --cap osd 'allow *' --cap mds 'allow *' --cap mgr 'allow *'
+
+<code class="c" data-page-node-id="3YDx9cG0Ek260DIFqqMaAy"># ③ bootstrap-osd（用于后续添加 OSD 时向 MON 注册）</code>
+mkdir -p /var/lib/ceph/bootstrap-osd
+ceph-authtool --create-keyring /var/lib/ceph/bootstrap-osd/ceph.keyring \
+  --gen-key -n client.bootstrap-osd \
+  --cap mon 'profile bootstrap-osd' --cap mgr 'allow r'
+
+<code class="c" data-page-node-id="3Pv5kVDAwhnfLGHf3i0KpS"># ④ bootstrap-mds / bootstrap-rgw / bootstrap-mgr（可选，后面会用到）</code>
+mkdir -p /var/lib/ceph/bootstrap-{mds,rgw,mgr}
+ceph-authtool --create-keyring /var/lib/ceph/bootstrap-mds/ceph.keyring \
+  --gen-key -n client.bootstrap-mds --cap mon 'profile bootstrap-mds'
+ceph-authtool --create-keyring /var/lib/ceph/bootstrap-rgw/ceph.keyring \
+  --gen-key -n client.bootstrap-rgw --cap mon 'profile bootstrap-rgw'
+ceph-authtool --create-keyring /var/lib/ceph/bootstrap-mgr/ceph.keyring \
+  --gen-key -n client.bootstrap-mgr --cap mon 'profile bootstrap-mgr'
+
+<code class="c" data-page-node-id="zXgfsDYrSEczHLC7v7e6sA"># ⑤ 把所有 key 合并进 mon keyring（MON 需要持有它们才能分发）</code>
+ceph-authtool /tmp/ceph.mon.keyring --import-keyring /etc/ceph/ceph.client.admin.keyring
+ceph-authtool /tmp/ceph.mon.keyring --import-keyring /var/lib/ceph/bootstrap-osd/ceph.keyring
+ceph-authtool /tmp/ceph.mon.keyring --import-keyring /var/lib/ceph/bootstrap-mds/ceph.keyring
+ceph-authtool /tmp/ceph.mon.keyring --import-keyring /var/lib/ceph/bootstrap-rgw/ceph.keyring
+ceph-authtool /tmp/ceph.mon.keyring --import-keyring /var/lib/ceph/bootstrap-mgr/ceph.keyring
+
+chown ceph:ceph /tmp/ceph.mon.keyring
+chown -R ceph:ceph /var/lib/ceph/bootstrap-*
+</code></pre>
+
+<h3 data-page-node-id="UrbAI7PIMkF7kRooB8i8wq">5.3 创建 monmap 并初始化第一个 MON</h3>
+<pre class="cmd" data-page-node-id="B6bcK9P2jFMpg85gDlfs0z"><code class="c" data-page-node-id="O0HLlz9EozZ9uXyFErrgsm"># ① 创建 monitor map</code>
+monmaptool --create \
+  --add ceph-mon1 10.10.10.11 \
+  --add ceph-mon2 10.10.10.12 \
+  --add ceph-mon3 10.10.10.13 \
+  --fsid a7f3c2e8-4b1d-4f9a-9c3e-8d2b5a1f6e70 \
+  --clobber /tmp/monmap
+
+monmaptool --print /tmp/monmap   <code class="c" data-page-node-id="Xszu1WBEy0791m7uTNaNAj"># 验证</code>
+
+<code class="c" data-page-node-id="1V1HFTzHAi8qLD5lMoLyHx"># ② 初始化 mon 数据目录（目录名必须是 ceph-&lt;主机名&gt;）</code>
+mkdir -p /var/lib/ceph/mon/ceph-ceph-mon1
+chown -R ceph:ceph /var/lib/ceph/mon
+
+sudo -u ceph ceph-mon --cluster ceph --mkfs \
+  -i ceph-mon1 \
+  --monmap /tmp/monmap \
+  --keyring /tmp/ceph.mon.keyring
+
+<code class="c" data-page-node-id="fwQAU1nNTc8NAGhSvBjoNQ"># ③ 建立 systemctl 启动标记</code>
+touch /var/lib/ceph/mon/ceph-ceph-mon1/{done,systemd}
+chown ceph:ceph /var/lib/ceph/mon/ceph-ceph-mon1/{done,systemd}
+
+<code class="c" data-page-node-id="CN5GauT20vY1opuvBJC52K"># ④ 启动</code>
+systemctl enable --now ceph-mon@ceph-mon1
+systemctl status ceph-mon@ceph-mon1
+
+<code class="c" data-page-node-id="81rDqnQCAcUPH0X72aY5Hd"># ⑤ 验证（此时 quorum 只有 1 个，会出现告警，正常）</code>
+ceph -s
+</code></pre>
+
+<h3 data-page-node-id="xl3Q2KTHFNHbCggo1XL7hm">5.4 扩展 MON 到 3 节点</h3>
+<pre class="cmd" data-page-node-id="a619bAgKkHsLlAGzwDs2RG"><code class="c" data-page-node-id="XpmrDpuPtYhQj5pDWYGQqj"># ① 把配置文件和 keyring 复制到其他 MON 节点</code>
+for h in ceph-mon2 ceph-mon3; do
+    scp /etc/ceph/ceph.conf              root@$h:/etc/ceph/ceph.conf
+    scp /etc/ceph/ceph.client.admin.keyring root@$h:/etc/ceph/ceph.client.admin.keyring
+    scp /tmp/monmap                      root@$h:/tmp/monmap
+    scp /tmp/ceph.mon.keyring            root@$h:/tmp/ceph.mon.keyring
+done
+
+<code class="c" data-page-node-id="ZAQtIbpYaIMkeWmemLMMy0"># ② 在 ceph-mon2 上执行（ceph-mon3 同理，改 -i 参数）</code>
+mkdir -p /var/lib/ceph/mon/ceph-ceph-mon2
+chown -R ceph:ceph /var/lib/ceph/mon
+chown ceph:ceph /tmp/ceph.mon.keyring
+
+sudo -u ceph ceph-mon --cluster ceph --mkfs -i ceph-mon2 --monmap /tmp/monmap --keyring /tmp/ceph.mon.keyring
+touch /var/lib/ceph/mon/ceph-ceph-mon2/{done,systemd}
+chown ceph:ceph /var/lib/ceph/mon/ceph-ceph-mon2/{done,systemd}
+systemctl enable --now ceph-mon@ceph-mon2
+
+<code class="c" data-page-node-id="snPhL4bFmGB7oCDIDLPuUV"># ③ 回到 ceph-mon1 验证</code>
+ceph -s
+<code class="o" data-page-node-id="lCi1QLVYCm81cKERqp4jkJ">  mon: 3 daemons, quorum ceph-mon1,ceph-mon2,ceph-mon3 (age 30s)</code>
+
+ceph mon stat
+ceph quorum_status --format json-pretty | grep -A5 quorum_names
+
+<code class="c" data-page-node-id="FbsZg8rGL7qPaQo17qBpft"># ④ 启用 msgr2（v2 协议，端口 3300，支持加密；Octopus+ 默认已开）</code>
+ceph mon enable-msgr2
+ceph mon dump | grep -i 'addr'
+</code></pre>
+
+<div class="warn" data-page-node-id="tsjGHAQZDsiJm6vR76D4AF">
+<b data-page-node-id="pVDBR1CgQYjZrlQHAlcCrQ">常见问题：MON 起不来</b><br data-page-node-id="sk3KQ1gkaxJqsxlFuAAUbX">
+· 目录名写成 <code data-page-node-id="B4dTgeVcBR8ugzRZFAi2y1">/var/lib/ceph/mon/ceph-mon1</code> 而主机名是 <code data-page-node-id="lAk0tGhBYyitJwba7LldYl">ceph-mon1</code> → 应为 <code data-page-node-id="C1Ge2czKIjeYV81gDxpQkG">ceph-ceph-mon1</code>（<code data-page-node-id="iPhGVHh6ZieEO6PS47C6ia">ceph-</code> + 主机名）<br data-page-node-id="0kB8gZfrwRzHQWUehNucbn">
+· 权限不对 → 必须是 <code data-page-node-id="Ss95QXE1BJBwxpa6ITJ3iP">ceph:ceph</code><br data-page-node-id="gwoZcbFvLEF8EzOTIUcocZ">
+· SELinux 拦截 → 临时 <code data-page-node-id="Xo7GMCyuPZ8AJvUfPoSRsF">setenforce 0</code> 验证<br data-page-node-id="9hK4WsOY1zyuOTOigTKVH1">
+· 时间不同步 → 检查 chrony<br data-page-node-id="JipTbpe5Fm5hLThbkQxKgf">
+· 看日志：<code data-page-node-id="QI2F2nlCHDvlH7gb9hieKy">journalctl -u ceph-mon@ceph-mon1 -f</code> 或 <code data-page-node-id="X4atwrhFUngfcS0M0bfOyi">/var/log/ceph/ceph-mon.ceph-mon1.log</code>
+</div>
+</section>
+
+<section id="ch6" data-page-node-id="ZkDSzvxyEQ42dSJEojMK55">
+<h2 data-page-node-id="9DxAFJmQFqpBRDS6M9aTay"><span class="num" data-page-node-id="4DpJdcOAuwjjfYckoiaxZk">6</span>【手动部署】部署 MGR</h2>
+<pre class="cmd" data-page-node-id="pM43g7vbAautpLD9U3O0we"><code class="c" data-page-node-id="VlzODxWqrCSEQfyFJy1Swl"># 在每台 MON 节点上部署 MGR（推荐：MGR 与 MON 同机部署，1 主 2 备）</code>
+<code class="c" data-page-node-id="iGoLO1ZBio6Q76m3qDLaqT"># 以 ceph-mon1 为例</code>
+
+<code class="c" data-page-node-id="6kP6wMdeZ1aRz8uyHdtmYb"># ① 创建数据目录</code>
+mkdir -p /var/lib/ceph/mgr/ceph-ceph-mon1
+
+<code class="c" data-page-node-id="KnEwY7RN3EpGxR3CtbIJ9I"># ② 创建 keyring（注意 daemon 名必须是 mgr.&lt;主机名&gt;）</code>
+ceph auth get-or-create mgr.ceph-mon1 \
+  mon 'allow profile mgr' osd 'allow *' mds 'allow *' \
+  -o /var/lib/ceph/mgr/ceph-ceph-mon1/keyring
+
+chown -R ceph:ceph /var/lib/ceph/mgr
+
+<code class="c" data-page-node-id="T2blaVonlrGqBzmorpcoHy"># ③ 启动</code>
+systemctl enable --now ceph-mgr@ceph-mon1
+
+<code class="c" data-page-node-id="eEITbZW43b3Hy7khFnMp5A"># ④ 在 ceph-mon2 / ceph-mon3 上重复（改名字）</code>
+mkdir -p /var/lib/ceph/mgr/ceph-ceph-mon2
+ceph auth get-or-create mgr.ceph-mon2 mon 'allow profile mgr' osd 'allow *' mds 'allow *' -o /var/lib/ceph/mgr/ceph-ceph-mon2/keyring
+chown -R ceph:ceph /var/lib/ceph/mgr
+systemctl enable --now ceph-mgr@ceph-mon2
+
+<code class="c" data-page-node-id="pSVEONUwtzYNttqNFm4xYc"># ⑤ 验证：应看到 1 个 active，其余 standby</code>
+ceph -s
+<code class="o" data-page-node-id="pdli87nxBUPclA3xpRM41I">  mgr: ceph-mon1(active, since 10s), standbys: ceph-mon2, ceph-mon3</code>
+
+<code class="c" data-page-node-id="Jk6HjBHimXy6jOuG5bKUhB"># ⑥ 启用关键模块</code>
+ceph mgr module enable dashboard
+ceph mgr module enable balancer
+ceph mgr module enable pg_autoscaler
+ceph mgr module enable prometheus
+ceph mgr module enable iostat
+
+ceph mgr module ls | grep enabled
+</code></pre>
+<div class="tip" data-page-node-id="y0HOlPa7DnzBXLC1wA7J7f"><b data-page-node-id="amUmF5EeJQXJvzOPu4eKiA">MGR 是"监控与编排大脑"。所有 MGR 挂掉不会阻塞 I/O，但会失去 Dashboard、自动均衡、PG 自动伸缩能力。</b>生产至少部署 2 个。</div>
+</section>
+
+<section id="ch7" data-page-node-id="r7FmZ1ebUPgxiuFCV1rgKW">
+<h2 data-page-node-id="GURtlOcBVvXtkxoc9H2DGb"><span class="num" data-page-node-id="Z1pEe9e0Hp1AwyVvDMAEW7">7</span>【手动部署】部署 OSD</h2>
+
+<h3 data-page-node-id="sXR53VpjDAkc2irIvVPCeY">7.1 方式一：ceph-volume lvm create（最常用，推荐）</h3>
+<pre class="cmd" data-page-node-id="saBRXpqvNDnbIC9kZHfc41"><code class="c" data-page-node-id="H5MHPyzUMUomFGc4CJEUHp"># 前置：把 ceph.conf 和 bootstrap keyring 分发到每个 OSD 节点</code>
+for h in ceph-osd1 ceph-osd2 ceph-osd3 ceph-osd4; do
+    scp /etc/ceph/ceph.conf root@$h:/etc/ceph/ceph.conf
+    ssh root@$h "mkdir -p /var/lib/ceph/bootstrap-osd"
+    scp /var/lib/ceph/bootstrap-osd/ceph.keyring root@$h:/var/lib/ceph/bootstrap-osd/ceph.keyring
+    ssh root@$h "chown -R ceph:ceph /var/lib/ceph/bootstrap-osd"
+done
+
+<code class="c" data-page-node-id="3PDnv5STkBom7VHDofKQmN"># ===== 在 ceph-osd1 上执行 =====</code>
+
+<code class="c" data-page-node-id="Xptp8pemzBmWQBTWthQ77C"># ① 单盘 collocated（数据与 db 在同一块盘，最简单，SSD 集群可用）</code>
+ceph-volume lvm create --data /dev/sdb
+
+<code class="c" data-page-node-id="fpztzjmGqF2zYFQwKLMpUn"># ② 推荐的 HDD 方案：数据盘 + 独立 db（先准备 NVMe 上的 LV）</code>
+vgcreate ceph-nvme0 /dev/nvme0n1
+lvcreate -L 60G -n db-osd-0 ceph-nvme0
+ceph-volume lvm create --data /dev/sdb --block.db ceph-nvme0/db-osd-0
+
+<code class="c" data-page-node-id="OSaNYShTTGC3KYUIZ4y55u"># ③ 最完整：data + db + wal 三者分离（全闪高端场景）</code>
+lvcreate -L 60G  -n db-osd-1  ceph-nvme0
+lvcreate -L 4G   -n wal-osd-1 ceph-nvme0
+ceph-volume lvm create --data /dev/sdc --block.db ceph-nvme0/db-osd-1 --block.wal ceph-nvme0/wal-osd-1
+
+<code class="c" data-page-node-id="5atrWPlfD31GZ9UFFeb7Rb"># ④ 批量创建（推荐，一次搞定一整台机器）</code>
+ceph-volume lvm batch --no-auto /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg
+<code class="c" data-page-node-id="HppYkzwhjhJ8KhMtMCGKBP"># 带 db 的批量：</code>
+ceph-volume lvm batch --no-auto \
+  --db-devices /dev/nvme0n1 /dev/nvme1n1 \
+  --db-slots 3 \
+  /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg
+
+<code class="c" data-page-node-id="7L9lb0JEt7eWQC8WymrQUE"># ⑤ 查看结果</code>
+ceph-volume lvm list
+ceph osd tree
+</code></pre>
+
+<h3 data-page-node-id="YgG4Egd5IaNHde5JIFhGZv">7.2 方式二：先 prepare 再 activate（可控性更强）</h3>
+<pre class="cmd" data-page-node-id="QcMPF4mzgb1a4ty3G1VuAX"><code class="c" data-page-node-id="RH1Z2BWxAfrYFCveZ8TRSx"># prepare：只做 LVM 划分 + 写入 OSD 元数据，不启动</code>
+ceph-volume lvm prepare --data /dev/sdb --block.db ceph-nvme0/db-osd-0
+
+<code class="c" data-page-node-id="NcPhBnh2eKQ2PZRTN0Q3W3"># 查看待激活的 OSD</code>
+ceph-volume lvm list
+
+<code class="c" data-page-node-id="ADMtD8pKMZfxw1wmyiy6k9"># activate：启动（--all 激活所有）</code>
+ceph-volume lvm activate --all
+<code class="c" data-page-node-id="whcMbzeBG4FWWOv82PzpDQ"># 或指定 osd id + fsid</code>
+ceph-volume lvm activate 0 a7f3c2e8-4b1d-4f9a-9c3e-8d2b5a1f6e70
+</code></pre>
+
+<h3 data-page-node-id="PSzxGp390eVdwE8l1r7aGF">7.3 OSD 创建后必做的配置</h3>
+<pre class="cmd" data-page-node-id="WcFynO33t9v0LcVN3Q7i98"><code class="c" data-page-node-id="kAhKZHRFUrVzxucyP22Whw"># ① 检查 CRUSH 层级是否正确（默认会把所有 OSD 放在同一个 root 下，没有 host 分层！）</code>
+ceph osd tree
+<code class="c" data-page-node-id="qfYEDhGFi5M0tlWNjPcDoc"># 如果看到所有 osd 都挂在 root default 下而没有 host 层，需要手动加 bucket：</code>
+
+ceph osd crush add-bucket ceph-osd1 host
+ceph osd crush add-bucket ceph-osd2 host
+ceph osd crush add-bucket ceph-osd3 host
+ceph osd crush add-bucket ceph-osd4 host
+
+ceph osd crush move ceph-osd1 root=default
+ceph osd crush move ceph-osd2 root=default
+ceph osd crush move ceph-osd3 root=default
+ceph osd crush move ceph-osd4 root=default
+
+ceph osd crush move osd.0 host=ceph-osd1
+ceph osd crush move osd.1 host=ceph-osd1
+<code class="c" data-page-node-id="v8GRjs8AyooG8fhZNQfL8a"># ... 逐个移动（或用下面的循环）</code>
+<code class="c" data-page-node-id="ZeFBXRFFvY5YjcHRTQQPKf"># for i in 0 1 2 3 4 5; do ceph osd crush move osd.$i host=ceph-osd1; done</code>
+
+<code class="c" data-page-node-id="B8C5TCrUc3xy8j7cC7oGlz"># ② 按容量设置 weight（8TB 盘 → 8.0）</code>
+ceph osd crush reweight osd.0 8.0
+<code class="c" data-page-node-id="VVN6gD8iI5a7y9SDKE7hGI"># 或者让 ceph-volume 自动设（默认按设备大小设，通常是对的）：</code>
+ceph osd df tree   <code class="c" data-page-node-id="Z4uRVD84R3QXDy2jxA0mX7"># 检查 WEIGHT 列</code>
+
+<code class="c" data-page-node-id="LEax0wi8sRll1j2IC60SQ4"># ③ 确认故障域是 host（关键！）</code>
+ceph osd crush rule dump replicated_rule | grep -A2 chooseleaf
+<code class="o" data-page-node-id="WDC8R6RMblRsIgXrSxAJx7">"op": "chooseleaf_firstn", "num": 0, "type": "host"</code>
+
+<code class="c" data-page-node-id="NQhQ0TUe7H0bbjM8XeKMCC"># ④ 设置 device class（混用 SSD/HDD 时自动分类，一般会自动识别）</code>
+ceph osd crush class ls
+ceph osd crush set-device-class ssd osd.0    <code class="c" data-page-node-id="oOH8xOs7oLzcBYMFoXdsLs"># 手动指定</code>
+
+<code class="c" data-page-node-id="Ry7BQZdH4ea5nS9EMNNCvr"># ⑤ 验证</code>
+ceph -s
+ceph osd df tree
+</code></pre>
+
+<div class="warn" data-page-node-id="LAKkBdQkBFGIyNnzA1VyEQ">
+<b data-page-node-id="BGJVNv2pb6ckDEfeaGWY0U">最容易踩的坑：忘记把 OSD 移动到 host bucket 下。</b><br data-page-node-id="jmvwrelAkGJB6bGpNr0RN0">
+如果所有 OSD 都在 root 下平铺，CRUSH 的故障域 <code data-page-node-id="3lcHGmpAAbi9tuA7FgSHrV">host</code> 就无法正常工作 —— 3 副本可能全部落在同一台机器上，那台机器一挂数据就没了。<br data-page-node-id="tIv2CnbNbP7VWLDIGch5Ti">
+<b data-page-node-id="KIXVxDrsolLghPoHCiN34B">务必用 <code data-page-node-id="tUHdKh9jxSLBLUZLwQcP29">ceph osd tree</code> 确认层级是 <code data-page-node-id="qRQu0pWhgHO1uJHoFc3dtF">root → host → osd</code> 三层结构。</b>
+</div>
+
+<h3 data-page-node-id="QnEczUjW8Al9MCJawRHVzH">7.4 部署后 OSD 相关调优</h3>
+<pre class="cmd" data-page-node-id="k1NXAjDxZEHgwfrNUv4Fzl"><code data-page-node-id="g0gMLLCCaEhKJmXk43xrpo">ceph config set osd osd_max_backfills 1
+ceph config set osd osd_recovery_sleep 0.1
+ceph config set osd osd_recovery_max_active 3
+ceph config set osd osd_memory_target 4294967296
+
+<code class="c" data-page-node-id="bGIfrNGtBFZcL03iQXFSXG"># 开启 balancer（见原理篇第 7 章）</code>
+ceph balancer on
+ceph balancer mode upmap
+ceph config set mgr mgr/balancer/begin_time 0000
+ceph config set mgr mgr/balancer/end_time 0600
+
+<code class="c" data-page-node-id="r6kw2NES4KhlnDTCyjOuWr"># 开启 PG 自动伸缩</code>
+ceph osd pool set .mgr pg_autoscale_mode on
+</code></pre>
+</section>
+
+<section id="ch8" data-page-node-id="yT3tkCOG90eGHgekco59Cw">
+<h2 data-page-node-id="TBOedHv1TpoonQqQu5XWTy"><span class="num" data-page-node-id="fwo5h3ikFUMiHyCPQr7nKa">8</span>【手动部署】部署 MDS + CephFS</h2>
+<p data-page-node-id="AjIDu5LEY3eizWcGoHtfwK">只有需要<strong data-page-node-id="7IOPtcumM8J71fD8BQACEu">文件存储</strong>时才需要这一章。如果只用 RBD/RGW，可以跳过。</p>
+
+<pre class="cmd" data-page-node-id="vUxdXiaofN2fr4v2RcTZiJ"><code class="c" data-page-node-id="oSKyytwWan1I0PYUHQ6kO0"># ===== 在每台 MON 节点部署 MDS =====</code>
+<code class="c" data-page-node-id="aBbjuc73AwObgYsoCrC06m"># ① 创建数据目录</code>
+mkdir -p /var/lib/ceph/mds/ceph-ceph-mon1
+
+<code class="c" data-page-node-id="oiDqPZa6m4pYb0FeU7MDFY"># ② 创建 keyring</code>
+ceph auth get-or-create mds.ceph-mon1 \
+  mon 'profile mds' mgr 'profile mds' osd 'allow rwx' mds 'allow' \
+  -o /var/lib/ceph/mds/ceph-ceph-mon1/keyring
+chown -R ceph:ceph /var/lib/ceph/mds
+
+<code class="c" data-page-node-id="bFAybp3iQSMrvsaXnZxmSu"># ③ 启动（ceph-mon2/3 同样操作，形成 1 active + 2 standby）</code>
+systemctl enable --now ceph-mds@ceph-mon1
+
+<code class="c" data-page-node-id="VvdLluzKiKGGFqHL5BWVNu"># ===== 创建 CephFS =====</code>
+<code class="c" data-page-node-id="MqTi84y1hIIcz7bI6bdICh"># 方式 A：一条命令搞定（推荐，会自动建池 + 配置 MDS）</code>
+ceph fs volume create cephfs
+<code class="c" data-page-node-id="f0Su1ozwq6zxQ392HW9tDZ"># 等价的手动方式：</code>
+<code class="c" data-page-node-id="WB56mW9jTiEfL10iZQedo2"># ceph osd pool create cephfs_metadata 64 64</code>
+<code class="c" data-page-node-id="BBLB1KC6IKmyvxpxeM23fj"># ceph osd pool create cephfs_data     256 256</code>
+<code class="c" data-page-node-id="7ibmGQHIiOgVa0XyVcyiCW"># ceph fs new cephfs cephfs_metadata cephfs_data</code>
+
+<code class="c" data-page-node-id="G0RHDps7aVMm5sxVZAuI5D"># ④ 验证</code>
+ceph fs status cephfs
+ceph fs ls
+ceph mds stat
+<code class="o" data-page-node-id="NZHFRitbx9zLnt3u1tQCpu">cephfs:1 {0=ceph-mon1=up:active} 2 up:standby</code>
+
+<code class="c" data-page-node-id="TxRhCBeGTWyynl3h1mU4yl"># ⑤ 元数据池放到 SSD（强烈建议）</code>
+ceph osd pool set cephfs_metadata crush_rule ssd_rule   <code class="c" data-page-node-id="Go0cu6j5mePz3tfqpW0VF7"># 需先创建 ssd_rule</code>
+
+<code class="c" data-page-node-id="WZjWLG5Ea8v21Q1tzDpaAH"># ===== 客户端挂载 =====</code>
+<code class="c" data-page-node-id="fF6ArKF6gkLg8bDbEEwUFv"># 内核挂载（性能好）</code>
+mkdir -p /mnt/cephfs
+mount -t ceph ceph-mon1:6789,ceph-mon2:6789,ceph-mon3:6789:/ /mnt/cephfs \
+  -o name=admin,secret=AQD...,ms_mode=crc,noatime,_netdev
+
+<code class="c" data-page-node-id="ua6ivW0Fa1DBL94kkV3j1C"># 或用 secretfile（更安全）</code>
+cat /etc/ceph/ceph.client.admin.keyring | grep key | awk '{print $3}' &gt; /etc/ceph/admin.secret
+chmod 600 /etc/ceph/admin.secret
+mount -t ceph ceph-mon1,ceph-mon2,ceph-mon3:/ /mnt/cephfs -o name=admin,secretfile=/etc/ceph/admin.secret
+
+<code class="c" data-page-node-id="GGVHi9rlFVVgYOFT1nsB7u"># 写入 /etc/fstab 实现开机挂载</code>
+echo "ceph-mon1:6789,ceph-mon2:6789,ceph-mon3:6789:/ /mnt/cephfs ceph name=admin,secretfile=/etc/ceph/admin.secret,noatime,_netdev 0 2" &gt;&gt; /etc/fstab
+
+<code class="c" data-page-node-id="BDRRD15jm1ONGVvzsMXxWf"># ceph-fuse 挂载（用户态，功能更全）</code>
+ceph-fuse -n client.admin -m ceph-mon1:6789 /mnt/cephfs
+</code></pre>
+
+<div class="tip" data-page-node-id="Yuzaj0P4NkUBascJCFCjZz">
+<b data-page-node-id="CXgdPIaKGJ9GOGdPzIRYNO">MDS 高可用配置：</b>默认 1 active + N standby，主 MDS 挂了 standby 需要几十秒接管。要求秒级切换时，配置 <code data-page-node-id="na7Bk0C2UXQ1sLyGK04nWS">standby-replay</code>：
+<pre style="margin-top:6px" data-page-node-id="tHi8O2mR3JdT2NfGOKlMcn"># 在 ceph.conf 增加
+[mds.ceph-mon2]
+mds_standby_replay = true
+mds_standby_for_name = ceph-mon1
+# 重启 mds.ceph-mon2 生效</pre>
+多活 MDS：<code data-page-node-id="joeSI2Ye00BciP19zmYJe8">ceph fs set cephfs max_mds 2</code>。
+</div>
+</section>
+
+<section id="ch9" data-page-node-id="ConH0QmkASUo8bc8mleMDj">
+<h2 data-page-node-id="OlUMfv6MGi1pZibKN8Ftrm"><span class="num" data-page-node-id="W0o7g1LCDRaXfQjIsMgzgs">9</span>【手动部署】部署 RGW 对象网关</h2>
+<p data-page-node-id="ifw0AktmwAmtqFN6TZsnF8">RGW 是<strong data-page-node-id="DlFWQNyRijCzNdCEpEMa7y">无状态</strong>的，可以部署多个，前面挂 HAProxy/Nginx 做负载均衡。</p>
+
+<pre class="cmd" data-page-node-id="zs4hIAfpHjB5iXMOAzEGo3"><code class="c" data-page-node-id="zHzG57sPhT3kWYIrb02HSu"># ===== 在 ceph-mon1 / ceph-mon2 上部署 =====</code>
+
+<code class="c" data-page-node-id="TBXAT2S2gDlG2tbHTmgU36"># ① 创建数据目录</code>
+mkdir -p /var/lib/ceph/radosgw/ceph-rgw.ceph-mon1
+mkdir -p /var/log/ceph
+
+<code class="c" data-page-node-id="XchtF78WAoZZ2nHwi2hCPD"># ② 创建 keyring</code>
+ceph auth get-or-create client.rgw.ceph-mon1 \
+  mon 'allow rw' osd 'allow rwx' \
+  -o /var/lib/ceph/radosgw/ceph-rgw.ceph-mon1/keyring
+chown -R ceph:ceph /var/lib/ceph/radosgw
+
+<code class="c" data-page-node-id="QtVXIpc9N8JAUpG9h5meiW"># ③ 在 ceph.conf 中增加 RGW 配置</code>
+cat &gt;&gt; /etc/ceph/ceph.conf &lt;&lt;EOF
+
+[client.rgw.ceph-mon1]
+host = ceph-mon1
+keyring = /var/lib/ceph/radosgw/ceph-rgw.ceph-mon1/keyring
+log file = /var/log/ceph/ceph-rgw-ceph-mon1.log
+rgw frontends = beast endpoint=0.0.0.0:7480
+rgw thread pool size = 512
+rgw dns name = s3.example.com
+EOF
+
+<code class="c" data-page-node-id="LQLr6A3khkbwKucqqcwhX7"># ④ 启动</code>
+systemctl enable --now ceph-radosgw@rgw.ceph-mon1
+
+<code class="c" data-page-node-id="KAhFkjpK2W8L9jqJVrPSYT"># ⑤ 验证</code>
+curl http://ceph-mon1:7480
+<code class="o" data-page-node-id="LmEKR4VusOoXfHNBS6pyGP">&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;ListAllMyBucketsResult ...&gt;</code>
+
+<code class="c" data-page-node-id="PPbegxvk15e7U7AABAdp7i"># ⑥ 创建 S3 用户</code>
+radosgw-admin user create --uid="s3admin" --display-name="S3 Admin"
+<code class="o" data-page-node-id="bk3eJiUFqe0Ve79fRK355W">"access_key": "XXXXXXXXXXXXXXXXXXXX",
+"secret_key": "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY"</code>
+
+<code class="c" data-page-node-id="LR0XPFp2sVuTrf7torzYX9"># 创建子用户 / 限制配额</code>
+radosgw-admin user create --uid=appuser --display-name="App User" --max-buckets=10
+radosgw-admin quota set --quota-scope=user --uid=appuser --max-size=100G
+radosgw-admin quota enable --quota-scope=user --uid=appuser
+
+<code class="c" data-page-node-id="cA55E3sGtZtNcDOxpIbXRc"># ⑦ 用 s3cmd / aws cli 测试</code>
+aws configure   <code class="c" data-page-node-id="lLFt709X0FxBuNhvQ0lPyF"># 填入上面生成的 key，endpoint 填 http://ceph-mon1:7480</code>
+aws s3 --endpoint-url http://ceph-mon1:7480 mb s3://test-bucket
+aws s3 --endpoint-url http://ceph-mon1:7480 cp /etc/hosts s3://test-bucket/
+</code></pre>
+
+<h3 data-page-node-id="isdClwdVgI4JGlgrfWv85U">9.1 RGW 生产建议</h3>
+<ul data-page-node-id="NsQpLFUsMRG24EXAN7XyRR">
+  <li data-page-node-id="BBONbIa6nAQq9nGJamKUuv"><strong data-page-node-id="Ok13jQVz4fxQFuQHoY8qB2">bucket index 池放 SSD</strong>：默认 RGW 会自动创建 <code data-page-node-id="YMT68Tp3sVQBoUuQMiGEV9">.rgw.buckets.index</code> 等池，建议单独建 SSD rule 并指定。</li>
+  <li data-page-node-id="oBSmxFwwLgO1zKf0xn2oUx"><strong data-page-node-id="8e3Gm7lPgjQlMLZ6LAvIb0">多 RGW + LB</strong>：至少 2 个 RGW，前置 HAProxy。</li>
+  <li data-page-node-id="mIIC3CVjkNzTAYoqEVFVTN"><strong data-page-node-id="GK3fGKzkngfzbcM4TQUgg7">bucket 分片</strong>：单桶对象数超过 10 万时执行 <code data-page-node-id="b8pE9Ls7eku9M81XalHG9B">radosgw-admin bucket reshard</code>。</li>
+  <li data-page-node-id="XEPS4XXPsHsFERqz5L5bpP"><strong data-page-node-id="XYn76Ig2lwiGGflaImPyAj">HTTPS</strong>：RGW 前面挂 Nginx 做 TLS 终结。</li>
+</ul>
+</section>
+
+<section id="ch10" data-page-node-id="jaRPFHr6UZSJYfZzXZxHf2">
+<h2 data-page-node-id="RQmOFW1l1GmezSGvCZ9dia"><span class="num" data-page-node-id="0AM9NPzcBJiY6kI4BETng9">10</span>【手动部署】Dashboard 与客户端配置</h2>
+
+<h3 data-page-node-id="SnWhtEjYCe2bSpo73B22mT">10.1 启用 Dashboard</h3>
+<pre class="cmd" data-page-node-id="Rmlpfo83ABAItQ7kutKVDb"><code class="c" data-page-node-id="OKJNMhFGeGzJDYCqROEKwu"># ① 启用模块并生成自签证书</code>
+ceph mgr module enable dashboard
+ceph dashboard create-self-signed-cert
+
+<code class="c" data-page-node-id="CVcdQbhHtTtFSEraRuqG5D"># ② 创建管理员账号</code>
+echo "YourStrongPassword" &gt; /tmp/dashpass
+ceph dashboard set-login-credentials admin -i /tmp/dashpass
+rm -f /tmp/dashpass
+
+<code class="c" data-page-node-id="V7ij8Abirpy5HjdgOPsK4C"># ③ 查看访问地址</code>
+ceph mgr services
+<code class="o" data-page-node-id="09aBRaDbZtyIKSYNGJrPI1">{
+    "dashboard": "https://ceph-mon1:8443/",
+    "prometheus": "http://ceph-mon1:9283/"
+}</code>
+
+<code class="c" data-page-node-id="NGdrS0HEHgX165U8LW3yBp"># ④ 常用配置</code>
+ceph config set mgr mgr/dashboard/server_addr 0.0.0.0
+ceph config set mgr mgr/dashboard/server_port 8443
+ceph config set mgr mgr/dashboard/ssl true
+<code class="c" data-page-node-id="oROznHH7FdGKaxAoyLosF4"># 禁用 SSL（内网环境）</code>
+ceph config set mgr mgr/dashboard/ssl false
+ceph config set mgr mgr/dashboard/server_port 8080
+ceph mgr module disable dashboard &amp;&amp; ceph mgr module enable dashboard
+
+<code class="c" data-page-node-id="O9JcL3wCHdQl7fN05WJE6U"># ⑤ 配置 SSL 证书（生产用真实证书）</code>
+ceph dashboard set-ssl-certificate -i /path/to/cert.pem
+ceph dashboard set-ssl-certificate-key -i /path/to/key.pem
+
+<code class="c" data-page-node-id="qkzvqHveMPaAabhciZnoJC"># ⑥ 启用单点登录 / 其他可选模块</code>
+ceph dashboard set-rgw-api-access-key &lt;key&gt;
+ceph dashboard set-rgw-api-secret-key &lt;secret&gt;
+</code></pre>
+
+<h3 data-page-node-id="VkR8monHzLAaiMiSBlqgRc">10.2 创建存储池并初始化 RBD</h3>
+<pre class="cmd" data-page-node-id="otHqaJxg1gvqC4fXzOkqBC"><code class="c" data-page-node-id="TweWcm7mSxiaZMogSIoPCM"># ① 创建 RBD 池（PG 数按原理篇第 8 章计算）</code>
+ceph osd pool create rbd 1024 1024 replicated
+ceph osd pool application enable rbd rbd
+rbd pool init rbd
+
+<code class="c" data-page-node-id="uYxBsgVkmIY6XxccnpNKdu"># ② 创建一个镜像并映射</code>
+rbd create -s 100G rbd/vm-disk-01 \
+  --image-feature layering,exclusive-lock,object-map,fast-diff,deep-flatten
+rbd ls -l rbd
+rbd info rbd/vm-disk-01
+
+rbd map rbd/vm-disk-01
+<code class="o" data-page-node-id="X1PEx9G3GyOVzBFjMJqkDs">/dev/rbd0</code>
+mkfs.xfs /dev/rbd0
+mount /dev/rbd0 /mnt
+
+<code class="c" data-page-node-id="JYl2p5XgrxOoBLV5MbAwqj"># 或用 librbd（K8s / QEMU 走这条路）</code>
+<code class="c" data-page-node-id="N2bQf4VJEH3rxaNnHRXHN1"># Kubernetes 需要 ceph-csi；OpenStack 用 cinder/nova 的 rbd driver</code>
+
+<code class="c" data-page-node-id="aHNnzvCZVHALKy5Y4Fw12H"># ③ 设置默认池（这样 rbd 命令可省略池名）</code>
+ceph config set global rbd_default_pool rbd
+</code></pre>
+
+<h3 data-page-node-id="NHDDPD3I6GTeqqYonZSGzf">10.3 客户端配置</h3>
+<pre class="cmd" data-page-node-id="osa4qnQsiifVfIhQXBkNo7"><code class="c" data-page-node-id="0xCw2x7M2irrOnyWkZf46y"># 客户端最小配置：两个文件即可</code>
+scp ceph-mon1:/etc/ceph/ceph.conf            /etc/ceph/ceph.conf
+scp ceph-mon1:/etc/ceph/ceph.client.admin.keyring /etc/ceph/ceph.client.admin.keyring
+
+<code class="c" data-page-node-id="Rqfy8Ged0IYeg4AcWgOJyt"># 用最小配置（客户端只需知道 MON 地址）</code>
+cat &gt; /etc/ceph/ceph.conf &lt;&lt;EOF
+[global]
+mon host = 10.10.10.11:6789,10.10.10.12:6789,10.10.10.13:6789
+auth cluster required = cephx
+auth service required = cephx
+auth client required  = cephx
+EOF
+
+ceph -s   <code class="c" data-page-node-id="P0puYlP0irx5GdHxqSzMDf"># 验证能连上</code>
+
+<code class="c" data-page-node-id="iHm8Jf6ktwkB6ZaVy5Fh1t"># 创建受限用户（不要到处用 admin！）</code>
+ceph auth get-or-create client.k8s \
+  mon 'profile rbd' osd 'profile rbd pool=rbd, profile rbd-read-only pool=backups' \
+  -o /etc/ceph/ceph.client.k8s.keyring
+
+<code class="c" data-page-node-id="lphHIhlxQtFop3Uw4Axs1Z"># 导出为 base64（K8s secret 用）</code>
+ceph auth get-key client.k8s | base64
+</code></pre>
+</section>
+
+<section id="ch11" data-page-node-id="i2vAnrDwGp3sFKHECtEUV6">
+<h2 data-page-node-id="9V1qKUWTdgTsDHgO31Khhn"><span class="num" data-page-node-id="dK9q9e0jFFxiTK2a1IV9xk">11</span>【手动部署】扩容、换盘、缩容</h2>
+
+<h3 data-page-node-id="D5lE3YnZiAVrCGJQMSVyio">11.1 扩容：新增 OSD 节点</h3>
+<pre class="cmd" data-page-node-id="kZnBBqEDtBsAE7h87rMnQn"><code class="c" data-page-node-id="VA4Olbm8ahp52LP1s77o8O"># ① 新节点做系统初始化（见第 2 章）+ 安装 ceph</code>
+dnf install -y ceph-osd ceph-common ceph-volume
+
+<code class="c" data-page-node-id="VCCEB2r5h15At2KUoSbxpE"># ② 分发配置</code>
+scp /etc/ceph/ceph.conf root@ceph-osd5:/etc/ceph/ceph.conf
+scp /var/lib/ceph/bootstrap-osd/ceph.keyring root@ceph-osd5:/var/lib/ceph/bootstrap-osd/ceph.keyring
+
+<code class="c" data-page-node-id="Gb0tPVY67wfhvbTDmkZBXA"># ③ 创建 OSD</code>
+ssh root@ceph-osd5 "ceph-volume lvm batch --no-auto /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg"
+
+<code class="c" data-page-node-id="GvDmd5L3Liqgs7Yoh0hqlF"># ④ 加 host bucket 并移动 OSD（关键！）</code>
+ceph osd crush add-bucket ceph-osd5 host
+ceph osd crush move ceph-osd5 root=default
+for i in $(ceph osd ls-tree 2&gt;/dev/null | head -0); do :; done
+<code class="c" data-page-node-id="NSAdqSImuPnkHWZGd7uiqN"># 查出新 OSD 的 ID：</code>
+ceph osd tree | grep -A10 'host ceph-osd5'
+<code class="c" data-page-node-id="46zoZWTu03F0lmgCKLWkFt"># 或者用 ceph-volume 的输出。然后：</code>
+ceph osd crush move osd.NN host=ceph-osd5
+
+<code class="c" data-page-node-id="7D63ujgmoYHUbhWEasq7WM"># ⑤ 观察数据迁移</code>
+ceph -w
+ceph osd df tree
+<code class="c" data-page-node-id="jSrBSKKkWjwWvaaBeDRo6p"># 迁移期间限速（避免打爆业务）：</code>
+ceph config set osd osd_max_backfills 1
+ceph tell 'osd.*' injectargs --osd_recovery_sleep 0.1
+</code></pre>
+
+<h3 data-page-node-id="cnOyxZeQJXrUNFtpFbOCl8">11.2 换盘（OSD 故障更换）</h3>
+<pre class="cmd" data-page-node-id="BDC1V0l3gPdzrCTdptx8BW"><code class="c" data-page-node-id="yCKD8aNJKIx4PSmBpZuyMb"># ===== 场景：osd.5 所在的磁盘损坏，需要更换 =====</code>
+
+<code class="c" data-page-node-id="vPpBfEcQ2IqNoYModPsShq"># ① 先设置 noout，避免不必要的数据抖动（可选但推荐）</code>
+ceph osd set noout
+
+<code class="c" data-page-node-id="UyTqhG0kmJm9HsQLWV3F5u"># ② 停止 OSD 并移出集群</code>
+systemctl stop ceph-osd@5
+ceph osd out 5
+ceph osd purge 5 --yes-i-really-mean-it   <code class="c" data-page-node-id="30TSrESFEkuYkJe7eA00oG"># 一次性删除 OSD + CRUSH + auth（推荐）</code>
+<code class="c" data-page-node-id="xaAabUvBqwEO21Qb3Cv8jd"># 等价的分步操作：</code>
+<code class="c" data-page-node-id="we6S52hEL3OKFWI87RIW5M"># ceph osd crush remove osd.5</code>
+<code class="c" data-page-node-id="wgEaZPD3EnxgdOKMvqhwz7"># ceph auth del osd.5</code>
+<code class="c" data-page-node-id="nJ8gyAjnYmI46iDUehArlH"># ceph osd rm 5</code>
+
+<code class="c" data-page-node-id="8lATPXq86Pu95iqJ1yhqo0"># ③ 物理更换硬盘后，确认新盘设备名</code>
+lsblk
+<code class="c" data-page-node-id="6SvDL0kMnymRKzMq1FSEwI"># ⚠ 务必确认，别选错盘</code>
+
+<code class="c" data-page-node-id="tbz2DHTmxTO0Z97dpdGOdo"># ④ 清理新盘残留</code>
+wipefs -a /dev/sdX
+sgdisk --zap-all /dev/sdX
+
+<code class="c" data-page-node-id="hhkxhB8KnnSFPLiNT0FreR"># ⑤ 重新创建 OSD（会复用原有的 OSD ID 或分配新 ID）</code>
+ceph-volume lvm create --data /dev/sdX --block.db ceph-nvme0/db-osd-5
+
+<code class="c" data-page-node-id="NrYKt6px4b0dOP68A8NndS"># ⑥ 移到正确的 host bucket</code>
+ceph osd crush move osd.NN host=ceph-osd1
+
+<code class="c" data-page-node-id="B0g6V9GSi7BNMm2C9wvggY"># ⑦ 取消 noout，观察恢复</code>
+ceph osd unset noout
+ceph -w
+</code></pre>
+
+<h3 data-page-node-id="OJeZLH2zVoCVDSirbYBiMV">11.3 缩容：下线 OSD 节点</h3>
+<pre class="cmd" data-page-node-id="7pkXWeSXvceDRpuzImHaBf"><code class="c" data-page-node-id="ZGYfQETrcU7DbPUwaGAt0d"># ① 逐个把该节点上的 OSD 标记为 out（不是直接停！让数据先迁走）</code>
+ceph osd out osd.18
+ceph osd out osd.19
+<code class="c" data-page-node-id="uC6GIF0xpNNuPRa4Im7kBj"># ... 逐个 out，每 out 一个等数据迁移完再下一个</code>
+
+<code class="c" data-page-node-id="ZCiLTmzspbQjLAVeNN2qDV"># ② 等待集群恢复 active+clean</code>
+watch ceph -s
+
+<code class="c" data-page-node-id="Fp4EhcZQiVoEWGmlMIeFZH"># ③ 停止服务并清除</code>
+ssh root@ceph-osd4 "systemctl stop ceph-osd.target"
+for i in 18 19 20 21 22 23; do
+    ceph osd purge $i --yes-i-really-mean-it
+done
+
+<code class="c" data-page-node-id="9xoEdGNIlQOifp0ABTselA"># ④ 移除 CRUSH 中的 host</code>
+ceph osd crush remove ceph-osd4
+ceph osd tree   <code class="c" data-page-node-id="sFr2z67KHiIGcfhCWmUopy"># 确认已消失</code>
+
+<code class="c" data-page-node-id="GnEFxsyt69mKxz6FXsfrAU"># ⑤ （可选）清理 LVM</code>
+ssh root@ceph-osd4 "vgremove -f ceph-* &amp;&amp; pvremove /dev/sdb /dev/sdc ..."
+</code></pre>
+
+<div class="warn" data-page-node-id="y5r2Z3v0amkd6s2Naw6oyD">
+<b data-page-node-id="vKWWPgLDxbUKMFvpyuhOdo">缩容铁律：</b>① 必须 <b data-page-node-id="ZL5E8lWb7c8csHDtJf82JW">逐个</b> out，等前一个迁移完再下一个；② 确认剩余容量足够容纳迁出的数据；③ 迁移期间限速；④ 绝不能同时 out 超过 <code data-page-node-id="LSIOnvvLjAPYYTipCgEzKr">m</code> 个（副本池 m = size-1，EC 池 m = 校验块数），否则会丢数据。
+</div>
+
+<h3 data-page-node-id="jGJzOrNUyKlAW28snO5wWA">11.4 紧急命令速查</h3>
+<pre class="cmd" data-page-node-id="pH74rAfxitIrlA7pt0ptTn"><code data-page-node-id="f1GgU6xssx0YIA3QyOPC8a">ceph osd set noout        <code class="c" data-page-node-id="Uj1KSnBFZDsPeXolnzySTA"># 维护前必做，防止自动重建</code>
+ceph osd unset noout
+ceph osd set norecover
+ceph osd set nobackfill
+ceph osd set nobalance
+ceph osd set noscrub
+
+ceph osd reweight osd.N 0.8         <code class="c" data-page-node-id="NrHPRKJskO74maU38OxbSa"># 临时降低某盘的承载（0.8 = 80%）</code>
+ceph osd crush reweight osd.N 8.0   <code class="c" data-page-node-id="2eN60zw68lZTLxFk45QPpb"># 设置容量权重</code>
+ceph osd primary-affinity osd.N 0.5 <code class="c" data-page-node-id="nvgADexpAESGIygcvy05ev"># 降低当 primary 的概率</code>
+ceph osd reweight-by-utilization 105
+</code></pre>
+</section>
+<section id="ch12" data-page-node-id="tZda5BSU6x6cVlaAHrDA12">
+<h2 data-page-node-id="3MJgnMSFMQ6mVUYloNUCCd"><span class="num" data-page-node-id="7C34fBL3yHmLpR60j5cwlB">12</span>【Ansible 部署】控制节点准备</h2>
+
+<div class="note" data-page-node-id="hsjDajYn0TjFvu2jLaUhxJ">
+<b data-page-node-id="z8I4dlsEiQ97IGpbExrwmZ">ceph-ansible 项目地址：</b>https://github.com/ceph/ceph-ansible<br data-page-node-id="UAZopxrdwjurj22dRzeNAx">
+<b data-page-node-id="zvnmT9l8ZBTxKBEx7RpLoF">分支对应关系（务必选对）：</b>
+<table style="margin-top:8px" data-page-node-id="swUwq5fc9KTmUVN0vHhyxc">
+<thead data-page-node-id="X1eDo9zTyiALjtpspGGF5n"><tr data-page-node-id="oJYdWJM528j6cXwSvAPRQ6"><th data-page-node-id="ufYH3EDzRqZJBq5OkhZg7w">ceph-ansible 分支</th><th data-page-node-id="BIyehAioA2gQlbRN9X7Olw">对应 Ceph 版本</th><th data-page-node-id="PaHGJEVOVHHB3ia3RFYNJO">要求 Ansible 版本</th></tr></thead>
+<tbody data-page-node-id="NiBldTWgHBFh7RX3Tz3vo4">
+<tr data-page-node-id="8NxAyKWKQIEIMsXLGq08Gv"><td data-page-node-id="2mD41GfJt2kkCVjWGRVU7G"><b data-page-node-id="9IrMgdRH9pUkqjMlD3NxSX">stable-9.0</b> ← 本文用这个</td><td data-page-node-id="z9EJp5P1PEkdmBu5quZWZF"><b data-page-node-id="LM3SloG1dleV7eCWYBfoAX">Squid (19.2.x)</b></td><td data-page-node-id="VRCwHcEJTy7qhVHsutKiLi">ansible-core 2.15 ~ 2.19</td></tr>
+<tr data-page-node-id="fRoAHsPaOkXYzO4RFBc769"><td data-page-node-id="uBDvwgyXAwWena6NAAKCLq">stable-8.0</td><td data-page-node-id="CanF0CPTVh4KgZpCrZt9yh">Reef (18.2.x)</td><td data-page-node-id="mTHiOJnHRqEhYEVoQTXbFS">2.15 / 2.16</td></tr>
+<tr data-page-node-id="efucRHV9yFB0dCVPlfBOoF"><td data-page-node-id="T7r0RAHB0Jhz94hPwWSR10">stable-7.0</td><td data-page-node-id="0ZejA9Ut3L3zYmzeKUxOTg">Quincy (17.2.x)</td><td data-page-node-id="MW3tXo3sqnR86tfkLSocjE">2.15</td></tr>
+<tr data-page-node-id="AiUKXNNRANFPIqjWlbhsqu"><td data-page-node-id="EPui1jvCo4MqwFj7PoZJTv">main</td><td data-page-node-id="3CdUlqLnIbaqPqwAPhtjJ5">devel / Tentacle（<b data-page-node-id="AvuDaCGYhO4nNt5FkZtIoB">实验性</b>）</td><td data-page-node-id="xTT6LcFkEsFAfzOYjTqUe9">2.15 ~ 2.19</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 data-page-node-id="0wOt6O1wEt1bFAqm6BBLsm">12.1 安装 Ansible</h3>
+<pre class="cmd" data-page-node-id="Ko8FXBgzZtHoIdYUvpgfJa"><code class="c" data-page-node-id="1cyIkXCfP1vuAi4DgBT73i"># 控制节点可以是独立的一台机器，也可以复用 ceph-mon1</code>
+<code class="c" data-page-node-id="IMsO3cUx4OGeUpBK5vzTHI"># 这里假设在 ceph-mon1 上操作（用 root 或具有 sudo 权限的账号）</code>
+
+<code class="c" data-page-node-id="jFTlTcZzfVvst2zEIpyetN"># ===== RHEL 9 系 =====</code>
+dnf install -y epel-release git python3-pip
+pip3 install --upgrade pip
+<b data-page-node-id="hJky6aky2WQAiH1Bq1IfNa">pip3 install ansible-core==2.16</b>     <code class="c" data-page-node-id="N7kc5VwfhH96RVswlytxps"># 或 dnf install ansible-core</code>
+
+<code class="c" data-page-node-id="rUgi592mzlEU1cWFztYJGv"># ===== Ubuntu =====</code>
+<code class="c" data-page-node-id="2mmHNvX0ncFS2m5aHYfErh"># apt install -y software-properties-common &amp;&amp; add-apt-repository --yes --update ppa:ansible/ansible</code>
+<code class="c" data-page-node-id="KzQDaszsbZMsKNHetINWnO"># apt install -y ansible git python3-pip</code>
+
+ansible --version
+<code class="o" data-page-node-id="fhBD7BkcbCwve3dVpHyPcl">ansible [core 2.16.x]</code>
+</code></pre>
+
+<h3 data-page-node-id="Tdeze91TKtivy3pmOuTwul">12.2 获取 ceph-ansible 并安装依赖</h3>
+<pre class="cmd" data-page-node-id="d1XCZGo6HhJai3rHPoWFjG"><code data-page-node-id="PD4TgkAEDgHj2IctyHx18O">cd /root
+git clone https://github.com/ceph/ceph-ansible.git
+cd ceph-ansible
+git checkout <b data-page-node-id="Mzt6tifYZ6rO9GUDak0bP4">stable-9.0</b>          <code class="c" data-page-node-id="MNoQTBeKX6bRjVb22VebeZ"># ← 关键：切到对应分支</code>
+git branch --show-current
+<code class="o" data-page-node-id="oitgyNG9jzzdRV7Z8WxQ9g">stable-9.0</code>
+
+<code class="c" data-page-node-id="nGAa7cRLMOvGSoSlTuM2f5"># 安装 Python 依赖</code>
+python3 -m pip install -r requirements.txt
+
+<code class="c" data-page-node-id="gQPOMI3njbAlKhuTMJwiPV"># 安装 Ansible Galaxy collections（必做，否则 role 找不到模块）</code>
+ansible-galaxy install -r requirements.yml
+
+<code class="c" data-page-node-id="6RACObGXBZ1cTctfd8m68O"># 目录结构速览</code>
+ls
+<code class="o" data-page-node-id="tWjHUmRA8yKCsO0NAqDgrF">group_vars/              # ← 我们要写的变量都在这里</code>
+<code class="o" data-page-node-id="NfsyhO26SM2oGGZPvEjoUb">infrastructure-playbooks/ # 扩容、缩容、清理等运维 playbook</code>
+<code class="o" data-page-node-id="lT5xE7v79kbpAmhvZugOMn">roles/                   # 各组件角色</code>
+<code class="o" data-page-node-id="oBFrB6x1wKQUW0IqjGXu44">site.yml.sample          # ← 主 playbook 样例，需改名为 site.yml</code>
+</code></pre>
+
+<h3 data-page-node-id="NKgnO5J5l8j0X3774NS84X">12.3 配置 SSH 免密</h3>
+<pre class="cmd" data-page-node-id="iQOXwjPq28JfRap9daay5o"><code class="c" data-page-node-id="AyFfTBuGXbPBNsdfDq2YbT"># 控制节点生成密钥并分发到所有目标节点</code>
+ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa
+for h in ceph-mon1 ceph-mon2 ceph-mon3 ceph-osd1 ceph-osd2 ceph-osd3 ceph-osd4; do
+    ssh-copy-id root@$h
+done
+
+<code class="c" data-page-node-id="XrHYIMxyjSfqNDfbcdhpEN"># 验证（应无需密码）</code>
+ansible all -i "ceph-mon1,ceph-mon2,ceph-osd1" -m ping -u root
+</code></pre>
+<div class="tip" data-page-node-id="Va0rqAjQGkDJkvhQsLjuuI"><b data-page-node-id="wTnUt9gWGcxVS1wYAHjWyj">如果用普通用户（如 ceph）而不是 root</b>，需要在 inventory 中加 <code data-page-node-id="ZPeAV2X39lNnr5soob3zEn">ansible_become=true</code> 和 <code data-page-node-id="tLfhgOwMTiGBra0KFj8H2K">ansible_become_user=root</code>，并确保该用户有 NOPASSWD sudo。</div>
+</section>
+
+<section id="ch13" data-page-node-id="dQZD9Y2zCXIYXTltjxeZgu">
+<h2 data-page-node-id="qfHRejsw0YzjLH4glG7VFM"><span class="num" data-page-node-id="hZS2iG2KXQy9jTcfdgB23O">13</span>【Ansible 部署】编写 Inventory</h2>
+
+<pre class="cmd" data-page-node-id="ZjDT50p2Znlzq3RhPMlhAE"><code class="c" data-page-node-id="lN1ThN5q9jR0pApqTveIHD"># /root/ceph-ansible/hosts</code>
+cat &gt; /root/ceph-ansible/hosts &lt;&lt;'EOF'
+<code class="c" data-page-node-id="8Kgvqc2sSHHw4Z55mK8AgL"># ============================================================</code>
+<code class="c" data-page-node-id="sP07wuT0DTSDpNyQwWpfS7">#  定义节点分组：一个节点可以同时属于多个组</code>
+<code class="c" data-page-node-id="06GicFO7AWBK7QDM6bDsSO"># ============================================================</code>
+
+[mons]
+ceph-mon1
+ceph-mon2
+ceph-mon3
+
+[mgrs]
+ceph-mon1
+ceph-mon2
+ceph-mon3
+
+[osds]
+ceph-osd1
+ceph-osd2
+ceph-osd3
+ceph-osd4
+
+[mdss]
+ceph-mon1
+ceph-mon2
+ceph-mon3
+
+[rgws]
+ceph-mon1
+ceph-mon2
+
+[clients]
+ceph-mon1
+
+[monitoring]
+ceph-mon1
+
+<code class="c" data-page-node-id="920LAjd9N356xIqfQZRB8z"># 把上面所有组聚合为 ceph 组（部分 playbook 会用到）</code>
+[ceph:children]
+mons
+mgrs
+osds
+mdss
+rgws
+clients
+monitoring
+
+<code class="c" data-page-node-id="PDZoe23sotG9I4lKOz0Vxn"># ============================================================</code>
+<code class="c" data-page-node-id="1cyEN5vGQkAW61TRFs1T22">#  主机变量（可选，但推荐显式指定地址，避免多网卡时选错）</code>
+<code class="c" data-page-node-id="w2vjT45LWbr8EeNYJuNsux"># ============================================================</code>
+[mons:vars]
+monitor_address = 10.10.10.11
+
+[osds:vars]
+<code class="c" data-page-node-id="kn3UoZKYLOaAkHvS14ppUB"># OSD 节点如果有多个网络接口，可显式指定</code>
+<code class="c" data-page-node-id="dxsPtMohdt3zgCdArCrt1o"># monitor_interface = eth0</code>
+<code class="c" data-page-node-id="xZ9oRS3DZMu1fQHL9wtunV"># radosgw_interface = eth0</code>
+ansible_python_interpreter = /usr/bin/python3
+
+[ceph:vars]
+ansible_user = root
+ansible_become = true
+ansible_become_user = root
+ansible_ssh_common_args = '-o StrictHostKeyChecking=no'
+EOF
+
+<code class="c" data-page-node-id="KgRz4pxFSSR7Nbatjryat6"># 验证 inventory</code>
+ansible-inventory -i hosts --graph
+</code></pre>
+
+<div class="warn" data-page-node-id="PNbhD72EVVdl8QSJnEqZm5">
+<b data-page-node-id="LfgPchZ5Ge5n7lrfadMyLw">注意：</b><code data-page-node-id="eTDx5J65ijiQYIrFST2voq">monitor_address</code> 在 <code data-page-node-id="RbpZVOHlGtlF4PNBFA3vt1">[mons:vars]</code> 里写会应用到该组内所有主机（值相同会冲突）。<br data-page-node-id="ODVCKQibaxDv6t99LmaDN8">
+正确做法是<b data-page-node-id="pVIV5f4PViQuEfvd2QOUPk">每台主机单独指定</b>：
+<pre style="margin-top:6px" data-page-node-id="VuyZLDIAhOtWpXzQLpDMeH">[mons]
+ceph-mon1 monitor_address=10.10.10.11
+ceph-mon2 monitor_address=10.10.10.12
+ceph-mon3 monitor_address=10.10.10.13</pre>
+或者在 <code data-page-node-id="iQoRJFtCW4OrG8LRhOCTat">group_vars/mons.yml</code> 里用 <code data-page-node-id="RodP4yEEqly6Z5oyu0XiW3">monitor_interface</code>（所有 MON 网卡名相同时更简单）。
+</div>
+</section>
+
+<section id="ch14" data-page-node-id="ZZmqFfdNXSxds9bUFQWXJp">
+<h2 data-page-node-id="T4YdD2YnVm2JNLsX6IYJ7v"><span class="num" data-page-node-id="Wd3XfPZbeIyWuQLcHf2psA">14</span>【Ansible 部署】编写 group_vars</h2>
+
+<h3 data-page-node-id="Jrdtd7VymQeJqe1clrVbgQ">14.1 group_vars/all.yml —— 全局配置（最核心）</h3>
+<pre class="cmd" data-page-node-id="CxefDj7XH5N7hogCnVjb1F"><code class="c" data-page-node-id="b2edg7QlrMwmzONm7LBbe2"># /root/ceph-ansible/group_vars/all.yml</code>
+cat &gt; group_vars/all.yml &lt;&lt;'EOF'
+<code class="c" data-page-node-id="tg1r42m3C0t0A5pRNxqozV"># ============ 版本与软件源 ============</code>
+ceph_origin: repository              <code class="c" data-page-node-id="n2fwr7YYtj3oMWlDNTctv9"># repository | distro | local</code>
+ceph_repository: community           <code class="c" data-page-node-id="EZdceep4P6llLoECYEHSg4"># community（社区源）| rhcs（红帽）| custom（自建源）</code>
+ceph_repository_type: cdn            <code class="c" data-page-node-id="ShnONnbta1uxbwfGGRvaFW"># cdn（在线）| iso | directory（本地源）</code>
+ceph_stable_release: squid           <code class="c" data-page-node-id="X3sjmT4JshHygy29ik0QEv"># 版本号代号（tentacle/squid/reef...）</code>
+<code class="c" data-page-node-id="9NR56YzKZ2O4zO49o1NuAC"># 若使用自建源（离线环境），改用：</code>
+<code class="c" data-page-node-id="yAGOJBnmAhhmWGiExbHX4U"># ceph_repository: custom</code>
+<code class="c" data-page-node-id="7q8anseSH4MxeqckcfQBFi"># custom_repo_url: http://10.10.10.1/ceph/rpm-squid/el9</code>
+
+<code class="c" data-page-node-id="OI7LF3jPhjExOwZVkOoBDk"># ============ 网络 ============</code>
+ip_version: ipv4
+monitor_interface: eth0              <code class="c" data-page-node-id="nCbG9m2NWTxWdXO6U5lHq5"># 所有 MON 的 public 网卡（若相同）</code>
+public_network:  10.10.10.0/24
+cluster_network: 192.168.100.0/24
+<code class="c" data-page-node-id="GsX8Do7w6bpwesgqWZ42MS"># 如果各节点网卡名不同，改用 monitor_address（每台单独配）</code>
+<code class="c" data-page-node-id="eYFJJQDv9bLMd6Z25FA1pn"># 或者用 monitor_address_block: 10.10.10.0/24（自动选取该网段的地址）</code>
+
+<code class="c" data-page-node-id="bzXK1gz5Gou5NfDhE06bQO"># ============ 认证 ============</code>
+cephx: true
+generate_fsid: true                  <code class="c" data-page-node-id="DEiE6T8Xd63m3aLomyie4K"># 自动生成 fsid；如需固定，改为 false 并设置 fsid:</code>
+<code class="c" data-page-node-id="D8WTZ2lPbe1UxqRgjbqTWh"># fsid: a7f3c2e8-4b1d-4f9a-9c3e-8d2b5a1f6e70</code>
+
+<code class="c" data-page-node-id="Xbl9bKEUxf6i7Jrdd7LDiW"># ============ OSD ============</code>
+osd_objectstore: bluestore
+osd_auto_discovery: false            <code class="c" data-page-node-id="xKHCJeHtkpJqAXUJFo8uBs"># true = 自动发现所有空闲盘（危险，生产建议 false）</code>
+
+<code class="c" data-page-node-id="FAAEmwJuxYOtbDXcOKj9VI"># ============ Dashboard ============</code>
+dashboard_enabled: true
+dashboard_protocol: https
+dashboard_port: 8443
+dashboard_admin_user: admin
+dashboard_admin_password: YourStrongPassword123!
+dashboard_frontend_ssl_verify: false
+grafana_admin_user: admin
+grafana_admin_password: admin
+
+<code class="c" data-page-node-id="95hxNAGc5oOkY6prtCEKH8"># ============ 其他 ============</code>
+configure_firewall: false            <code class="c" data-page-node-id="GNfjgiRC6oQEuRdgwVn7Zk"># 让 ansible 自己配防火墙（生产建议 false，自己配）</code>
+copy_admin_key: true                 <code class="c" data-page-node-id="6W6n7wVeNsrqWbfNp6WrLv"># 把 admin keyring 复制到 clients 组</code>
+containerized_deployment: false      <code class="c" data-page-node-id="aAdvtJP1wKcapasduHO90u"># 裸机部署（非容器）</code>
+ceph_docker_image: quay.io/ceph/ceph
+ceph_docker_image_tag: v19
+ceph_docker_registry: quay.io
+
+<code class="c" data-page-node-id="0q1SBnbqsghXUlip0JFn1o"># ============ 时间同步 ============</code>
+<code class="c" data-page-node-id="kKedzbE0ZfJHDHlLsvIoZd"># 较新版本已移除 ntp 相关变量，请提前在各节点配好 chrony</code>
+<code class="c" data-page-node-id="NAUNGloZkufolPJvxOOGZd"># ntp_service_enabled: true</code>
+<code class="c" data-page-node-id="rItDp0pYX7i9J6KPlikUoG"># ntp_daemon_type: chronyd</code>
+
+<code class="c" data-page-node-id="IIqOw03xMDsxvp2G88LwKf"># ============ CephFS（按需）============</code>
+cephfs: cephfs
+cephfs_pools:
+  - name: "{{ cephfs_data }}"
+    pg_num: 256
+    pgp_num: 256
+    application: cephfs
+  - name: "{{ cephfs_metadata }}"
+    pg_num: 64
+    pgp_num: 64
+    application: cephfs
+cephfs_data: cephfs_data
+cephfs_metadata: cephfs_metadata
+cephfs_data_pool:
+  name: "{{ cephfs_data }}"
+  pg_num: 256
+
+<code class="c" data-page-node-id="GKa8ckNxPEQoNtjapcXR2h"># ============ 额外的 ceph.conf 覆盖（最常用的自定义入口）============</code>
+ceph_conf_overrides:
+  global:
+    osd_pool_default_size: 3
+    osd_pool_default_min_size: 2
+    osd_pool_default_pg_num: 128
+    osd_pool_default_pgp_num: 128
+    mon_allow_pool_delete: true
+    mon_osd_down_out_interval: 600
+    rbd_default_features: 61
+  mon:
+    mon_clock_drift_allowed: 0.5
+  osd:
+    osd_max_backfills: 1
+    osd_recovery_max_active: 3
+    osd_recovery_sleep: 0.1
+    osd_memory_target: 4294967296
+  mgr:
+    mgr/balancer/mode: upmap
+    mgr/balancer/begin_time: "0000"
+    mgr/balancer/end_time: "0600"
+  client:
+    rbd_cache: true
+    rbd_cache_size: 67108864
+    rbd_cache_writethrough_until_flush: true
+EOF
+</code></pre>
+
+<h3 data-page-node-id="moOrwKw1m1kUv9CTw9pFrC">14.2 group_vars/osds.yml —— OSD 磁盘定义（三种写法）</h3>
+<pre class="cmd" data-page-node-id="CSQwcNZSQgDDztFSfc8xef"><code class="c" data-page-node-id="Ev7syu8kyz2VtuZwJ9ph2P"># /root/ceph-ansible/group_vars/osds.yml</code>
+<code class="c" data-page-node-id="ccdNpcQBeyEDNFFU3vxLSh"># ----- 写法 A：全部使用 collocated（数据与 db 同盘，适合全闪/测试）-----</code>
+cat &gt; group_vars/osds.yml &lt;&lt;'EOF'
+osd_objectstore: bluestore
+devices:
+  - /dev/sdb
+  - /dev/sdc
+  - /dev/sdd
+  - /dev/sde
+  - /dev/sdf
+  - /dev/sdg
+EOF
+
+<code class="c" data-page-node-id="aTuYl6B47xADMP0CFs5hQ9"># ----- 写法 B：data + 独立 db（HDD 集群推荐）-----</code>
+cat &gt; group_vars/osds.yml &lt;&lt;'EOF'
+osd_objectstore: bluestore
+devices:
+  - /dev/sdb
+  - /dev/sdc
+  - /dev/sdd
+  - /dev/sde
+  - /dev/sdf
+  - /dev/sdg
+<code class="c" data-page-node-id="zzADzj2nKyVhchwGWLEc4U"># dedicated_devices 与 devices 一一对齐：第 1 块数据盘用第 1 块 db 设备</code>
+dedicated_devices:
+  - /dev/nvme0n1     <code class="c" data-page-node-id="ZumWDGT5a2QUDt0w8pcJdt"># 给 /dev/sdb  用</code>
+  - /dev/nvme0n1     <code class="c" data-page-node-id="IsIbptUYfIUcychHsONzDA"># 给 /dev/sdc  用</code>
+  - /dev/nvme0n1     <code class="c" data-page-node-id="ZpKLHrvtM06QuBm0shbG1E"># 给 /dev/sdd  用</code>
+  - /dev/nvme1n1     <code class="c" data-page-node-id="9zMyB0oZtFHyi1iLFtEVDd"># 给 /dev/sde  用</code>
+  - /dev/nvme1n1     <code class="c" data-page-node-id="02ipy1riDu2AtSUUipNAKU"># 给 /dev/sdf  用</code>
+  - /dev/nvme1n1     <code class="c" data-page-node-id="lkjCpzbtVYntR5CGyeSGK7"># 给 /dev/sdg  用</code>
+<code class="c" data-page-node-id="XhvTLhBkrhVm2WbpA08Utn"># ansible 会自动在 NVMe 上按需创建 LV（每个 db 默认大小 = 数据的 4% 或可指定）</code>
+EOF
+
+<code class="c" data-page-node-id="st3TI0PwoCgSQXA4kWdcht"># ----- 写法 C：lvm_volumes（最精细，可指定 db/wal 大小、device class）-----</code>
+cat &gt; group_vars/osds.yml &lt;&lt;'EOF'
+osd_objectstore: bluestore
+lvm_volumes:
+  - data: /dev/sdb
+    db: /dev/nvme0n1
+    db_size: "60G"
+    wal: /dev/nvme0n1
+    wal_size: "4G"
+    crush_device_class: hdd
+  - data: /dev/sdc
+    db: /dev/nvme0n1
+    db_size: "60G"
+    crush_device_class: hdd
+  - data: /dev/sdd
+    db: /dev/nvme0n1
+    db_size: "60G"
+    crush_device_class: hdd
+  - data: /dev/sde
+    db: /dev/nvme1n1
+    db_size: "60G"
+    crush_device_class: hdd
+  - data: /dev/sdf
+    db: /dev/nvme1n1
+    db_size: "60G"
+    crush_device_class: hdd
+  - data: /dev/sdg
+    db: /dev/nvme1n1
+    db_size: "60G"
+    crush_device_class: hdd
+EOF
+</code></pre>
+
+<div class="warn" data-page-node-id="9LauoCG73YkHaPw0udsrmz">
+<b data-page-node-id="1ItZcQm55oDTBHuGiWoaSX">关于 db_size：</b>每块 8TB HDD 的 block.db 建议 <b data-page-node-id="uMRkUOk8i6xZoDCKF56mBJ">40~80GB</b>。太小的后果是 RocksDB 溢出到慢设备，性能断崖式下降（见原理篇 9.3）。<br data-page-node-id="oVpmeMShu3IXnBQmnyuvhv">
+<b data-page-node-id="Lkne03gQVjqQ6HYt5A1XeZ">关于 NVMe 承载数量：</b>一块 NVMe 上不要放超过 <b data-page-node-id="UbFtmAZIeQOzMFM42I6xgz">6~8 个</b> OSD 的 db，否则 NVMe 会成为新的瓶颈，而且它一坏会连带所有 OSD 一起挂。
+</div>
+
+<h3 data-page-node-id="aUbLYdknBZBGvnM67V9MfI">14.3 其他 group_vars</h3>
+<pre class="cmd" data-page-node-id="v3Uk5RP1VL5GYiqdW4ZCyi"><code class="c" data-page-node-id="uBd8nPNuGHDVMiFkRi6tqq"># group_vars/mons.yml</code>
+cat &gt; group_vars/mons.yml &lt;&lt;'EOF'
+<code class="c" data-page-node-id="D94dPxuuFEs9x9eF6CEjro"># MON 数据目录（可选，默认 /var/lib/ceph/mon）</code>
+<code class="c" data-page-node-id="JEBkfUIYhgauTJPEEmBsaJ"># ceph_mon_hosts_override: true</code>
+monitor_interface: eth0
+<code class="c" data-page-node-id="1ZfmfzezPTuboBn3z9Zh2T"># 或者显式指定地址（推荐，多网卡时避免歧义）</code>
+<code class="c" data-page-node-id="X346g1xR06aZkkdrchwYTk"># monitor_address: 10.10.10.11</code>
+EOF
+
+<code class="c" data-page-node-id="bnNdZMUD4bqw7yl31Q9wsi"># group_vars/mgrs.yml</code>
+cat &gt; group_vars/mgrs.yml &lt;&lt;'EOF'
+ceph_mgr_modules:
+  - dashboard
+  - balancer
+  - pg_autoscaler
+  - prometheus
+  - iostat
+  - crash
+EOF
+
+<code class="c" data-page-node-id="Uefyb5sOLU9ZHQU4gvZIDV"># group_vars/rgws.yml（按需）</code>
+cat &gt; group_vars/rgws.yml &lt;&lt;'EOF'
+radosgw_frontend_type: beast
+radosgw_frontend_port: 7480
+radosgw_thread_pool_size: 512
+radosgw_civetweb_num_threads: 512
+radosgw_interface: eth0
+<code class="c" data-page-node-id="GxUg1JVdvRRIw8irF3DABG"># 多站点 / 自定义 pool 等高级配置见官方文档</code>
+EOF
+
+<code class="c" data-page-node-id="3g985UYOB2egQhLhLroLxG"># group_vars/mdss.yml（按需）</code>
+cat &gt; group_vars/mdss.yml &lt;&lt;'EOF'
+<code class="c" data-page-node-id="EWMHHORFZJDHiKCOaiiFqt"># 多活 MDS 数量</code>
+<code class="c" data-page-node-id="OfchQMtodsOWkgbrFxmjfF"># ceph_fs_max_mds: 2</code>
+EOF
+
+<code class="c" data-page-node-id="hlzJgBHbiLBGv4DDBPwu7G"># group_vars/clients.yml（按需）</code>
+cat &gt; group_vars/clients.yml &lt;&lt;'EOF'
+copy_admin_key: true
+<code class="c" data-page-node-id="J22zNaVI2Vgb550oi9FclN"># 挂载 CephFS 到客户端（可选）</code>
+<code class="c" data-page-node-id="eBE6haNcoz4jElmgHZP9Oc"># cephfs_mount:</code>
+<code class="c" data-page-node-id="3fvDSbLufRPLvrwVkHiP96">#   - path: /mnt/cephfs</code>
+<code class="c" data-page-node-id="tOKC11CgLizDcAwdxvqPxv">#     src: /</code>
+<code class="c" data-page-node-id="YE04swwZrhHPEXzWbhGtHr">#     fstype: ceph</code>
+<code class="c" data-page-node-id="DYTNkB0KMkQgIjcHIVZ0Hd">#     opts: name=admin,secret={{ ceph_admin_key }}</code>
+EOF
+</code></pre>
+
+<h3 data-page-node-id="jtlOf97EdUfwsplm4pOQEu">14.4 主 playbook site.yml</h3>
+<pre class="cmd" data-page-node-id="NhIx6b2EqhqpO4LCJaf3YM"><code class="c" data-page-node-id="R82D93GEb5Q5hqdCHUZnmj"># 最简单：直接复制样例（推荐）</code>
+cp site.yml.sample site.yml
+
+<code class="c" data-page-node-id="paaju07NHfjEDxFZdMhvyw"># 自定义精简版（只部署 mon/mgr/osd/mds/rgw/client）：</code>
+cat &gt; site.yml &lt;&lt;'EOF'
+---
+- hosts:
+    - mons
+    - mgrs
+    - osds
+    - mdss
+    - rgws
+    - clients
+    - monitoring
+  become: true
+  any_errors_fatal: true
+  gather_facts: true
+  pre_tasks:
+    - import_role:
+        name: ceph-defaults
+  roles:
+    - role: ceph-defaults
+    - role: ceph-facts
+    - role: ceph-handler
+    - role: ceph-validate
+    - role: ceph-infra
+    - role: ceph-config
+    - role: ceph-mon
+    - role: ceph-mgr
+    - role: ceph-mds
+    - role: ceph-rgw
+    - role: ceph-osd
+    - role: ceph-client
+EOF
+</code></pre>
+<div class="tip" data-page-node-id="xNdLLkE8R1G7bzM7lAC2Ef">
+<b data-page-node-id="3h7Ul0ueUxEsX3Nu4cuH8z">site.yml 必须放在 ceph-ansible 项目根目录</b>（和 <code data-page-node-id="Wyu5tM6V2gmh19ee8ZGHFX">roles/</code> 同级），否则 role 找不到。<br data-page-node-id="Gb6AlPIA6AncEdvU7dWh9j">
+如果不需要 CephFS 或 RGW，直接把对应的 <code data-page-node-id="SYElHmyUY5eMuhn4Dr4uDl">- role: ceph-mds</code> / <code data-page-node-id="wNMziORs5uYk1EgF70hpXB">ceph-rgw</code> 行删掉即可（也可以不填 mdss/rgws 组）。
+</div>
+</section>
+
+<section id="ch15" data-page-node-id="lE0Gco8EFLtsBO74oU0W2q">
+<h2 data-page-node-id="wGK9Zzie0xYWgy3v4JzBbp"><span class="num" data-page-node-id="P7xMo0toPmN3sMs7E7C4Vy">15</span>【Ansible 部署】执行部署与验证</h2>
+
+<h3 data-page-node-id="EjiSBh98kEhIOu4T4Lb73J">15.1 执行流程</h3>
+<figure data-page-node-id="CLV6xPsz5qDnGtzOyMUiDk">
+<svg viewBox="0 0 900 150" xmlns="http://www.w3.org/2000/svg" data-page-node-id="ySu0VSpfcP0ZSVIwDWkKJw">
+  <defs data-page-node-id="MN0HXOw4xuv0WwtGgnKXot"><marker id="b3" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" data-page-node-id="KmG9qnAXG5PYil4UlF6w8K"><path d="M0,0 L0,6 L8,3 z" fill="#0e7490" data-page-node-id="jHFizvLi2QA9ECVOPPeXb5"/></marker></defs>
+  <g font-size="11" text-anchor="middle" data-page-node-id="RjEWIKLX7Z24miXmcVvYcG">
+    <rect x="8" y="40" width="128" height="52" rx="8" fill="#fef3c7" stroke="#b45309" stroke-width="1.5" data-page-node-id="UZ9djA8Nfkfn6IUYrASYjG"/>
+    <text x="72" y="62" font-weight="700" fill="#78350f" data-page-node-id="vBInh8FI1rvDJBYXhPOiBb">① 检查连通性</text><text x="72" y="78" font-size="9.5" fill="#92400e" data-page-node-id="7stOJWOOLdBk1Ep6y9iS1i">ansible -m ping</text>
+    <rect x="146" y="40" width="128" height="52" rx="8" fill="#fef3c7" stroke="#b45309" stroke-width="1.5" data-page-node-id="Qd1cNrARZq4cLgIitlcVi1"/>
+    <text x="210" y="62" font-weight="700" fill="#78350f" data-page-node-id="HGkLcD4MwlJHWsZwizqqMb">② 语法与预演</text><text x="210" y="78" font-size="9.5" fill="#92400e" data-page-node-id="uWCCA9gMpi2sUtZjQrP30N">--syntax-check / --check</text>
+    <rect x="284" y="40" width="128" height="52" rx="8" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.5" data-page-node-id="S8wrgFywf68KPozoBSHj41"/>
+    <text x="348" y="62" font-weight="700" fill="#0c4a6e" data-page-node-id="8YxVcELGFcJo3o9jwheAIa">③ 执行 site.yml</text><text x="348" y="78" font-size="9.5" fill="#0e7490" data-page-node-id="DVlP3D28H8Li9xw7dgm75n">ansible-playbook -i hosts</text>
+    <rect x="422" y="40" width="128" height="52" rx="8" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.5" data-page-node-id="ySq8wuFjmSNwDRj4zbjhnr"/>
+    <text x="486" y="62" font-weight="700" fill="#0c4a6e" data-page-node-id="LnAH1ce7Tka17gyuM89Evz">④ 等待 OSD 就绪</text><text x="486" y="78" font-size="9.5" fill="#0e7490" data-page-node-id="naHFGMDOUsvWKOMpaeaXGt">watch ceph -s</text>
+    <rect x="560" y="40" width="128" height="52" rx="8" fill="#ede9fe" stroke="#6d28d9" stroke-width="1.5" data-page-node-id="QoWa9SIM5AEzd6xTaLUGcg"/>
+    <text x="624" y="62" font-weight="700" fill="#5b21b6" data-page-node-id="4lUaH4pNIHEEouRfBBJd2v">⑤ 验证层级</text><text x="624" y="78" font-size="9.5" fill="#6d28d9" data-page-node-id="M24q9I46KkHvSeAlVqdix2">ceph osd tree</text>
+    <rect x="698" y="40" width="128" height="52" rx="8" fill="#dcfce7" stroke="#15803d" stroke-width="1.5" data-page-node-id="TqifRopFAbGrV4EYzUyaig"/>
+    <text x="762" y="62" font-weight="700" fill="#14532d" data-page-node-id="Q7z1tzKO8MmCAaHHID3VHe">⑥ 交付</text><text x="762" y="78" font-size="9.5" fill="#166534" data-page-node-id="CtDPoVWYRv58XGyLOwt3Sr">建池 / 开 balancer</text>
+  </g>
+  <line x1="136" y1="66" x2="144" y2="66" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b3)" data-page-node-id="o4e3E1mGGFzuGHVOtrAAr6"/>
+  <line x1="274" y1="66" x2="282" y2="66" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b3)" data-page-node-id="h3o70FtALrESAdjwPZLrRF"/>
+  <line x1="412" y1="66" x2="420" y2="66" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b3)" data-page-node-id="21FVmbb8Q0JhK3K6k2chrg"/>
+  <line x1="550" y1="66" x2="558" y2="66" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b3)" data-page-node-id="kOS14DD9q4jE09ALvbpIXQ"/>
+  <line x1="688" y1="66" x2="696" y2="66" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b3)" data-page-node-id="gHeNXJuuBCehTNLkreBGOA"/>
+  <text x="450" y="122" text-anchor="middle" font-size="11.5" fill="#475569" data-page-node-id="k2tuPzSJQGLfIJcxfPgwyM">Ansible 部署六步。<b data-page-node-id="i5o4upJG1zTsXu7aSzO6cB">强烈建议先 --check 预演</b>，避免把配置写坏了。</text>
+</svg>
+<figcaption data-page-node-id="J4uvWxQWSCroEj0jzYFlTc">图 15-1　Ansible 部署执行流程。</figcaption>
+</figure>
+
+<h3 data-page-node-id="mA4xfsSeKnDwh1GI8bH7ln">15.2 执行命令</h3>
+<pre class="cmd" data-page-node-id="TO3WcwDTcZf5Uk2UZzVLkh"><code data-page-node-id="v1r9W7cHSQn9pm9CQzzQ1V">cd /root/ceph-ansible
+
+<code class="c" data-page-node-id="c0vzPN3QyLdyFoHNIp3kPy"># ① 连通性检查</code>
+ansible -i hosts all -m ping
+<code class="o" data-page-node-id="vHbaJTGfeBuaQEfLUxWFed">ceph-mon1 | SUCCESS =&gt; {"changed": false, "ping": "pong"}</code>
+
+<code class="c" data-page-node-id="3dPflB2AYwccAzSerckXgJ"># ② 语法检查</code>
+ansible-playbook -i hosts site.yml --syntax-check
+
+<code class="c" data-page-node-id="7ltXFBF0iO2qgvrxihaQ37"># ③ 预演（不实际改动，强烈建议先跑一遍）</code>
+ansible-playbook -i hosts site.yml --check
+
+<code class="c" data-page-node-id="kJqt6SUkiAWx3XQqHhYdhX"># ④ 正式执行（24 个 OSD 的集群大约 10~30 分钟）</code>
+ansible-playbook -i hosts site.yml
+
+<code class="c" data-page-node-id="rDs1fOkd9uHtFlTPRcA6BN"># ⑤ 如果只想部署某部分，用 --tags / --limit</code>
+ansible-playbook -i hosts site.yml --tags ceph-mon        <code class="c" data-page-node-id="dcSlFl5wDwHLoKHFB7bPUp"># 只部署 MON</code>
+ansible-playbook -i hosts site.yml --limit ceph-osd1      <code class="c" data-page-node-id="UnBvRGHdtMJW5ML2JVuMKz"># 只在某台机器上执行</code>
+ansible-playbook -i hosts site.yml --start-at-task 'ceph-mon : start ceph-mon'  <code class="c" data-page-node-id="Vg0wBk872ulvmChqStwZTp"># 从某任务开始</code>
+ansible-playbook -i hosts site.yml -vvv                   <code class="c" data-page-node-id="T2oliHqfUV6C82YwvRjRvN"># 详细输出（排障用）</code>
+
+<code class="c" data-page-node-id="YDcraSIWrNuQlp4FlOks2I"># ⑥ 执行完成后，登录任一 MON 节点验证</code>
+ceph -s
+</code></pre>
+
+<h3 data-page-node-id="26oCkdTS9AE8Inhii1rUpi">15.3 部署结果验证</h3>
+<pre class="cmd" data-page-node-id="QiM7pK3IDr6utf0krsLiGi"><code data-page-node-id="NcnJZEaEG9t0O3bXRc8XDQ">$ ceph -s
+  cluster:
+    id:     a7f3c2e8-4b1d-4f9a-9c3e-8d2b5a1f6e70
+    health: HEALTH_OK
+
+  services:
+    mon: 3 daemons, quorum ceph-mon1,ceph-mon2,ceph-mon3 (age 5m)
+    mgr: ceph-mon1(active, since 4m), standbys: ceph-mon2, ceph-mon3
+    mds: 1/1 daemons up, 2 standby
+    osd: 24 osds: 24 up (since 3m), 24 in (since 3m)
+    rgw: 2 daemons active (2 hosts, 1 zones)
+
+  data:
+    pools:   6 pools, 385 pgs
+    objects: 0 objects, 0 B
+    usage:   10 TiB used, 182 TiB / 192 TiB avail
+    pgs:     385 active+clean
+
+<code class="c" data-page-node-id="HMtFxMtHp8aqfL96VpdrdH"># 关键检查项</code>
+ceph osd tree                     <code class="c" data-page-node-id="234Ko9XkJg2r7KRkHVzbrS"># 确认 root → host → osd 三层结构正确</code>
+ceph osd df tree                  <code class="c" data-page-node-id="rdBLjpyr13tlsfkAXIg44y"># 确认每 OSD 的 WEIGHT 与容量匹配</code>
+ceph osd crush rule dump replicated_rule | grep type   <code class="c" data-page-node-id="vpNCIUocPKS17fz8StojMu"># 确认故障域是 host</code>
+ceph auth list                    <code class="c" data-page-node-id="XJHH6vpQTUSGhOyHW8N2ko"># 确认各组件 keyring 已生成</code>
+ceph mgr module ls | grep enabled <code class="c" data-page-node-id="Q6ix8gLwEB3JJHnvkmASdW"># 确认 dashboard/balancer 已启用</code>
+ceph mgr services                <code class="c" data-page-node-id="RDYPDsSxeUoTFkwiFVGf6L"># 获取 Dashboard 地址</code>
+ceph health detail
+</code></pre>
+
+<div class="good" data-page-node-id="bcBHc03L5j2aOJEQGa2AKw">
+<b data-page-node-id="7IeDwMAhiP3Zs0ZdcGuX5L">看到 <code data-page-node-id="ZSDwMDlZ5pGA5zdl1JmIGG">health: HEALTH_OK</code> 和 <code data-page-node-id="WsLMAEgnyz1xZVcJaMg3ZQ">pgs: N active+clean</code> 就说明部署成功了。</b><br data-page-node-id="XfojAsfuDxyQgxov2fCqPd">
+如果 <code data-page-node-id="xwiXLJYQuo7Fhyj0Jp9MBv">pgs</code> 不是 active+clean，用 <code data-page-node-id="0KuTc0viFAUXTTO76JBEmE">ceph health detail</code> 和 <code data-page-node-id="ySJw9YTEJJBsJhcjZcm4TB">ceph pg stat</code> 查原因（常见：OSD 未全部 up、CRUSH 层级不对、PG 数过多导致 peering 慢）。
+</div>
+</section>
+
+<section id="ch16" data-page-node-id="SC8OY3wD9u6mLVKYSvL62S">
+<h2 data-page-node-id="KOrkAs6yBTIpw0UVbAAcVD"><span class="num" data-page-node-id="EVahCRUpSxHyv5q5ShPntR">16</span>【Ansible 部署】扩缩容运维</h2>
+
+<h3 data-page-node-id="qJ9LyvHs7jWGYynJHRmd1T">16.1 扩容：新增 OSD 节点</h3>
+<pre class="cmd" data-page-node-id="CVC0Fxzd4oz6oxcC3tnmyl"><code class="c" data-page-node-id="ppk8XWdORUDs1XuKuRjU4y"># ① 新节点做系统初始化（第 2 章）+ 配置免密</code>
+
+<code class="c" data-page-node-id="KqxFOrQVYNbAHqeqsRDlHT"># ② 在 inventory 中加入新节点</code>
+vi hosts
+<code class="c" data-page-node-id="IHFhbBznqKffhTk1ExKnUk"># [osds]</code>
+<code class="c" data-page-node-id="IxPIxsMemVs8G6l6tygCZ1"># ceph-osd1</code>
+<code class="c" data-page-node-id="4An6HuzjCEp3ZUUvSjehYr"># ...</code>
+<code class="c" data-page-node-id="eEEUjNczxyivFuUXAf3GHY"># ceph-osd5     ← 新增</code>
+
+<code class="c" data-page-node-id="W1qb6p7DkzAZPNN4l2waq6"># ③ 执行 add-osd playbook（推荐，只做增量）</code>
+ansible-playbook -i hosts infrastructure-playbooks/add-osd.yml
+
+<code class="c" data-page-node-id="A633H3k6HPgyFeFpNQ9jFF"># 或者重新跑 site.yml（幂等，只会对新节点生效）</code>
+ansible-playbook -i hosts site.yml --limit ceph-osd5
+
+<code class="c" data-page-node-id="gIaqKFBqFtutSrSiY9V8bQ"># ④ 观察迁移</code>
+ceph -w
+ceph osd df tree
+
+<code class="c" data-page-node-id="LB9DuiX1SAetHMqFrNjxi7"># ⑤ 迁移限速（大集群扩容时务必设置）</code>
+ceph config set osd osd_max_backfills 1
+ceph config set osd osd_recovery_sleep 0.1
+</code></pre>
+
+<h3 data-page-node-id="fugw5EQIaMmlZ7lAtOkdxC">16.2 缩容：下线 OSD</h3>
+<pre class="cmd" data-page-node-id="yaifrvjCLWbdIgucYUKSbd"><code class="c" data-page-node-id="V8x1BBgmCLgfpCc9cbLSXC"># 使用官方 shrink-osd playbook，指定要下线的 OSD ID</code>
+ansible-playbook -i hosts infrastructure-playbooks/shrink-osd.yml \
+  -e osd_to_kill=18,19,20,21,22,23
+
+<code class="c" data-page-node-id="PZw4qo5oLWoNQ0iX4JMY2p"># 常用额外参数</code>
+<code class="c" data-page-node-id="JFmyks2M6XweBc3DrXVuMC">#   -e ireallymeanit=yes                 # 确认执行（某些版本需要）</code>
+<code class="c" data-page-node-id="ZW1HH2SGHxfnbGB4sm20er">#   -e shrink_single_node=true           # 整节点下线时</code>
+
+<code class="c" data-page-node-id="ja9Bkqcgy2BtWzmOOqU5eM"># ⚠ 注意：一次性下线太多 OSD 会导致数据丢失风险</code>
+<code class="c" data-page-node-id="pboLWBsBZ1SSEo6glj8vab">#   副本池：同时下线 ≤ (size - 1) 个；EC k+m 池：同时下线 ≤ m 个</code>
+<code class="c" data-page-node-id="3TUfxoabXvZGSICQNRCvCU">#   建议分批执行，每批之间等集群回到 active+clean</code>
+
+<code class="c" data-page-node-id="zDwdFhpXfTjfMKmKQGO8wn"># 下线后从 inventory 移除节点，并清理 CRUSH</code>
+ansible-playbook -i hosts infrastructure-playbooks/purge-cluster.yml  <code class="c" data-page-node-id="mFo0Y0X5HjByZeq3q3YZxg"># ⚠ 慎用：清空整个集群</code>
+</code></pre>
+
+<h3 data-page-node-id="e7fF15svhGqLEPmwCkvnxS">16.3 其他运维 playbook</h3>
+<table data-page-node-id="oMerJNsqHIu26K7I8U6QNJ">
+<thead data-page-node-id="Eq8eA1DsUVX64UI3xOKDh8"><tr data-page-node-id="moQyUm2ypLrxBhsWEkspsG"><th style="width:38%" data-page-node-id="aTHYvIWDCFY79He6gEfrw5">Playbook</th><th data-page-node-id="viInhXoJ3gG9SvjWND2pnz">用途</th></tr></thead>
+<tbody data-page-node-id="fnyj3CfFvRN8eJSerJu3AH">
+<tr data-page-node-id="3EL8aSGBtsZ1rVwlMZFAAN"><td data-page-node-id="8f1PFFrZSqvl7NWjeRyFjX"><code data-page-node-id="SOCZAJ5d7fGfwmUgA6HqEM">infrastructure-playbooks/add-osd.yml</code></td><td data-page-node-id="zcUzpyPa3eRKvJAanw1vud">新增 OSD（扩容）</td></tr>
+<tr data-page-node-id="HhRISgQT7hCzLTmKjuxm5F"><td data-page-node-id="5yPEZLXDRE8y7TQ7yvy01b"><code data-page-node-id="WOoZ1EQ1jXekjPvT1BA59x">infrastructure-playbooks/shrink-osd.yml</code></td><td data-page-node-id="l1twlLXbZ5qQgMmur2jKpG">下线指定 OSD（缩容）</td></tr>
+<tr data-page-node-id="bl7cvQF5mn2uSl8Lo3MjfJ"><td data-page-node-id="BpGv0Is79PpHjD5MNGrLhS"><code data-page-node-id="HKQYOOd2dqVCAGJiBHuYNJ">infrastructure-playbooks/purge-cluster.yml</code></td><td data-page-node-id="EMYYXmPlA3TjnnWKzDa3vn"><b data-page-node-id="c3stOEAUMeT8VouOhB4lTj">彻底清空集群</b>（危险，会删除所有数据）</td></tr>
+<tr data-page-node-id="L4LsQACILyF32nyOR1UOVh"><td data-page-node-id="CprWWlkL7Dxjuxx9iwqLUn"><code data-page-node-id="uDpyLoGvebFcGQZWk473ir">infrastructure-playbooks/rolling_update.yml</code></td><td data-page-node-id="q9bQWqGZzQ2Fh2fDMxuS26">滚动升级 Ceph 版本</td></tr>
+<tr data-page-node-id="hnKRBmNWG0fclNE712dtn8"><td data-page-node-id="uUYt2DiE3krBLKQcgtxxRB"><code data-page-node-id="8MYdN2v5sEEye2Dx83TqgB">infrastructure-playbooks/switch-to-containers.yml</code></td><td data-page-node-id="DwXCL8HQsJRGNk5uaRaoM4">从裸机切换到容器化部署</td></tr>
+<tr data-page-node-id="pYnmTAdIXeqhBiU6qxlu0d"><td data-page-node-id="faBDRPNeF1vSkesKRM39gm"><code data-page-node-id="AlFQ7bCajBNetwDczWA6LC">infrastructure-playbooks/rbd-mirror.yml</code></td><td data-page-node-id="yDv47GHZ3YSzPUAnFpH63F">部署 RBD 异地镜像</td></tr>
+<tr data-page-node-id="x5sFRSAhWZtg8YTqmMBBxL"><td data-page-node-id="W8IjX2aMB1KcJLRwpZIpR0"><code data-page-node-id="Dw6nZg1U7hWRmJyo73UH2E">infrastructure-playbooks/take-over-existing-cluster.yml</code></td><td data-page-node-id="pVk3tjPjePBTHfmgn1FrPu">接管已有集群（把手动部署的集群纳入 ansible 管理）</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="ch17" data-page-node-id="b8WZRTg6VQst6DkHlZV4x9">
+<h2 data-page-node-id="uXFKZplKbAmr1LMq5q6mX2"><span class="num" data-page-node-id="YgMCwYXlLIALAzTPhmEwTR">17</span>【Ansible 部署】常见报错与解决</h2>
+
+<table data-page-node-id="BEAjK96RhGtPRfmtCrTKee">
+<thead data-page-node-id="hTQbgIVW7er2v1aFT6pSHx"><tr data-page-node-id="RCi0RAGCFlk6aWoilKjOHL"><th style="width:34%" data-page-node-id="dy0wuBHAxPlWj3DipYJYuQ">报错信息</th><th style="width:30%" data-page-node-id="0EegkcFvQxgIlRhJ0pC3Qo">原因</th><th data-page-node-id="Os1HfufwAB5dcDlO6sMPNw">解决</th></tr></thead>
+<tbody data-page-node-id="Hjg9a6CwKgL6BO1Ga62Vmg">
+<tr data-page-node-id="2AT71GdUPVLB7tqqExSGnJ"><td data-page-node-id="d2Bah6y6DpBwT9xy1VGgEZ"><code data-page-node-id="pGmLKgHgKUMFWMRUc6HSQ1">ERROR! the role 'ceph-defaults' was not found</code></td><td data-page-node-id="7UTqIQ0UWAOW1m3cocArqd">site.yml 不在项目根目录</td><td data-page-node-id="ZpRAvRNNbAD0kQyvbw1Bef">把 site.yml 放在 <code data-page-node-id="qHcSqhl8dzSNPpNEwwFgWE">ceph-ansible/</code> 根目录，或用 <code data-page-node-id="m5rSK7mVIByxt77I3UqrEp">ANSIBLE_ROLES_PATH</code> 指定</td></tr>
+<tr data-page-node-id="uWfCI00yPytsXg9DzOroAV"><td data-page-node-id="Qvr0bWhMq9XqPt6ZR4bFUP"><code data-page-node-id="Xa5FIg7ALX0ffbtRsHQ30n">couldn't resolve module/action 'ansible.builtin.xxx'</code></td><td data-page-node-id="unGGOl9mFBhl4Fh48NTghd">没装 galaxy collections</td><td data-page-node-id="vIcl7OgPazCchNX5CTNhJ8"><code data-page-node-id="NgbgLux1DsOjIKqCb3DcbB">ansible-galaxy install -r requirements.yml</code></td></tr>
+<tr data-page-node-id="cZJVriRH0HbXnuRmn1AGtF"><td data-page-node-id="qkV90PQjKc8aBlWyXyANHZ"><code data-page-node-id="uN3v1UKmTfhhFYyBDm5pcl">ImportError: No module named 'netaddr'</code></td><td data-page-node-id="MwMutEOI5mJHHby8HfvXqZ">Python 依赖没装</td><td data-page-node-id="mCqzZgswNcxgGQZ6ZOUOCx"><code data-page-node-id="wubYFL8uhP3A74ygfzfDVr">pip3 install -r requirements.txt</code></td></tr>
+<tr data-page-node-id="kbUB8mIdnezxRF8uHWQZip"><td data-page-node-id="LuoGH63mA41FewkeEyuhTP"><code data-page-node-id="siGHgRqMfvznYRgt9J9DRH">Ansible version 2.14 is not supported</code></td><td data-page-node-id="JVYFW0mlYW7GlYN0igFAVx">ansible 版本与分支不匹配</td><td data-page-node-id="uCanxGByNhf7ZgK7UG0d3r">stable-9.0 需要 2.15~2.19，<code data-page-node-id="LAascmiBDnVSjnNHupohbv">pip3 install ansible-core==2.16</code></td></tr>
+<tr data-page-node-id="fqglPeRdjcce7JEEViaxT2"><td data-page-node-id="uMaN1bCTIdoYKJJBVevgDK"><code data-page-node-id="9iNuydrP4LVZ5Be1Sogphr">FAILED! =&gt; {"msg": "The conditional check 'devices | length &gt; 0' failed"}</code></td><td data-page-node-id="zoHizNm0fmppRLx8oWv2RQ"><code data-page-node-id="52VbygANnd28PeQfrq26y2">group_vars/osds.yml</code> 没写 devices</td><td data-page-node-id="bEoa1qEIXX18qkI7m8FGe4">补全 <code data-page-node-id="z1JMZhqHmGMerriokc7MWZ">devices:</code> 列表</td></tr>
+<tr data-page-node-id="sp8pDd2RELwV1K65kcCyFr"><td data-page-node-id="nS1nwEzMJuS7iJaSDU2Fqc"><code data-page-node-id="6v3wvJ6YMHWvA5tQGP1kxA">ceph-volume lvm create: device is already in use</code></td><td data-page-node-id="QQnT0249ZWoERuSH9cgdbq">磁盘有分区/GPT/LVM 残留</td><td data-page-node-id="jHdWP5VkUHTeTu8n59G9aK"><code data-page-node-id="djLi93zoJdrpVi03AyTC3s">sgdisk --zap-all /dev/sdX</code> + <code data-page-node-id="BLwVG1rWtJnKFZ36FB2nxR">wipefs -a /dev/sdX</code></td></tr>
+<tr data-page-node-id="LVueqlPtGaGoqRyoJiEpgD"><td data-page-node-id="T44s2ueamb1EzvMXDB1xdb"><code data-page-node-id="YHwootl1EL3ui72y9LJ8z8">Unable to find a device with enough space for db</code></td><td data-page-node-id="iI8Qj1X4EyXbYKMlU0RpOW">NVMe 上剩余空间不足</td><td data-page-node-id="xO2Iyz88QkCasdIkMaFZPO">减小 <code data-page-node-id="b0HvxTsMbrLZc240Jl4NXv">db_size</code>，或减少该 NVMe 上承载的 OSD 数</td></tr>
+<tr data-page-node-id="DuSeBq7z03sAUFgytKAT4B"><td data-page-node-id="oKYBurc2qMU6icGsczX0lv">MON 起不来 / 无法形成 quorum</td><td data-page-node-id="AQ59NZDSSzaU45e0IRAbTn">时间不同步 或 monitor_interface 选错网卡</td><td data-page-node-id="h6CZFa7BQkJz5aozUubjp5">检查 chrony；改用 <code data-page-node-id="XiUlAO1BIler5NnNXHkgwd">monitor_address</code> 显式指定 IP</td></tr>
+<tr data-page-node-id="CnjqAipTVHGzQhQPyWoAAR"><td data-page-node-id="lHDFawQXhT1AVl5TE43QBO"><code data-page-node-id="rpK9YhGEAZDDjeHTHS4YmI">No package ceph-osd available</code></td><td data-page-node-id="5bpJhCFRitPLfdfKcST0DZ">软件源配置错误 / 无网络</td><td data-page-node-id="GxK1RTsTYYHu9vGNNBwY5g">检查 <code data-page-node-id="hyXpoFD2waEwnDt3fkmVYl">ceph_repository</code>/<code data-page-node-id="TI1oBFBpuiG7blAm9tO6M5">ceph_stable_release</code>；或改用本地源 <code data-page-node-id="RwMMkjw7TOZcs7150lj7zy">custom_repo_url</code></td></tr>
+<tr data-page-node-id="Fv2OUtfhji4QeOLsUepPwy"><td data-page-node-id="gisScAkcmyi2JGKRioC9RX"><code data-page-node-id="vqP9OKpO7QoMfHFcU9Gkn7">Failed to connect to the host via ssh: Permission denied</code></td><td data-page-node-id="9DkG12f82c68PPNHiTuvEA">SSH 免密没配好</td><td data-page-node-id="v4ccvI98DobRhRZpHOwMvq"><code data-page-node-id="M5oF5MZQfvhXoeLuZExD5P">ssh-copy-id</code>；确认 <code data-page-node-id="OOMfZwfQux7TY2zvMXGWWH">ansible_user</code> 正确</td></tr>
+<tr data-page-node-id="b7wbdhVTpUg6DExQc3UxPH"><td data-page-node-id="E5kj2lWkQZhKgRNi5BOBYA"><code data-page-node-id="XBAgqXr48ih8caRhHOp2K3">/usr/bin/python3: not found</code></td><td data-page-node-id="xmygzADbebQS189RiDM89E">目标机 python 路径不同</td><td data-page-node-id="WIOgyd9Li279W156K6OHqY">在 inventory 中指定 <code data-page-node-id="1FnwlFfxg4KCOwsugCbElI">ansible_python_interpreter=/usr/bin/python3</code></td></tr>
+<tr data-page-node-id="yE2imvs4YTFMxsAiodrrnb"><td data-page-node-id="mjr0txtutTCMPBs7Vgx4Fa">部署卡在 <code data-page-node-id="6eBWOuldMEA454bXoDhrEO">ceph-validate</code> 阶段</td><td data-page-node-id="4L36qwK1xicGDtmnte4h00">前置条件检查不通过（往往是磁盘或网络）</td><td data-page-node-id="jQIImTb9GoHMqfhOAwwQLi">加 <code data-page-node-id="wyeCFb2FX6wg29vAvUoA1e">-vvv</code> 看具体检查项；或临时 <code data-page-node-id="pAuwPeqZJxnDdXRNGhNJV6">ceph_validate: false</code>（不推荐）</td></tr>
+</tbody>
+</table>
+
+<div class="tip" data-page-node-id="XAb0Bi8oFWoiwnuStW5Bp1">
+<b data-page-node-id="wvAHkgIerOE913xxkI84t4">排障三板斧：</b><br data-page-node-id="pWPmCrkEjfAADcnJWlDmUX">
+① <code data-page-node-id="9lvI82RSwK6YC7x9QG597N">ansible-playbook ... -vvv</code> 看详细输出，通常最后几行就是真实原因；<br data-page-node-id="4vzk83JjVOPc8Vzu6yq5fe">
+② 到出错的节点上看 <code data-page-node-id="m8H4a4t1wz7jyinuPv2B0C">/var/log/ceph/</code> 和 <code data-page-node-id="A46sEGXbA4FoJifwWi4Zi7">journalctl -u ceph-*</code>；<br data-page-node-id="CN4LxFgCH9k7EqmvKV8bw3">
+③ 单个组件重试：<code data-page-node-id="DLgEKo7G9nu56gLNanFnsF">ansible-playbook -i hosts site.yml --tags ceph-osd --limit ceph-osd1</code>。
+</div>
+</section>
+
+<section id="ch18" data-page-node-id="AV21lqmUkhvX71pG74XCIm">
+<h2 data-page-node-id="xy0mE7k7H4zmHwIZUNFJ6Z"><span class="num" data-page-node-id="POsVIKRzijhh3RnCxiOVdD">18</span>部署后必做清单</h2>
+
+<p data-page-node-id="h8GHzzsOnQQdbCXFqg9EfA">无论用哪种方式部署完，下面这些<strong data-page-node-id="eOgfIbXB8DSvqVWVg6KMWV">必须</strong>做。按重要性排序：</p>
+
+<pre class="cmd" data-page-node-id="8NjU89wnEajZz3OOgeH5zu"><code data-page-node-id="b2tZDq2x6azNZ1itQIX9nZ"><code class="c" data-page-node-id="x2AR9VGjK4HbHJGNJWBpEX"># ===== 1. 确认 CRUSH 层级与故障域（最重要！）=====</code>
+ceph osd tree                                   <code class="c" data-page-node-id="v7LlLWVPdPGpoRNbnlW5Nl"># 必须是 root → host(rack) → osd 三层</code>
+ceph osd crush rule dump replicated_rule         <code class="c" data-page-node-id="H130WOkU6e007JnPBOQOsj"># type 必须是 host 或 rack</code>
+
+<code class="c" data-page-node-id="CQxBiNPDNyuZRfT6Iicdgl"># ===== 2. 确认 weight 与真实容量匹配 =====</code>
+ceph osd df tree                                <code class="c" data-page-node-id="roXEAWUxwODMSyEEEdrhef"># WEIGHT 列应约等于 TiB 数；VAR 列应接近 1.00</code>
+
+<code class="c" data-page-node-id="6Y9Q1fZLUZA1gQU0jug3Wy"># ===== 3. 配置 PG 与开启自动伸缩 =====</code>
+ceph mgr module enable pg_autoscaler
+ceph osd pool autoscale-status
+ceph osd pool set &lt;pool&gt; pg_autoscale_mode on
+
+<code class="c" data-page-node-id="IzEVq0tg2uAOU3jCmJkDDi"># ===== 4. 开启 balancer 并设定低峰窗口 =====</code>
+ceph mgr module enable balancer
+ceph balancer on
+ceph balancer mode upmap
+ceph config set mgr mgr/balancer/begin_time 0000
+ceph config set mgr mgr/balancer/end_time 0600
+
+<code class="c" data-page-node-id="wECdxCrIxf8U2euL9hZgwu"># ===== 5. 设置恢复/回填限速（保护业务）=====</code>
+ceph config set osd osd_max_backfills 1
+ceph config set osd osd_recovery_max_active 3
+ceph config set osd osd_recovery_sleep 0.1
+ceph config set osd osd_recovery_op_priority 3
+ceph config set osd osd_client_op_priority 63
+
+<code class="c" data-page-node-id="K2nHuNd31H4q6omfeo81gQ"># ===== 6. 配置 scrub 时间窗 =====</code>
+ceph config set osd osd_scrub_begin_hour 2
+ceph config set osd osd_scrub_end_hour 6
+ceph config set osd osd_scrub_load_threshold 2.0
+ceph config set osd osd_max_scrubs 1
+
+<code class="c" data-page-node-id="AOybGDFZD8jvPOooeznL9X"># ===== 7. 设置容量告警阈值 =====</code>
+ceph osd set-nearfull-ratio 0.85
+ceph osd set-full-ratio 0.95
+ceph osd set-backfillfull-ratio 0.90
+
+<code class="c" data-page-node-id="vKGSLoZTUzQQSeB5FvglW7"># ===== 8. 启用监控 =====</code>
+ceph mgr module enable prometheus
+<code class="c" data-page-node-id="EgE3FzmIzAs8G1tWMSJ2lf"># 访问 http://&lt;mgr&gt;:9283/metrics，接入 Prometheus + Grafana（Dashboard ID 2842）</code>
+
+<code class="c" data-page-node-id="UwJdMBZB2CchbskDApRhch"># ===== 9. 配置日志轮转 =====</code>
+cat &gt; /etc/logrotate.d/ceph &lt;&lt;EOF
+/var/log/ceph/*.log {
+    daily
+    rotate 14
+    compress
+    sharedscripts
+    postrotate
+        killall -q -1 ceph-mon ceph-mgr ceph-mds ceph-osd ceph-fuse || true
+    endscript
+    missingok
+    notifempty
+    su root ceph
+}
+EOF
+
+<code class="c" data-page-node-id="mB8bG9sDKjLfCA5SPdEQId"># ===== 10. 备份关键文件（救命用！）=====</code>
+mkdir -p /root/ceph-backup
+cp -a /etc/ceph /root/ceph-backup/etc-ceph
+ceph mon dump &gt; /root/ceph-backup/mon-dump.txt
+ceph osd dump &gt; /root/ceph-backup/osd-dump.txt
+ceph auth list &gt; /root/ceph-backup/auth-list.txt
+ceph osd crush dump &gt; /root/ceph-backup/crush-dump.txt
+<code class="c" data-page-node-id="p5ebZzdlCrYyz0pt57WLt7"># 并把这份备份同步到集群外的安全位置</code>
+</code></pre>
+
+<div class="good" data-page-node-id="eO2gMwX992mhq8fv9PnzVH">
+<b data-page-node-id="YW62dW3AUKlCj49qu0xRzC">最终验收标准（全部满足才算部署成功）：</b>
+<ul style="margin:8px 0 0" data-page-node-id="w1vHBNqXBZjdB7DzqDFCHf">
+<li data-page-node-id="sz5yDK97WPgn8l7v1fFbWa"><code data-page-node-id="lOcGuE2mWRixVQUubTOy1D">ceph health detail</code> 返回 <code data-page-node-id="Kr46WyZER8Xmv9CZDfAzo1">HEALTH_OK</code></li>
+<li data-page-node-id="pHyndBiBQ48Ze5S6TF5Nax"><code data-page-node-id="qMMuuAlRUT1rq6hUqC0EVk">ceph -s</code> 中 <code data-page-node-id="sV5W7kzoAtOZuMRUD3KAOX">pgs: N active+clean</code>，且 N = 所有池的 PG 总和</li>
+<li data-page-node-id="PYgSHdvZ8DBrK1e2dkoE9L"><code data-page-node-id="7SbxhyYGkMKzd9Yq8zZGi7">ceph osd tree</code> 层级正确，每个 host bucket 下挂着对应的 OSD</li>
+<li data-page-node-id="HkAAf3eK4rB4wUtQFE7Q4j"><code data-page-node-id="zy7FQFGUQ8nM4cxL4B5Y7C">ceph osd df tree</code> 中 VAR 列全部在 0.85 ~ 1.15 之间</li>
+<li data-page-node-id="Z485h8ggyR3EkUyqZo7Ti2">模拟故障测试：停掉一个 OSD，观察能自动恢复；停掉一台机器，数据安全</li>
+<li data-page-node-id="YaNF8E7CJBjnw2agAlmdIs">Dashboard 可访问，Prometheus 指标可采集</li>
+</ul>
+</div>
+</section>
+
+<section id="ch19" data-page-node-id="E9i2k6WX0FifBT0a8G21jS">
+<h2 data-page-node-id="fATe1lyySjCe5bNjycXIZc"><span class="num" data-page-node-id="keQPpM0WDnPBZ4cg9r4ehX">19</span>附录：端口 / 目录 / 命令速查</h2>
+
+<h3 data-page-node-id="goNIi1n3nulzL7OCOGnNLm">19.1 端口表</h3>
+<table data-page-node-id="i5f8AbNNVXiT0KCTf32Glp">
+<thead data-page-node-id="VywYadt1abfZ0NOXn02Flr"><tr data-page-node-id="2oJFsJHKhRiqlAaY76Ik7B"><th style="width:22%" data-page-node-id="QvveIfOwllocreuj5Pm5gs">端口</th><th style="width:22%" data-page-node-id="JUWRYkGxzk0cHBDKl6b6RJ">服务</th><th style="width:16%" data-page-node-id="1TYA9hmUJzf18SvLKS34HY">协议</th><th data-page-node-id="WNK05JoofAB7slNZkaZBnZ">说明</th></tr></thead>
+<tbody data-page-node-id="yr9AQISskQIgE4IW49YjHt">
+<tr data-page-node-id="U1s2ACt5XQl8SEsFulkYDW"><td data-page-node-id="MtSixC8Nc1XPqC2H5fkvb4"><b data-page-node-id="8CIbTr0Bh1vYaVRwyQzdiC">3300</b></td><td data-page-node-id="eSWwpNYIkvnW3ntAmbaPqk">MON</td><td data-page-node-id="MzWYi0xMaIqKklFKfsDkOf">TCP</td><td data-page-node-id="Nl2vjXcIZLLI9SwvFZNcBo">msgr2（Octopus 起默认）</td></tr>
+<tr data-page-node-id="Mc1IPfEHjsqYvD7vbhpukj"><td data-page-node-id="kNyeBuIU4PJlwdRLNXkfZ2">6789</td><td data-page-node-id="V05maCev0vflvPOHF17F83">MON</td><td data-page-node-id="FTOWCTrnM7dKhJfxaqSqSi">TCP</td><td data-page-node-id="dCjvIA2eyHcKrzZgClsOWj">msgr1（legacy，兼容老客户端）</td></tr>
+<tr data-page-node-id="DCsTr4WJctIYPTgsYyKfR2"><td data-page-node-id="zAqyDMFyHuxDAghcqPueq9">6800 ~ 7300</td><td data-page-node-id="O1CuRw1sRtEcv3WKLtXtgI">OSD</td><td data-page-node-id="Wq3lCu0buY5gSVq8Xk0T5W">TCP</td><td data-page-node-id="Laux6nGljKjbQh8XInTvzD">每个 OSD 占若干端口，默认范围</td></tr>
+<tr data-page-node-id="Lpu5ItG0UEjEWWgHE3085w"><td data-page-node-id="ZmTEKAcdTD1BDvYleMrdHi">6800 ~ 7300</td><td data-page-node-id="ONDtDmTie3vvUFFPAUgATs">MDS</td><td data-page-node-id="7WVtFxznBExuZvvEBkEBvZ">TCP</td><td data-page-node-id="Y8eYJEnqRIT1093ugYG1Au">与 OSD 共用范围</td></tr>
+<tr data-page-node-id="GgoCctyODzmTvARD88dAwC"><td data-page-node-id="qNNoKdaQ8FDRktufxyWK2W">6800 ~ 7300</td><td data-page-node-id="fBUY1BNYVVQsPBtjBkAwuW">MGR</td><td data-page-node-id="3SfE7vRrCWzzv2FdfLbuMu">TCP</td><td data-page-node-id="09X3ClCWjDpNjPIdIBVwrr">与 OSD 共用范围</td></tr>
+<tr data-page-node-id="AHuwmywO0sfu3aqrx415gR"><td data-page-node-id="X5nxsa6rDyjO3rS5TEkP8R"><b data-page-node-id="h17BkzvZ69BcZg5h3Be3E5">8443</b></td><td data-page-node-id="4ObHJHRkIBWrh8xEWIzuoD">Dashboard</td><td data-page-node-id="EpIHfQ2x2v9LgzCahqiaUG">TCP/HTTPS</td><td data-page-node-id="sz9p8sYLF6gUnnpkToI20j">MGR dashboard（可改 <code data-page-node-id="2erb5gUyBEzioenglLPOUE">mgr/dashboard/server_port</code>）</td></tr>
+<tr data-page-node-id="CnOb1jURGvGCsgLwcw2rEE"><td data-page-node-id="SUJoRb66YtOaRdYKpujVj4">9283</td><td data-page-node-id="Mpwodm7v1bROMdk9YlAd2g">Prometheus</td><td data-page-node-id="6d3VSIdAbbpDzGKApDUAAL">TCP/HTTP</td><td data-page-node-id="PDPWAxhGc8KfYxHUwHiIWo">MGR prometheus 指标导出</td></tr>
+<tr data-page-node-id="pAMWEiXRGTQ5klEGByFCCm"><td data-page-node-id="GmTH8Jgir4EwZMoCFctP8t"><b data-page-node-id="4kHMv80WWXjOjA1kCEzUcg">7480</b></td><td data-page-node-id="p8hEsJh5gpjN5wTgmxKlnY">RGW</td><td data-page-node-id="7FulIfaYGjUl0dGJZAWuMD">TCP/HTTP</td><td data-page-node-id="NVuuCNqlp2U48TDaHeWllI">对象网关（beast 前端，可改）</td></tr>
+<tr data-page-node-id="HoN7WisUwpIVQpRpJZC2g5"><td data-page-node-id="iiOhTJAW0iK5YiYOEoDTr3">3000</td><td data-page-node-id="bwwwkj53rbNqU1yZCwUXBS">Grafana</td><td data-page-node-id="UAV4dBwcivCIwvfrALARMg">TCP/HTTP</td><td data-page-node-id="URtmjS3wOlW4Q7ZnqadWbt">可选组件</td></tr>
+<tr data-page-node-id="EH3kTXQneECBLQ728CFeSP"><td data-page-node-id="xECfmGeWcJ9tB9rEW6PufL">9100</td><td data-page-node-id="Gvo0qsXd0lmg6AlRpNVDK1">node-exporter</td><td data-page-node-id="rBw4RLWUzUhyPFmMfbKkW6">TCP/HTTP</td><td data-page-node-id="GgALrgMJUiu9AkJy5zXOoJ">可选组件</td></tr>
+</tbody>
+</table>
+
+<h3 data-page-node-id="HsvhNLvuxI8RS0yGcfbQ4B">19.2 重要目录</h3>
+<table data-page-node-id="42r925yWfblSGGUkc7vtyo">
+<thead data-page-node-id="mAEwWT0FREhsEdpOH9TvzA"><tr data-page-node-id="6BKKquXW7P0ZThgqmNtYaD"><th style="width:26%" data-page-node-id="0fwd2ZJ0MXIMK0nG2FqMm1">路径</th><th data-page-node-id="ZtBqxp4ErJcUyaqj28QubQ">用途</th></tr></thead>
+<tbody data-page-node-id="ogkO19C2GyVCX51Hhj9u4V">
+<tr data-page-node-id="n8yjRW9gVjTkqC51DoBQwb"><td data-page-node-id="EX2W1ZVNTpU48YM95HS1mp"><code data-page-node-id="aIO1zrkF82Ep4P8HuNQhFt">/etc/ceph/</code></td><td data-page-node-id="yf67ySKztqcXZ5948E1vqH">配置文件、keyring（<code data-page-node-id="JWreAYJMzDczustZWFq1JT">ceph.conf</code>、<code data-page-node-id="u9lRYsLQd32IFTKfEQ44J3">ceph.client.admin.keyring</code>）</td></tr>
+<tr data-page-node-id="A6SVb7OIyLd29AkWrWlTw1"><td data-page-node-id="To9MDkvzAhnRgHghcGGEXd"><code data-page-node-id="6iIZuumtV64Ztb5vYJqrvF">/var/lib/ceph/mon/ceph-&lt;host&gt;/</code></td><td data-page-node-id="DwGbQ87CeEHuSLb1aK9qGP">MON 数据（含 store.db）</td></tr>
+<tr data-page-node-id="BMFKjw991pJyjBRuJfJjis"><td data-page-node-id="OoDwXQB4QOC03jRZ8BcXnc"><code data-page-node-id="2AKo0D5jdTfv9ojqWWwBcu">/var/lib/ceph/mgr/ceph-&lt;host&gt;/</code></td><td data-page-node-id="vZAGtJDCXyTTHYZ4STAGjp">MGR 数据 + keyring</td></tr>
+<tr data-page-node-id="MmNBxnw8jVUUdKl6LKjiQJ"><td data-page-node-id="hWMxesJo8gOsnDTnBYgmla"><code data-page-node-id="Yfc8g4SXyv1xrPSLnUTsrU">/var/lib/ceph/mds/ceph-&lt;host&gt;/</code></td><td data-page-node-id="eqW38fcC8eQJEMKg008ANf">MDS 数据 + keyring</td></tr>
+<tr data-page-node-id="eT7Ei8JbKO84CpVluxXzuj"><td data-page-node-id="x8vThHThavcNcVEv3ofAVI"><code data-page-node-id="hfpVeHOUgwBIMA7V9svRHS">/var/lib/ceph/osd/ceph-&lt;id&gt;/</code></td><td data-page-node-id="xaqL7QSiOuvDoXzbbxLanU">OSD 数据目录（含 block 软链接、keyring、whoami）</td></tr>
+<tr data-page-node-id="JifUKfh5GBNFTEF8LggZOT"><td data-page-node-id="Zkii0HxI7ASsVv8i1m9V8C"><code data-page-node-id="gKU2XrqxdA2OtYxciUsNO0">/var/lib/ceph/bootstrap-osd/</code></td><td data-page-node-id="OZ9uS6S0NDqyZmABRCVTFt">bootstrap-osd keyring（添加 OSD 时用）</td></tr>
+<tr data-page-node-id="9SEJeaEExgSRUEV4rjACqy"><td data-page-node-id="VP2b0GJD2gNtjp2Wioypvd"><code data-page-node-id="U82GdsjFhE4LIx1swMPB8W">/var/log/ceph/</code></td><td data-page-node-id="dDGhAt4EDGPiebpafzQrFq">所有守护进程日志</td></tr>
+<tr data-page-node-id="4YP4EmtVbb3NyYvNRMkaNI"><td data-page-node-id="YmYJTvGDlTnupMCo1DAv0L"><code data-page-node-id="zlaNFeokGbpeVszUas8k2S">/run/ceph/</code></td><td data-page-node-id="OymurDiFyZbBzsBiWHIbVY">pid、socket 文件</td></tr>
+</tbody>
+</table>
+
+<h3 data-page-node-id="OYEpG3p0B5YCXD90GXHuJv">19.3 keyring（认证实体）说明</h3>
+<table data-page-node-id="OEsrHDKXcDXlZux8d1Ywh9">
+<thead data-page-node-id="HzLbDxifgSAdQwV1RTaGEG"><tr data-page-node-id="4B17xJQEw09W7JDNS6SXFT"><th style="width:26%" data-page-node-id="5aGz4btFRFaFczdyFw6PCA">实体名</th><th style="width:30%" data-page-node-id="Sk7vTFHhHe1Bu9bTePNueX">文件</th><th data-page-node-id="Y94G9u2VfqHgMgb5LnDNA1">用途</th></tr></thead>
+<tbody data-page-node-id="t1iKxKQdJOf7zsAIHiUdWI">
+<tr data-page-node-id="5jZ3b9jVB4dsyIhm2nYh3C"><td data-page-node-id="cVCmOBzhljw36f6r9tkYUb"><code data-page-node-id="KLvLUf9fjyUmgbRHD7q4cN">mon.</code></td><td data-page-node-id="BqpNQuvjt3DBtb3LfzuRyq">内置于 MON 数据库</td><td data-page-node-id="NHhNDME8sbJGVWysibHTci">MON 内部认证</td></tr>
+<tr data-page-node-id="WPqpcHEPPtQHpY193TVKfQ"><td data-page-node-id="YsEpxDyyO9ViRaJ9w4E6Ip"><code data-page-node-id="PwtwNqvGcDWgOdue3R4a5k">client.admin</code></td><td data-page-node-id="AEUDqMENFp6rYewaD3ne8P"><code data-page-node-id="Zu7AeImpHzBwXtrHTSYZAZ">/etc/ceph/ceph.client.admin.keyring</code></td><td data-page-node-id="FSTkYbaqbODqJxZx9bZwan">管理员（<b data-page-node-id="4gLnzcRG3BZQ9JH126JpIZ">不要分发给客户端</b>）</td></tr>
+<tr data-page-node-id="KE7RZ5d02fk3aSZfaUHdKz"><td data-page-node-id="R1JazUVD2fPNSyhXS6a4rz"><code data-page-node-id="PAoKsunoaYufjkalUbp1ki">client.bootstrap-osd</code></td><td data-page-node-id="g4d5SmOW4rvlZseGGGGL3j"><code data-page-node-id="kJyYCD7Ufei716lq77aMgV">/var/lib/ceph/bootstrap-osd/ceph.keyring</code></td><td data-page-node-id="xufTGlEwUYamnyeF2E56Qy">注册新 OSD</td></tr>
+<tr data-page-node-id="oW9E0cZC35r6ajydqf91uo"><td data-page-node-id="w61qt3iX1Iw6G82ymn2ngD"><code data-page-node-id="TpuvgkLxVnwty66Nr7eaqs">client.bootstrap-mds</code></td><td data-page-node-id="Dg3OAHhffLZ6aceKUDd2Cx"><code data-page-node-id="9SWrwKpA4EgZ7Eo9XNH2fZ">/var/lib/ceph/bootstrap-mds/ceph.keyring</code></td><td data-page-node-id="SwCD2bxtHraAyFMzSb8DDG">注册新 MDS</td></tr>
+<tr data-page-node-id="jnEjCVvWUt7RnaryDuOAmI"><td data-page-node-id="ZZvNEGLrY6OJvEenVEki99"><code data-page-node-id="GPTpoiX621rMdZCFBhiKUL">client.bootstrap-rgw</code></td><td data-page-node-id="lWXky9Et354uEkieZMUFxs"><code data-page-node-id="PbIHS7WDuz0fWePplZyWUF">/var/lib/ceph/bootstrap-rgw/ceph.keyring</code></td><td data-page-node-id="j5HIzAVvsmRe88IcGYpFH8">注册新 RGW</td></tr>
+<tr data-page-node-id="Ju0gdxNHn7P3trVfaaKdsA"><td data-page-node-id="B9uOka7IF17mECUl9RoX4H"><code data-page-node-id="FcOXUoCHFr2oCpFgaNgnJI">osd.N</code></td><td data-page-node-id="h6lXfhBhsf4xKMS3teQ1qC"><code data-page-node-id="ZK6BzgKG6fozRCEM61obgK">/var/lib/ceph/osd/ceph-N/keyring</code></td><td data-page-node-id="utcFKZnEKnRDSMGCWQcdMp">OSD 自身（自动创建）</td></tr>
+</tbody>
+</table>
+
+<h3 data-page-node-id="szORSwkxT5Zpt5LWrd6yKY">19.4 systemd 服务命名</h3>
+<pre class="cmd" data-page-node-id="HpzW0YNMFOWw9RhUnj5L4U"><code data-page-node-id="2Dxsn0XDvYchPXEzxxFoXh">systemctl start ceph-mon@&lt;hostname&gt;
+systemctl start ceph-mgr@&lt;hostname&gt;
+systemctl start ceph-mds@&lt;hostname&gt;
+systemctl start ceph-osd@&lt;osd-id&gt;
+systemctl start ceph-radosgw@rgw.&lt;hostname&gt;
+
+<code class="c" data-page-node-id="sygGRKtUyqBpfK2ejO9mPD"># 按 target 批量操作</code>
+systemctl restart ceph-mon.target
+systemctl restart ceph-osd.target
+systemctl restart ceph.target          <code class="c" data-page-node-id="PZslXW2ZBnD0QV7C2ts5m9"># 所有</code>
+
+<code class="c" data-page-node-id="4BwpfYS2fdWEE4U5yFITNO"># 查看状态</code>
+systemctl status ceph-osd@0
+systemctl --failed --type=service | grep ceph
+</code></pre>
+</section>
+
+<section id="ch20" data-page-node-id="ZXMriOoQZ2d5aq5HJAmPUO">
+<h2 data-page-node-id="jM76kp7Is5pQMah8WS3V86"><span class="num" data-page-node-id="zxiGoDF3WixTRO1RKhv52y">A</span>附录：cephadm 快速方案（官方主推）</h2>
+
+<p data-page-node-id="LnQYPNg8FeaLMK8XJXPqGv">如果你不需要完全掌控部署细节，<strong data-page-node-id="o6wPgl4v9HmGFAdezoRFA0">cephadm</strong> 是目前官方推荐的部署方式，基于容器（podman/docker）。下面是极简流程，供对比参考。</p>
+
+<pre class="cmd" data-page-node-id="pQDfQ9CExV9pAkuGCrEt9R"><code class="c" data-page-node-id="vD4WKr3GK6bnk7JAQl4vbf"># ① 所有节点：安装依赖 + 配置容器运行时</code>
+dnf install -y podman lvm2 chrony
+<code class="c" data-page-node-id="KbK3Onqs5SQczrCyzgOV0m"># Ubuntu: apt install -y docker.io lvm2 chrony</code>
+
+<code class="c" data-page-node-id="ctyDawzCmQ6yZ02GvinHVL"># ② 在第一个节点安装 cephadm</code>
+curl --silent --remote-name --location https://download.ceph.com/rpm-squid/el9/noarch/cephadm
+chmod +x cephadm
+./cephadm add-repo --release squid
+./cephadm install
+cephadm --version
+
+<code class="c" data-page-node-id="d3QurViszYjCnC4lEfycZ9"># ③ 引导集群（只执行一次）</code>
+cephadm bootstrap --mon-ip 10.10.10.11 \
+  --cluster-network 192.168.100.0/24 \
+  --allow-fqdn-hostname \
+  --initial-dashboard-user admin \
+  --initial-dashboard-password YourStrongPassword \
+  --dashboard-password-noupdate
+<code class="c" data-page-node-id="23leQ6s7CrlYlyIVaXGc5h"># 完成后会输出 Dashboard 地址 https://ceph-mon1:8443/</code>
+
+<code class="c" data-page-node-id="Ed2lqQvP1WcnjGbhNtwNxm"># ④ 复制 SSH 公钥到其他节点</code>
+ssh-copy-id -f -i /etc/ceph/ceph.pub root@ceph-mon2
+ssh-copy-id -f -i /etc/ceph/ceph.pub root@ceph-mon3
+ssh-copy-id -f -i /etc/ceph/ceph.pub root@ceph-osd1
+<code class="c" data-page-node-id="4qLkYFDAIAjAHUGikHmSMb"># ... 依次对所有节点</code>
+
+<code class="c" data-page-node-id="EETEL97EWxQJRMHWSSYJdC"># ⑤ 把主机加入集群</code>
+ceph orch host add ceph-mon2 10.10.10.12
+ceph orch host add ceph-mon3 10.10.10.13
+ceph orch host add ceph-osd1 10.10.10.21
+ceph orch host add ceph-osd2 10.10.10.22
+<code class="c" data-page-node-id="JyujNHzJtah9m3LrAkJOub"># 或批量：ceph orch host add ceph-osd{3,4} 10.10.10.2{3,4}</code>
+
+<code class="c" data-page-node-id="FEbXzti2a4cReNqAwvpFpC"># 打标签（用于指定守护进程部署位置）</code>
+ceph orch host label add ceph-mon1 mon
+ceph orch host label add ceph-mon2 mon
+ceph orch host label add ceph-mon3 mon
+
+<code class="c" data-page-node-id="0SAowVDF5yV1SfzqDVXkY6"># ⑥ 部署 MON / MGR（cephadm 会自动扩展到 5 个，可用下面命令指定）</code>
+ceph orch apply mon ceph-mon1,ceph-mon2,ceph-mon3
+ceph orch apply mgr ceph-mon1,ceph-mon2
+<code class="c" data-page-node-id="CD3ryghAAJDWVSzWlKASPm"># 或用标签：ceph orch apply mon --placement="label:mon"</code>
+
+<code class="c" data-page-node-id="yzPylH7rGzOBOW7mqJZwtk"># ⑦ 部署 OSD</code>
+ceph orch device ls                        <code class="c" data-page-node-id="DthYI540SPEhp5ZA9awmcC"># 查看可用磁盘</code>
+ceph orch apply osd --all-available-devices   <code class="c" data-page-node-id="O5Cnwnuj2rUowQ8vFxWyzh"># 使用所有空闲盘</code>
+<code class="c" data-page-node-id="WfQXZA3gtnpp7m9rTrLlih"># 指定盘：</code>
+ceph orch daemon add osd ceph-osd1:/dev/sdb
+<code class="c" data-page-node-id="xeoxq6edX5WHcqcYyyhXhY"># 指定 db 设备：</code>
+ceph orch daemon add osd ceph-osd1:data_devices=/dev/sdb,db_devices=/dev/nvme0n1
+
+<code class="c" data-page-node-id="zfu2YVEJwBxktVhx3VNoMF"># ⑧ 部署其他服务</code>
+ceph orch apply mds cephfs --placement="3 ceph-mon1 ceph-mon2 ceph-mon3"
+ceph fs volume create cephfs
+ceph orch apply rgw myrgw --placement="2 ceph-mon1 ceph-mon2" --port=7480
+
+<code class="c" data-page-node-id="LtY8Xurz9gQhSyQ2Vd0yzR"># ⑨ 常用运维</code>
+ceph orch ps                    <code class="c" data-page-node-id="8kR7i1CeH42BCUkaYNaq64"># 查看所有守护进程</code>
+ceph orch ls                    <code class="c" data-page-node-id="ho1t5tZbAzO33B51Ms8Xxn"># 查看服务</code>
+ceph orch host ls
+ceph orch device ls
+ceph orch daemon restart osd.0
+ceph orch daemon add osd ceph-osd1:/dev/sdh   <code class="c" data-page-node-id="lNRrwJNPDXefH9VkK2Kfzm"># 扩容</code>
+ceph orch osd rm 0              <code class="c" data-page-node-id="A3ue2E0wlIIsw6xEubAZ28"># 下线 OSD</code>
+ceph cephadm shell              <code class="c" data-page-node-id="RzQErgvaHVLLIeG8JZ3FOQ"># 进入 ceph 命令行容器</code>
+
+<code class="c" data-page-node-id="PwRIwKZj082aytnIjwFDjz"># ⑩ 升级</code>
+ceph orch upgrade start --ceph-version 19.2.4
+ceph orch upgrade status
+</code></pre>
+
+<table data-page-node-id="BgelyRcsv4UKg6wXx3Tb03">
+<thead data-page-node-id="4vueAjwDl5jmH4oScBUklk"><tr data-page-node-id="iVSwhq6rtXgWJ7K3C5IpRt"><th style="width:20%" data-page-node-id="16ZcaFPBlWL41LBhO8ztRm">对比项</th><th style="width:40%" data-page-node-id="VGajsLuWpojMBOGhtyPZrz">cephadm</th><th data-page-node-id="uPEzAYdD3a2maYxdgWITVC">ceph-ansible / 手动</th></tr></thead>
+<tbody data-page-node-id="t2TndAsJgUMxT1AXrlTQBq">
+<tr data-page-node-id="Jr0QLEi7zgDdG4zkwhScmO"><td data-page-node-id="u5cx73MsmqjJdv9Ojazxzr">部署复杂度</td><td data-page-node-id="MPWh2ifRUvY54kWea5GZOt">低（几条命令）</td><td data-page-node-id="u5GoGpglfnKEEmV2dtLOKG">中~高</td></tr>
+<tr data-page-node-id="dVXF5qCzOAcepf9fqLnu1m"><td data-page-node-id="2TF7jd3UlDCY4kH2PArYmM">可掌控度</td><td data-page-node-id="2RzGMFDNaBR7ctvlfee6sL">中（容器内部不透明）</td><td data-page-node-id="zgPgTNFY6HzmDLGFevv2B9"><b data-page-node-id="F8p2BZddpCCuOvsjamNxxG">高</b>（每个进程、配置文件都可见）</td></tr>
+<tr data-page-node-id="ApzmcKHOxZ3KZ5QT010Sh0"><td data-page-node-id="2gPvH8WPumjt5RDOWRRk2V">排障难度</td><td data-page-node-id="pVYauA1fSZ0WIKDfmVGZrI">需要懂容器/podman</td><td data-page-node-id="7vc4vLvsiiAaGAh8xuaPyH">直接看进程和日志</td></tr>
+<tr data-page-node-id="L0ddVgDJBB5BE2RwtjJTpx"><td data-page-node-id="mYA5DIdu4erSnFrUDcBDEy">升级</td><td data-page-node-id="sffRoijH49hPKi09QHOUxC"><b data-page-node-id="iGtVCAFZ529ngPK8kJRhNz">一条命令，最方便</b></td><td data-page-node-id="lXJMHUCBe0DBpeHM0Hb2DF">需手动滚动升级</td></tr>
+<tr data-page-node-id="pPLOKVulz3ojd2s6brdbhH"><td data-page-node-id="J85UV1F7E0Wsz3LijSFnun">离线环境</td><td data-page-node-id="95F3HdDLoU7DpHMIc3oxHG">麻烦（需要镜像仓库）</td><td data-page-node-id="T7EfWpfLJC43orIJbXwH9h"><b data-page-node-id="igk2haYeLKzUESyapV0poa">简单（本地 rpm 源即可）</b></td></tr>
+<tr data-page-node-id="JPYqvWvhrAWwpsnWdKJIi6"><td data-page-node-id="uoatKXE4vp0zxBHO2XwNMI">与现有 Ansible 体系集成</td><td data-page-node-id="8v32F3Wd8P9W9MQtBvwZCx">一般</td><td data-page-node-id="wxhB1KDjMbxUWAdF2vbgXI"><b data-page-node-id="t2zCvXMAcyeauQszkjhhXf">天然契合</b></td></tr>
+<tr data-page-node-id="Dh9HEKXGqoa8AhDr6KPyVk"><td data-page-node-id="vbMuSeRmjc44GTx6Bi4nqp">学习价值</td><td data-page-node-id="xNAkhQlWDJFG52AGdz66KB">低（屏蔽了细节）</td><td data-page-node-id="Pclmdw7ftDtRHP94OAc2x1"><b data-page-node-id="Hq1KXgZ69yfppTn7i8FLlm">高（能真正理解 Ceph）</b></td></tr>
+</tbody>
+</table>
+
+<div class="note" data-page-node-id="IFkCzDZyRyqBXz8jAl1h4B">
+<b data-page-node-id="4UaJ2bUOmKsybzSQFBzECB">选型建议：</b><br data-page-node-id="LifD4qj6Ms1Pbu5MDod6L4">
+· 新集群、团队熟悉容器、追求升级便利 → <b data-page-node-id="2hHEq4AN3gVGuELeX0cmwB">cephadm</b><br data-page-node-id="elXlZgaYmSaZk0VxCCKSmQ">
+· 已有 Ansible 体系、等保/内网离线环境、需要完全掌控 → <b data-page-node-id="41HXf2pW8phqFpDC78QZkJ">ceph-ansible</b><br data-page-node-id="I0YE5lHTRCzgCquZgW4hJ2">
+· 学习 / 排障 / 小规模特殊环境 → <b data-page-node-id="HPK7RZUUjyFLbDgQSudvIw">手动部署</b>（本文第二部分）
+</div>
+</section>
+
+<div class="footer" data-page-node-id="foXNHpCVCJn9HMcqXIfGv8">
+  <p data-page-node-id="UasAhpq6yhmmEJhLmV3Htv"><b data-page-node-id="K3PWejexqtVlS5T26QlZkE">Ceph 完整部署手册</b> · 完</p>
+  <p data-page-node-id="VM074XocFEc3MbH8iUoGCf">配套文档：《Ceph 原理详解（分布式原理 · 数据均衡 · 存储调优）》</p>
+  <p style="font-size:12px;margin-top:10px" data-page-node-id="39TXQX5qZcpSWf0Nu1upKu">基线版本：Squid 19.2　|　ceph-ansible stable-9.0　|　OS：RHEL 9 系 / Ubuntu 22.04+<br data-page-node-id="s5aLAChhrHocaxtKuOLbQN">
+  实际操作时请以目标环境为准：<code data-page-node-id="ydc0GePWgcsRC20pnbMx6C">/dev/sdX</code> 设备名、网卡名、IP 段请务必替换；执行任何破坏性命令前先确认设备</p>
+</div>
+
+</main>
+</div>
+</body>
+</html>

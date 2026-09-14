@@ -1,0 +1,2188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ceph 原理详解：从寻址到数据均衡 · rensongqi</title>
+<meta name="description" content="五张 Map · CRUSH 寻址 · 强一致写入 · 数据均衡 · BlueStore · EC · 容量规划">
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../feed.xml">
+<style>
+
+:root{
+  --bg:#f5f7fa; --card:#ffffff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+  --accent:#0e7490; --accent-soft:#e0f2f7; --amber:#b45309; --amber-soft:#fef3c7;
+  --green:#15803d; --green-soft:#dcfce7; --red:#b91c1c; --red-soft:#fee2e2;
+  --purple:#6d28d9; --purple-soft:#ede9fe; --code-bg:#f6f8fa; --code-ink:#243b53;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif;
+  font-size:15px;line-height:1.8;}
+.layout{display:flex;max-width:1400px;margin:0 auto;gap:24px;padding:0 16px;}
+/* 侧边目录 */
+.toc{position:sticky;top:0;align-self:flex-start;width:270px;flex:0 0 270px;
+  height:100vh;overflow-y:auto;padding:24px 12px 60px 0;border-right:1px solid var(--line);}
+.toc h4{margin:0 0 12px;font-size:13px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+.toc a{display:block;text-decoration:none;color:#374151;font-size:13.5px;padding:5px 10px;border-radius:6px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.toc a:hover{background:var(--accent-soft);color:var(--accent);}
+.toc a.sub{padding-left:24px;font-size:12.5px;color:var(--muted);}
+.toc .part{margin:14px 0 6px;font-weight:700;color:var(--accent);font-size:12.5px;}
+/* 主体 */
+main{flex:1;min-width:0;padding:24px 0 100px;}
+header.hero{background:linear-gradient(135deg,#0e7490 0%,#155e75 45%,#1e3a5f 100%);
+  color:#fff;border-radius:16px;padding:38px 40px;margin-bottom:28px;}
+header.hero h1{margin:0 0 10px;font-size:30px;letter-spacing:.5px;}
+header.hero p{margin:0;opacity:.9;font-size:15px;}
+header.hero .tags{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px;}
+header.hero .tags span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);
+  padding:3px 12px;border-radius:999px;font-size:12.5px;}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:28px 32px;margin-bottom:22px;}
+h2{font-size:23px;margin:0 0 6px;padding-bottom:12px;border-bottom:2px solid var(--accent-soft);
+  color:#0f172a;scroll-margin-top:20px;}
+h2 .num{display:inline-block;background:var(--accent);color:#fff;font-size:14px;
+  width:30px;height:30px;line-height:30px;text-align:center;border-radius:8px;margin-right:10px;vertical-align:2px;}
+h3{font-size:18px;margin:30px 0 10px;color:#0e7490;border-left:4px solid var(--accent);padding-left:10px;}
+h4{font-size:15.5px;margin:20px 0 8px;color:#334155;}
+p{margin:10px 0;}
+ul,ol{padding-left:22px;margin:10px 0;}
+li{margin:5px 0;}
+code{background:var(--code-bg);color:#b91c1c;padding:1.5px 5px;border-radius:4px;
+  font-family:"JetBrains Mono",Consolas,"Courier New",monospace;font-size:13px;}
+pre{background:var(--code-bg);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:8px;padding:14px 16px;overflow-x:auto;font-size:12.8px;line-height:1.65;color:var(--code-ink);}
+pre code{background:none;color:inherit;padding:0;font-size:12.8px;}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+th{background:#eef2f7;color:#0f172a;text-align:left;padding:9px 12px;border:1px solid var(--line);font-weight:600;}
+td{padding:8px 12px;border:1px solid var(--line);vertical-align:top;}
+tbody tr:nth-child(even){background:#fafbfc;}
+.note,.warn,.good,.tip{border-radius:10px;padding:12px 16px;margin:16px 0;font-size:14px;border-left:4px solid;}
+.note{background:var(--accent-soft);border-color:var(--accent);}
+.warn{background:var(--amber-soft);border-color:var(--amber);}
+.good{background:var(--green-soft);border-color:var(--green);}
+.tip{background:var(--purple-soft);border-color:var(--purple);}
+.note b,.warn b,.good b,.tip b{color:inherit;}
+figure{margin:20px 0;text-align:center;}
+figure svg{max-width:100%;height:auto;}
+figcaption{font-size:13px;color:var(--muted);margin-top:8px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#fcfdfe;}
+.card h5{margin:0 0 6px;font-size:14.5px;color:#0f172a;}
+.card p{margin:0;font-size:13.3px;color:#475569;line-height:1.7;}
+.kv{background:#f8fafc;border:1px dashed var(--line);border-radius:8px;padding:10px 14px;margin:10px 0;font-size:13.3px;}
+.q{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:12px 0;}
+.q .qq{font-weight:600;color:#0e7490;}
+.footer{text-align:center;color:var(--muted);font-size:13px;padding:30px 0;}
+@media(max-width:1080px){.toc{display:none}.layout{padding:0 10px}}
+@media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}section{padding:20px 16px}}
+
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../index.html">首页</a>
+      <a href="../archive.html">归档</a>
+      <a href="../storage.html" class="is-active">存储</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../index.html">首页</a> / <a href="../storage.html">存储</a> / <span>Ceph 原理详解：从寻址到数据均衡</span></div>
+
+<div class="doc-title">
+  <h1>Ceph 原理详解：从寻址到数据均衡</h1>
+  <div class="meta">2026-09-14 · 约 3.2 万字 · 更新于 2026-09-14</div>
+  <div class="doc-tags"><span>#Ceph</span><span>#分布式存储</span><span>#原理</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc">
+  <h4>目录 · Contents</h4>
+  <a href="#ch0">写在前面：怎么读</a>
+  <div class="part">第一部分 · 认知</div>
+  <a href="#ch1">1. Ceph 到底解决什么问题</a>
+  <a href="#ch2">2. 核心组件与各自职责</a>
+  <div class="part">第二部分 · 分布式原理</div>
+  <a href="#ch3">3. 数据寻址三部曲</a>
+  <a href="#ch4">4. CRUSH 算法详解</a>
+  <a href="#ch5">5. 一致性：一次写入之旅</a>
+  <a href="#ch6">6. 自愈：Recovery/Backfill</a>
+  <div class="part">第三部分 · 数据均衡</div>
+  <a href="#ch7">7. 数据均衡原理</a>
+  <a href="#ch8">8. PG 数量规划</a>
+  <div class="part">第四部分 · 存储引擎与编码</div>
+  <a href="#ch9">9. BlueStore 存储引擎</a>
+  <a href="#ch10">10. 副本 vs 纠删码</a>
+  <a href="#ch11">11. 三种存储接口</a>
+  <a href="#ch12">12. 网络设计</a>
+  <div class="part">第五部分 · 调优与运维</div>
+  <a href="#ch13">13. 性能调优全景</a>
+  <a href="#ch14">14. 容量规划与监控</a>
+  <a href="#ch15">15. 故障场景与排障</a>
+  <a href="#ch16">16. 术语速查表</a>
+</nav>
+<main>
+<p class="lead">五张 Map · CRUSH 寻址 · 强一致写入 · 数据均衡 · BlueStore · EC · 容量规划</p>
+<section id="ch0">
+<h2><span class="num">0</span>写在前面：怎么读这份文档</h2>
+<p>Ceph 难学，不是因为它概念多，而是因为它的概念<strong>分层很明显</strong>：底层的 RADOS 是一套完整的分布式对象存储，上层的 RBD / RGW / CephFS 只是三种"客户端"。很多人一上来就看 RBD 怎么用，结果遇到 <code>ceph -s</code> 报 PG 异常就懵了 —— 因为你跳过的是整个地基。</p>
+
+<div class="grid3">
+  <div class="card"><h5>如果你是运维</h5><p>重点读 3、4、5、6、7 章。这五章决定你能不能看懂集群为什么不健康、数据为什么不均衡。</p></div>
+  <div class="card"><h5>如果你是开发/架构</h5><p>重点读 1、3、10、11 章。理解为什么 Ceph 能做到无单点、以及选哪种接口对应你的业务。</p></div>
+  <div class="card"><h5>如果你要做性能调优</h5><p>重点读 9、12、13 章。绝大多数"慢"都是硬件布局和网络问题，不是参数问题。</p></div>
+</div>
+
+<div class="note">
+<b>一条贯穿全文的主线：</b>Ceph 的一切设计，都围绕一个核心矛盾 —— <b>如何在"没有中心节点记录数据在哪"的前提下，让任何人都能算出数据在哪，并且在机器坏了以后自动重新排布。</b>
+理解了 CRUSH（第 4 章）和 PG（第 3、5 章），你就理解了 Ceph 的 80%。
+</div>
+
+<h3>Ceph 一句话定义</h3>
+<p>Ceph 是一个<strong>统一的、分布式的、软件定义存储系统</strong>。它在同一套集群上同时提供三种存储能力：</p>
+<ul>
+  <li><strong>块存储 RBD</strong> —— 像云硬盘一样挂给虚拟机 / 数据库 / Kubernetes PV</li>
+  <li><strong>对象存储 RGW</strong> —— 兼容 S3 / Swift 协议，用于备份、归档、AI 数据集、静态资源</li>
+  <li><strong>文件存储 CephFS</strong> —— POSIX 兼容的共享文件系统，用于 HPC、CI/CD、共享目录</li>
+</ul>
+<p>这三种能力<strong>共用同一个底层存储池</strong>。这是它跟"三套独立存储系统"的本质区别。</p>
+</section>
+
+<section id="ch1">
+<h2><span class="num">1</span>Ceph 到底解决什么问题</h2>
+
+<h3>1.1 传统存储的两个死穴</h3>
+<p>在 Ceph 出现之前，企业存储大致两条路，但都有硬伤：</p>
+
+<table>
+<thead><tr><th style="width:20%">方案</th><th style="width:32%">工作方式</th><th>死穴</th></tr></thead>
+<tbody>
+<tr><td><b>传统 SAN/NAS 阵列</b></td><td>双控制器 + 专用硬盘柜，控制器里跑 RAID，对外暴露 LUN / NFS</td><td><b>纵向扩展天花板</b>：容量和性能受限于那两个控制器；<b>厂商锁定</b>：扩容只能买同品牌盘柜；<b>贵</b>：每 GB 成本高一个数量级</td></tr>
+<tr><td><b>早期分布式文件系统<br>（如 HDFS / GlusterFS / Lustre）</b></td><td>数据节点 + 中心元数据节点（NameNode / MDS）</td><td><b>元数据单点</b>：NameNode 挂了整个集群不可写；<b>元数据瓶颈</b>：海量小文件时元数据节点先被打爆</td></tr>
+</tbody>
+</table>
+
+<p>Ceph 的答案很直接：<strong>把元数据也分布式掉，让"数据在哪"不再需要查表，而是"算"出来。</strong></p>
+
+<figure>
+<svg viewBox="0 0 900 250" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#64748b"/></marker>
+  </defs>
+  <text x="150" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#b91c1c">传统中心化元数据方案</text>
+  <text x="640" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#15803d">Ceph 的 CRUSH 方案</text>
+  <line x1="400" y1="10" x2="400" y2="240" stroke="#cbd5e1" stroke-dasharray="5 4"/>
+
+  <!-- 左：中心化 -->
+  <rect x="90" y="50" width="120" height="44" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.6"/>
+  <text x="150" y="70" text-anchor="middle" font-size="13" font-weight="600" fill="#7f1d1d">NameNode / MDS</text>
+  <text x="150" y="86" text-anchor="middle" font-size="11" fill="#991b1b">"文件 A 在 OSD 7、13、42"</text>
+  <text x="150" y="112" text-anchor="middle" font-size="11.5" fill="#b91c1c">单点 · 瓶颈 · 需持久化表</text>
+  <line x1="150" y1="94" x2="150" y2="130" stroke="#64748b" marker-end="url(#ar)"/>
+  <g>
+    <rect x="20" y="135" width="80" height="34" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+    <text x="60" y="156" text-anchor="middle" font-size="12" fill="#334155">Client 1</text>
+    <rect x="110" y="135" width="80" height="34" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+    <text x="150" y="156" text-anchor="middle" font-size="12" fill="#334155">Client 2</text>
+    <rect x="200" y="135" width="80" height="34" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+    <text x="240" y="156" text-anchor="middle" font-size="12" fill="#334155">Client N</text>
+    <path d="M60 135 L145 94" stroke="#cbd5e1" fill="none"/>
+    <path d="M150 135 L150 94" stroke="#cbd5e1" fill="none"/>
+    <path d="M240 135 L155 94" stroke="#cbd5e1" fill="none"/>
+  </g>
+  <rect x="20" y="190" width="260" height="40" rx="8" fill="#fff" stroke="#cbd5e1" stroke-dasharray="4 3"/>
+  <text x="150" y="207" text-anchor="middle" font-size="12" fill="#475569">每个请求都要先问一次元数据节点</text>
+  <text x="150" y="222" text-anchor="middle" font-size="12" fill="#475569">元数据节点 → 集群规模天花板</text>
+
+  <!-- 右：CRUSH -->
+  <rect x="560" y="50" width="150" height="44" rx="8" fill="#dcfce7" stroke="#15803d" stroke-width="1.6"/>
+  <text x="635" y="70" text-anchor="middle" font-size="13" font-weight="600" fill="#14532d">CRUSH Map + Rule</text>
+  <text x="635" y="86" text-anchor="middle" font-size="11" fill="#166534">拓扑 / 权重 / 故障域</text>
+  <text x="635" y="112" text-anchor="middle" font-size="11.5" fill="#15803d">无中心 · 人人可算 · 极小数据量</text>
+  <line x1="635" y1="94" x2="635" y2="130" stroke="#64748b" marker-end="url(#ar)"/>
+  <g>
+    <rect x="490" y="135" width="95" height="34" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+    <text x="537" y="156" text-anchor="middle" font-size="12" fill="#334155">Client 1</text>
+    <rect x="590" y="135" width="95" height="34" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+    <text x="637" y="156" text-anchor="middle" font-size="12" fill="#334155">Client 2</text>
+    <rect x="690" y="135" width="95" height="34" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+    <text x="737" y="156" text-anchor="middle" font-size="12" fill="#334155">Client N</text>
+    <path d="M537 135 L620 94" stroke="#cbd5e1" fill="none"/>
+    <path d="M637 135 L635 94" stroke="#cbd5e1" fill="none"/>
+    <path d="M737 135 L650 94" stroke="#cbd5e1" fill="none"/>
+    <text x="560" y="128" font-size="10.5" fill="#64748b">拷贝一份 map</text>
+  </g>
+  <rect x="490" y="190" width="295" height="40" rx="8" fill="#fff" stroke="#cbd5e1" stroke-dasharray="4 3"/>
+  <text x="637" y="207" text-anchor="middle" font-size="12" fill="#475569">每个客户端本地算：hash(obj) → PG → OSD</text>
+  <text x="637" y="222" text-anchor="middle" font-size="12" fill="#475569">元数据节点消失 → 集群规模无上限</text>
+</svg>
+<figcaption>图 1-1　中心化元数据 vs CRUSH 计算式寻址。Ceph 干掉了"查表"这个动作。</figcaption>
+</figure>
+
+<h3>1.2 Ceph 的四个设计目标</h3>
+<div class="grid2">
+  <div class="card"><h5>① 无单点故障（No SPOF）</h5><p>MON 用 Paxos 组 quorum（奇数个，通常 3 或 5）；数据多副本或 EC 编码；任何组件都可以有副本。没有"主控制器"这种东西。</p></div>
+  <div class="card"><h5>② 线性可扩展（Scalable）</h5><p>从 3 台到 3000 台用同一套代码。扩容 = 加节点 = 数据自动迁移一部分过去，无需停机、无需手动分配。</p></div>
+  <div class="card"><h5>③ 自愈与自管理（Autonomic）</h5><p>硬盘坏了自动标记 out、自动在其他 OSD 上重建副本、重建完再自动回到均衡。运维要做的只是"把坏盘拔了换新的"。</p></div>
+  <div class="card"><h5>④ 商用硬件 + 开源（Commodity）</h5><p>不依赖专用硬件，普通 x86 服务器 + 万兆网卡 + SATA/SAS/NVMe 即可。软件定义，无厂商锁定。</p></div>
+</div>
+
+<h3>1.3 统一存储架构总览</h3>
+<p>下面这张图是理解全篇的"地图"。请记住：<strong>RADOS 是地基，其余都是建在上面的房子。</strong></p>
+
+<figure>
+<svg viewBox="0 0 900 470" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#0e7490"/></marker>
+  </defs>
+  <!-- 接入层 -->
+  <text x="450" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#6d28d9">接入层 · 三种存储接口</text>
+  <rect x="60" y="40" width="200" height="92" rx="10" fill="#f5f3ff" stroke="#6d28d9" stroke-width="1.6"/>
+  <text x="160" y="64" text-anchor="middle" font-size="15" font-weight="700" fill="#5b21b6">RBD</text>
+  <text x="160" y="82" text-anchor="middle" font-size="12" fill="#4c1d95">块存储 (librbd / krbd)</text>
+  <text x="160" y="100" text-anchor="middle" font-size="11.5" fill="#6d28d9">虚拟机云盘 · DB · K8s PV</text>
+  <text x="160" y="118" text-anchor="middle" font-size="11.5" fill="#6d28d9">精简配置 / 快照 / 克隆</text>
+
+  <rect x="350" y="40" width="200" height="92" rx="10" fill="#f5f3ff" stroke="#6d28d9" stroke-width="1.6"/>
+  <text x="450" y="64" text-anchor="middle" font-size="15" font-weight="700" fill="#5b21b6">RGW</text>
+  <text x="450" y="82" text-anchor="middle" font-size="12" fill="#4c1d95">对象存储 (S3 / Swift)</text>
+  <text x="450" y="100" text-anchor="middle" font-size="11.5" fill="#6d28d9">备份归档 · AI 数据集 · 图床</text>
+  <text x="450" y="118" text-anchor="middle" font-size="11.5" fill="#6d28d9">多站点复制 · 生命周期</text>
+
+  <rect x="640" y="40" width="200" height="92" rx="10" fill="#f5f3ff" stroke="#6d28d9" stroke-width="1.6"/>
+  <text x="740" y="64" text-anchor="middle" font-size="15" font-weight="700" fill="#5b21b6">CephFS</text>
+  <text x="740" y="82" text-anchor="middle" font-size="12" fill="#4c1d95">文件存储 (POSIX)</text>
+  <text x="740" y="100" text-anchor="middle" font-size="11.5" fill="#6d28d9">共享目录 · HPC · NFS 导出</text>
+  <text x="740" y="118" text-anchor="middle" font-size="11.5" fill="#6d28d9">需要独立 MDS  daemon</text>
+
+  <path d="M160 132 L160 160" stroke="#0e7490" stroke-width="1.6" marker-end="url(#a2)"/>
+  <path d="M450 132 L450 160" stroke="#0e7490" stroke-width="1.6" marker-end="url(#a2)"/>
+  <path d="M740 132 L740 160" stroke="#0e7490" stroke-width="1.6" marker-end="url(#a2)"/>
+
+  <!-- 库层 -->
+  <rect x="40" y="163" width="820" height="40" rx="8" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.4"/>
+  <text x="450" y="181" text-anchor="middle" font-size="13" font-weight="600" fill="#0c4a6e">librados  ——  统一的原生对象访问库（所有接口最终都翻译成 RADOS 对象操作）</text>
+  <text x="450" y="196" text-anchor="middle" font-size="11.5" fill="#0e7490">对象 = 名字 + 二进制数据 + 扩展属性(xattr) + 键值 omap</text>
+
+  <path d="M450 203 L450 232" stroke="#0e7490" stroke-width="1.6" marker-end="url(#a2)"/>
+
+  <!-- RADOS -->
+  <rect x="40" y="235" width="820" height="205" rx="12" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+  <text x="450" y="258" text-anchor="middle" font-size="16" font-weight="700" fill="#0f766e">RADOS — Reliable Autonomic Distributed Object Store</text>
+  <text x="450" y="275" text-anchor="middle" font-size="11.5" fill="#115e59">可靠的、自治的、分布式对象存储 —— Ceph 的唯一地基</text>
+
+  <!-- 控制面 -->
+  <text x="200" y="298" text-anchor="middle" font-size="12.5" font-weight="700" fill="#b45309">控制面（Cluster Map 的维护者）</text>
+  <rect x="60" y="306" width="130" height="58" rx="8" fill="#fef3c7" stroke="#b45309" stroke-width="1.4"/>
+  <text x="125" y="326" text-anchor="middle" font-size="13" font-weight="600" fill="#78350f">MON × 3/5</text>
+  <text x="125" y="342" text-anchor="middle" font-size="11" fill="#92400e">Paxos 一致性</text>
+  <text x="125" y="357" text-anchor="middle" font-size="11" fill="#92400e">持有 5 张 Map</text>
+
+  <rect x="210" y="306" width="130" height="58" rx="8" fill="#fef3c7" stroke="#b45309" stroke-width="1.4"/>
+  <text x="275" y="326" text-anchor="middle" font-size="13" font-weight="600" fill="#78350f">MGR × 2</text>
+  <text x="275" y="342" text-anchor="middle" font-size="11" fill="#92400e">采集 / 编排</text>
+  <text x="275" y="357" text-anchor="middle" font-size="11" fill="#92400e">Balancer / Dashboard</text>
+
+  <!-- 数据面 -->
+  <text x="620" y="298" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0c4a6e">数据面（真正存数据的进程）</text>
+  <g>
+    <rect x="430" y="310" width="52" height="44" rx="7" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text x="456" y="330" text-anchor="middle" font-size="11" font-weight="600" fill="#1e3a8a">OSD</text>
+    <text x="456" y="345" text-anchor="middle" font-size="9.5" fill="#1e40af">.0</text>
+    <rect x="492" y="310" width="52" height="44" rx="7" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text x="518" y="330" text-anchor="middle" font-size="11" font-weight="600" fill="#1e3a8a">OSD</text>
+    <text x="518" y="345" text-anchor="middle" font-size="9.5" fill="#1e40af">.1</text>
+    <rect x="554" y="310" width="52" height="44" rx="7" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text x="580" y="330" text-anchor="middle" font-size="11" font-weight="600" fill="#1e3a8a">OSD</text>
+    <text x="580" y="345" text-anchor="middle" font-size="9.5" fill="#1e40af">.2</text>
+    <rect x="616" y="310" width="52" height="44" rx="7" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text x="642" y="330" text-anchor="middle" font-size="11" font-weight="600" fill="#1e3a8a">OSD</text>
+    <text x="642" y="345" text-anchor="middle" font-size="9.5" fill="#1e40af">.3</text>
+    <rect x="678" y="310" width="52" height="44" rx="7" fill="#dbeafe" stroke="#1d4ed8" stroke-dasharray="4 3"/>
+    <text x="704" y="330" text-anchor="middle" font-size="11" font-weight="600" fill="#1e3a8a">OSD</text>
+    <text x="704" y="345" text-anchor="middle" font-size="9.5" fill="#1e40af">…N</text>
+    <rect x="740" y="310" width="52" height="44" rx="7" fill="#dbeafe" stroke="#1d4ed8" stroke-dasharray="4 3"/>
+    <text x="766" y="330" text-anchor="middle" font-size="11" font-weight="600" fill="#1e3a8a">OSD</text>
+    <text x="766" y="345" text-anchor="middle" font-size="9.5" fill="#1e40af">.N</text>
+  </g>
+  <text x="620" y="378" text-anchor="middle" font-size="11.5" fill="#1e40af">一个 OSD 进程 ≈ 一块物理硬盘 / 一个 NVMe 分区</text>
+
+  <!-- MDS -->
+  <rect x="60" y="380" width="280" height="45" rx="8" fill="#ffe4e6" stroke="#be123c" stroke-width="1.4"/>
+  <text x="200" y="400" text-anchor="middle" font-size="13" font-weight="600" fill="#881337">MDS × 1~N（仅 CephFS 需要）</text>
+  <text x="200" y="416" text-anchor="middle" font-size="11" fill="#9f1239">只管目录树/文件名等元数据，不管文件数据本体</text>
+
+  <rect x="430" y="380" width="362" height="45" rx="8" fill="#fff" stroke="#5eead4" stroke-width="1.4"/>
+  <text x="611" y="400" text-anchor="middle" font-size="12.5" fill="#0f766e">每个 OSD 内含 ObjectStore（BlueStore）+ 本地磁盘</text>
+  <text x="611" y="416" text-anchor="middle" font-size="11.5" fill="#115e59">对象元数据放 RocksDB（block.db）· 数据直接落裸设备</text>
+
+  <!-- 底部说明 -->
+  <rect x="40" y="448" width="820" height="34" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="450" y="470" text-anchor="middle" font-size="12" fill="#475569">关键：<tspan fill="#b91c1c">MDS 只服务 CephFS</tspan>；<tspan fill="#b91c1c">RBD 和 RGW 完全不需要 MDS</tspan>，它们自己管理"名字→对象"的映射，因此没有元数据瓶颈</text>
+</svg>
+<figcaption>图 1-2　Ceph 统一存储架构。RADOS 是唯一的存储底座，三种接口共享它。</figcaption>
+</figure>
+
+<div class="tip">
+<b>初学者最常见的误解：</b>"Ceph 是个文件系统。" 不是。<b>CephFS 才是文件系统，而且只是 Ceph 的一个可选模块。</b>Ceph 的本质是<b>对象存储</b>（RADOS），块和文件都是在对象之上"模拟"出来的。这就是为什么 RBD 的快照、克隆那么快 —— 底层本来就没有"文件"这个概念。
+</div>
+</section>
+
+<section id="ch2">
+<h2><span class="num">2</span>核心组件与各自职责</h2>
+
+<h3>2.1 组件速查表</h3>
+<table>
+<thead><tr><th style="width:12%">守护进程</th><th style="width:8%">数量</th><th style="width:38%">职责</th><th>挂了会怎样</th></tr></thead>
+<tbody>
+<tr><td><b>MON</b><br><code>ceph-mon</code></td><td>3 或 5<br>(奇数)</td><td>维护集群的 5 张 Map（MonMap / OSDMap / MDSMap / MGRMap / CRUSH Map）；通过 Paxos 保证这些 Map 在多数派间一致；做身份认证分发</td><td>少于半数存活 → <b>集群停止写入</b>（quorum 丢失）。这正是必须部署奇数个的原因</td></tr>
+<tr><td><b>MGR</b><br><code>ceph-mgr</code></td><td>2<br>(1主1备)</td><td>采集集群状态与性能指标；承载 Dashboard、Prometheus、Balancer、PG autoscaler、iSCSI 等模块；提供编排接口</td><td>主 MGR 挂了备自动接管。<b>但所有 mgr 都挂 → 不阻塞 I/O，只是失去监控/调均衡能力</b>（dashboard、pg_autoscaler 失效）</td></tr>
+<tr><td><b>OSD</b><br><code>ceph-osd</code></td><td>每盘一个</td><td>真正干活的：存储对象数据、响应客户端读写、互相之间做心跳、副本复制、数据恢复/回填、scrub 校验</td><td>单个 OSD down → 该 OSD 上的 PG 降级，触发数据重建。多副本下不影响可用性</td></tr>
+<tr><td><b>MDS</b><br><code>ceph-mds</code></td><td>仅 CephFS<br>1~N</td><td>管理 CephFS 的目录树/文件名/权限等元数据；维护元数据缓存；支持多活（多 MDS 分片目录树）</td><td>不用 CephFS 则完全不需要。用了但全挂 → <b>文件系统不可访问</b>（数据还在，但读不到）</td></tr>
+<tr><td><b>RGW</b><br><code>radosgw</code></td><td>无状态<br>可多副本</td><td>把 S3/Swift HTTP 请求翻译成 RADOS 操作；处理 bucket index、分片上传、多站点复制</td><td>单台挂了由 LB 切走，无状态，随便加</td></tr>
+</tbody>
+</table>
+
+<h3>2.2 五张 Map：Ceph 的"集群真相"</h3>
+<p>Ceph 集群没有数据库，它的"状态"就是 MON 里维护的这几张 Map。理解它们，就理解了 <code>ceph -s</code> 输出的每一行。</p>
+<table>
+<thead><tr><th style="width:18%">Map</th><th style="width:34%">内容</th><th>为什么重要</th></tr></thead>
+<tbody>
+<tr><td><b>MonMap</b></td><td>所有 MON 的地址和 fsid</td><td>客户端靠它找到集群入口</td></tr>
+<tr><td><b>OSDMap</b></td><td>所有 OSD 的 IP、状态(up/down/in/out)、权重；所有 Pool 的 PG 数量；<b>所有 PG → OSD 的映射</b>；epoch 版本号</td><td><b>最重要的 Map。</b>客户端拿着它就能自己算出数据在哪，不用来问 MON</td></tr>
+<tr><td><b>CRUSH Map</b></td><td>集群拓扑树（root/rack/host/osd 层级）、每个 OSD 的 weight、CRUSH rule</td><td>决定"算"的规则。改拓扑、改权重、扩缩容全靠它</td></tr>
+<tr><td><b>MDSMap</b></td><td>MDS 的状态与元数据池信息</td><td>CephFS 专用</td></tr>
+<tr><td><b>MGRMap</b></td><td>MGR 的 active/standby 状态</td><td>决定 dashboard、balancer 在哪跑</td></tr>
+</tbody>
+</table>
+
+<div class="note">
+<b>epoch —— Ceph 的"版本号"。</b>每次集群拓扑发生任何变化（OSD 上线、下线、权重调整、PG 迁移完成），OSDMap 就会生成一个新版本，叫 <b>epoch</b>（单调递增的整数）。客户端和 OSD 之间通信时会交换各自的 epoch，谁落后了谁就去 MON 拉增量。这就是 Ceph 实现<b>最终一致的集群视图</b>的方式 —— 注意，Ceph 不要求所有人瞬间看到同一张图，只要求在数据路径上达成一致即可。
+</div>
+
+<h3>2.3 MON 的 Paxos 与 quorum</h3>
+<p>MON 为什么要奇数个？因为 MON 之间用 <strong>Paxos</strong> 算法对 Map 的每一次修改达成共识，而 Paxos 要求<strong>多数派（quorum）</strong>。</p>
+<div class="kv">
+3 个 MON：需要 2 个存活 → 可容忍 1 台故障<br>
+5 个 MON：需要 3 个存活 → 可容忍 2 台故障<br>
+<b>4 个 MON：需要 3 个存活 → 也只能容忍 1 台故障</b>，所以偶数个是浪费，永远用奇数。
+</div>
+<div class="warn">
+<b>生产建议：</b>小规模集群 3 个 MON 足够；超过 50 个 OSD 或者跨机柜部署，建议 5 个 MON（放在不同机柜/故障域）。<b>不要把 MON 和 OSD 混部在同一台重负载机器上</b>——MON 对延迟敏感，OSD 重建时的 I/O 风暴会拖垮 MON，进而导致集群"假死"。
+</div>
+</section>
+
+<section id="ch3">
+<h2><span class="num">3</span>数据寻址三部曲：File → Object → PG → OSD</h2>
+
+<p>这是全篇<strong>最重要的一章</strong>。Ceph 为什么能"算"出数据在哪？因为寻址是纯计算，没有任何查表。</p>
+
+<h3>3.1 第一步：File → Object（切条带）</h3>
+<p>一个 1GB 的文件不会作为一个整体存。Ceph 会把它切成若干<strong>对象（Object）</strong>：对象名 = <code>镜像名或 inode 号 + 序号</code>，默认对象大小 4MB（RBD 可通过 <code>--object-size</code> 调整）。</p>
+<pre><code># RBD 镜像 "vm-disk-01" 的一个文件，切成 4MB 对象后：
+rbd_data.1a3f2b8c4567.0000000000000000   ← 第 0 个对象（offset 0 ~ 4MB）
+rbd_data.1a3f2b8c4567.0000000000000001   ← 第 1 个对象（offset 4MB ~ 8MB）
+...
+rbd_data.1a3f2b8c4567.00000000000000ff   ← 第 255 个对象（1GB / 4MB = 256 个）</code></pre>
+<div class="tip"><b>为什么要切？</b>① 并行：256 个对象散落在几百块盘上，一次大文件读写变成几百个并发小 I/O，吞吐直接叠加；② 均衡：小粒度才可能均匀；③ 恢复粒度可控：坏盘后重传的是一个个 4MB 对象，而不是整个 1GB 文件。</div>
+
+<h3>3.2 第二步：Object → PG（为什么要引入 PG）</h3>
+<p>如果直接把几千万个 Object 映射到几千个 OSD 上，会有两个灾难：</p>
+<ul>
+  <li><b>元数据爆炸</b>：OSDMap 要记录"每个对象在哪"，几千万条记录根本存不下、也同步不动；</li>
+  <li><b>无法做一致性</b>：每个对象独立管理副本状态，几千万个状态机无法维护。</li>
+</ul>
+<p>Ceph 的解法是引入中间层 <strong>PG（Placement Group，归置组）</strong>：Object 先<strong>哈希</strong>到 PG，PG 再通过 CRUSH 映射到 OSD。<strong>PG 是 Ceph 的一致性单元、迁移单元、均衡单元。</strong></p>
+
+<pre><code># 计算方式（概念，非真实代码）
+hash(object_name)  →  得到一个 32 位整数
+pg_id = hash(object_name) & (pg_num - 1)     # 按 pg_num 取模
+# 加上 pool 前缀，形成最终的 PG 标识：
+pgid  = "{pool_id}.{pg_id}"                   # 例如  2.1f</code></pre>
+
+<div class="note">
+<b>PG 的本质：</b>PG 是"一组对象的集合"，也是"一组 OSD 的集合"的中间桥梁。<br>
+· 对上（对象）：所有 hash 到同一个 PG 的对象，<b>一定</b>存放在同一组 OSD 上。<br>
+· 对下（OSD）：一个 PG 会被 CRUSH 分配到 N 个 OSD（N = 副本数 或 k+m）。<br>
+所以 Ceph 只需要维护 <b>PG 数量级</b>（几千~几万）的状态，而不是对象数量级（几十亿）。这就是 PG 存在的意义 —— <b>把规模降下来</b>。
+</div>
+
+<h3>3.3 第三步：PG → OSD（CRUSH）</h3>
+<p>最后一步由 CRUSH 完成：输入 <code>(pgid, crush_rule, cluster_map)</code>，输出一组 OSD 列表。这一章先知道结论，第 4 章展开算法。</p>
+
+<h3>3.4 完整寻址图</h3>
+<figure>
+<svg viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a3" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto"><path d="M0,0 L0,6.5 L9,3.2 z" fill="#0e7490"/></marker>
+  </defs>
+  <!-- Step 0 -->
+  <rect x="20" y="30" width="150" height="70" rx="9" fill="#fef3c7" stroke="#b45309" stroke-width="1.6"/>
+  <text x="95" y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#78350f">文件 / LUN / Bucket</text>
+  <text x="95" y="70" text-anchor="middle" font-size="11.5" fill="#92400e">vm-disk-01 (10 GB)</text>
+  <text x="95" y="88" text-anchor="middle" font-size="11" fill="#92400e">app.log / s3://bucket/a.jpg</text>
+
+  <path d="M170 65 L232 65" stroke="#0e7490" stroke-width="2" marker-end="url(#a3)"/>
+  <text x="201" y="55" text-anchor="middle" font-size="10.5" fill="#0e7490">①</text>
+  <text x="201" y="82" text-anchor="middle" font-size="10.5" fill="#0e7490">切条带</text>
+
+  <!-- Step 1 -->
+  <rect x="240" y="20" width="180" height="100" rx="9" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.6"/>
+  <text x="330" y="42" text-anchor="middle" font-size="13" font-weight="700" fill="#0c4a6e">Object（默认 4MB）</text>
+  <text x="330" y="60" text-anchor="middle" font-size="10.5" fill="#0e7490">rbd_data.1a3f.00000000</text>
+  <text x="330" y="75" text-anchor="middle" font-size="10.5" fill="#0e7490">rbd_data.1a3f.00000001</text>
+  <text x="330" y="90" text-anchor="middle" font-size="10.5" fill="#0e7490">rbd_data.1a3f.00000002</text>
+  <text x="330" y="105" text-anchor="middle" font-size="10.5" fill="#0e7490">… 共 2560 个对象</text>
+
+  <path d="M420 70 L482 70" stroke="#0e7490" stroke-width="2" marker-end="url(#a3)"/>
+  <text x="451" y="60" text-anchor="middle" font-size="10.5" fill="#0e7490">②</text>
+  <text x="451" y="88" text-anchor="middle" font-size="10.5" fill="#0e7490">hash</text>
+  <text x="451" y="101" text-anchor="middle" font-size="10.5" fill="#0e7490">+取模</text>
+
+  <!-- Step 2 -->
+  <rect x="490" y="20" width="160" height="100" rx="9" fill="#ede9fe" stroke="#6d28d9" stroke-width="1.6"/>
+  <text x="570" y="42" text-anchor="middle" font-size="13" font-weight="700" fill="#5b21b6">PG 归置组</text>
+  <text x="570" y="62" text-anchor="middle" font-size="10.5" fill="#6d28d9">pgid = pool_id.pg_id</text>
+  <text x="570" y="80" text-anchor="middle" font-size="11" fill="#4c1d95">2.0   2.1   2.2  …</text>
+  <text x="570" y="97" text-anchor="middle" font-size="10.5" fill="#6d28d9">对象 1a3f.00000000</text>
+  <text x="570" y="112" text-anchor="middle" font-size="10.5" fill="#6d28d9">→ 落到 PG 2.1f</text>
+
+  <path d="M650 70 L712 70" stroke="#0e7490" stroke-width="2" marker-end="url(#a3)"/>
+  <text x="681" y="60" text-anchor="middle" font-size="10.5" fill="#0e7490">③</text>
+  <text x="681" y="88" text-anchor="middle" font-size="10.5" fill="#0e7490">CRUSH</text>
+
+  <!-- Step 3 -->
+  <rect x="720" y="20" width="160" height="100" rx="9" fill="#dcfce7" stroke="#15803d" stroke-width="1.6"/>
+  <text x="800" y="42" text-anchor="middle" font-size="13" font-weight="700" fill="#14532d">OSD 列表</text>
+  <text x="800" y="64" text-anchor="middle" font-size="12" fill="#166534">[ 3, 17, 42 ]</text>
+  <text x="800" y="82" text-anchor="middle" font-size="10.5" fill="#166534">3 = Primary（主副本）</text>
+  <text x="800" y="96" text-anchor="middle" font-size="10.5" fill="#166534">17, 42 = Replica</text>
+  <text x="800" y="112" text-anchor="middle" font-size="10.5" fill="#166534">3 副本 / 跨 host</text>
+
+  <!-- 底部：输入说明 -->
+  <rect x="20" y="150" width="860" height="52" rx="9" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="450" y="170" text-anchor="middle" font-size="12.5" fill="#334155">整个计算在<b>客户端本地</b>完成，只需要 3 个输入：</text>
+  <text x="450" y="190" text-anchor="middle" font-size="12" fill="#0e7490">① 对象的名字　② 集群的 CRUSH Map（拓扑+权重，从 MON 拿一次即可缓存）　③ 池的 CRUSH rule 与副本数</text>
+
+  <!-- 命令示例 -->
+  <rect x="20" y="220" width="860" height="160" rx="9" fill="#1e293b"/>
+  <text x="40" y="244" font-size="12.5" fill="#7dd3fc" font-family="monospace"># 实战：查看一个对象到底存在哪几台机器的哪几块盘上</text>
+  <text x="40" y="266" font-size="12.5" fill="#e2e8f0" font-family="monospace">$ ceph osd map rbd rbd_data.1a3f2b8c4567.0000000000000000</text>
+  <text x="40" y="288" font-size="12.5" fill="#86efac" font-family="monospace">osdmap e1143 pool 'rbd' (2) object 'rbd_data.1a3f...' -&gt; pg 2.31f9c4a1 (2.1f)</text>
+  <text x="40" y="306" font-size="12.5" fill="#86efac" font-family="monospace">        -&gt; up [3,17,42] acting [3,17,42]</text>
+  <text x="40" y="332" font-size="12" fill="#94a3b8" font-family="monospace">#        ↑epoch   ↑pool   ↑对象名                    ↑PG ID     ↑PG 所在 OSD 集合</text>
+  <text x="40" y="352" font-size="12" fill="#fbbf24" font-family="monospace"># up    = 当前实际提供服务的 OSD 集合（Up Set）</text>
+  <text x="40" y="370" font-size="12" fill="#fbbf24" font-family="monospace"># acting = 被授权持有该 PG 数据的 OSD 集合（Acting Set）—— 正常情况两者相同</text>
+</svg>
+<figcaption>图 3-1　Ceph 寻址三部曲。三个步骤全是纯计算，没有一次网络查询。</figcaption>
+</figure>
+
+<div class="good">
+<b>这就是 Ceph 可扩展的秘密。</b>客户端不依赖任何中心节点做寻址。加机器 → CRUSH Map 变大一点（几 MB）→ 客户端拉一次新 Map → 继续本地计算。<b>MON 不参与数据路径</b>，所以哪怕集群有 5000 个 OSD、10 万个客户端，MON 的负载也不会线性增长。
+</div>
+
+<h3>3.5 up set 与 acting set 的区别</h3>
+<p>这两个集合在正常状态下相同，但在数据迁移期间会分叉 —— 这是理解 PG 状态的关键：</p>
+<ul>
+  <li><b>Acting Set</b>：CRUSH 算出来的、<strong>应该</strong>持有这个 PG 的 OSD 列表（权威答案）。</li>
+  <li><b>Up Set</b>：当前<strong>实际</strong>在提供服务的 OSD 列表。当 acting 中的某个 OSD 还没完成数据回填时，Ceph 会临时保留老 OSD 在 up set 里继续服务，直到新 OSD 追上数据。</li>
+</ul>
+</section>
+
+<section id="ch4">
+<h2><span class="num">4</span>CRUSH 算法详解</h2>
+
+<p>CRUSH = <strong>C</strong>ontrolled <strong>R</strong>eplication <strong>U</strong>nder <strong>S</strong>calable <strong>H</strong>ashing（可控的、可扩展的、基于哈希的复制）。它解决三件事：</p>
+<div class="grid3">
+  <div class="card"><h5>① 数据放哪</h5><p>输入 PG 编号，输出 N 个 OSD。</p></div>
+  <div class="card"><h5>② 遵守故障域</h5><p>3 副本必须落在 3 个不同主机/机柜/机房，不能全挤在一台机器上。</p></div>
+  <div class="card"><h5>③ 变化时影响最小</h5><p>加一块盘，只有约 (新增容量/总容量) 比例的数据需要搬迁，而不是全量重排。</p></div>
+</div>
+
+<h3>4.1 CRUSH Map：一棵描述机房拓扑的树</h3>
+<p>CRUSH Map 的核心是一棵<strong>层级树</strong>。叶子是 OSD（真实设备），中间节点是 bucket（逻辑容器）。</p>
+
+<figure>
+<svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg">
+  <style>.bx{fill:#fff;stroke:#94a3b8;stroke-width:1.3;rx:6}.lb{font-size:11.5px;fill:#1e293b;text-anchor:middle}.ty{font-size:9.5px;fill:#94a3b8;text-anchor:middle}</style>
+  <!-- root -->
+  <rect class="bx" x="380" y="14" width="140" height="40" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.8"/>
+  <text class="lb" x="450" y="32" font-weight="700" fill="#0c4a6e">root default</text>
+  <text class="ty" x="450" y="47">type: root</text>
+
+  <line x1="450" y1="54" x2="450" y2="70" stroke="#94a3b8"/>
+  <line x1="180" y1="70" x2="720" y2="70" stroke="#94a3b8"/>
+  <line x1="180" y1="70" x2="180" y2="86" stroke="#94a3b8"/>
+  <line x1="450" y1="70" x2="450" y2="86" stroke="#94a3b8"/>
+  <line x1="720" y1="70" x2="720" y2="86" stroke="#94a3b8"/>
+
+  <!-- racks -->
+  <rect class="bx" x="100" y="86" width="160" height="38" fill="#fef3c7" stroke="#b45309"/>
+  <text class="lb" x="180" y="103" font-weight="600" fill="#78350f">rack rack-01</text>
+  <text class="ty" x="180" y="117">type: rack</text>
+
+  <rect class="bx" x="370" y="86" width="160" height="38" fill="#fef3c7" stroke="#b45309"/>
+  <text class="lb" x="450" y="103" font-weight="600" fill="#78350f">rack rack-02</text>
+  <text class="ty" x="450" y="117">type: rack</text>
+
+  <rect class="bx" x="640" y="86" width="160" height="38" fill="#fef3c7" stroke="#b45309"/>
+  <text class="lb" x="720" y="103" font-weight="600" fill="#78350f">rack rack-03</text>
+  <text class="ty" x="720" y="117">type: rack</text>
+
+  <line x1="180" y1="124" x2="180" y2="140" stroke="#94a3b8"/>
+  <line x1="450" y1="124" x2="450" y2="140" stroke="#94a3b8"/>
+  <line x1="720" y1="124" x2="720" y2="140" stroke="#94a3b8"/>
+
+  <!-- hosts -->
+  <g>
+    <rect class="bx" x="30" y="140" width="138" height="34" fill="#f1f5f9"/>
+    <text class="lb" x="99" y="161">host node-01</text>
+    <rect class="bx" x="192" y="140" width="138" height="34" fill="#f1f5f9"/>
+    <text class="lb" x="261" y="161">host node-02</text>
+
+    <rect class="bx" x="300" y="140" width="138" height="34" fill="#f1f5f9"/>
+    <text class="lb" x="369" y="161">host node-03</text>
+    <rect class="bx" x="462" y="140" width="138" height="34" fill="#f1f5f9"/>
+    <text class="lb" x="531" y="161">host node-04</text>
+
+    <rect class="bx" x="570" y="140" width="138" height="34" fill="#f1f5f9"/>
+    <text class="lb" x="639" y="161">host node-05</text>
+    <rect class="bx" x="732" y="140" width="138" height="34" fill="#f1f5f9"/>
+    <text class="lb" x="801" y="161">host node-06</text>
+  </g>
+
+  <line x1="99" y1="174" x2="99" y2="190" stroke="#94a3b8"/>
+  <line x1="261" y1="174" x2="261" y2="190" stroke="#94a3b8"/>
+  <line x1="639" y1="174" x2="639" y2="190" stroke="#94a3b8"/>
+
+  <!-- osds -->
+  <g>
+    <rect class="bx" x="20" y="192" width="44" height="32" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text class="lb" x="42" y="212" fill="#1e3a8a">osd.0</text>
+    <rect class="bx" x="70" y="192" width="44" height="32" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text class="lb" x="92" y="212" fill="#1e3a8a">osd.1</text>
+    <rect class="bx" x="120" y="192" width="44" height="32" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text class="lb" x="142" y="212" fill="#1e3a8a">osd.2</text>
+
+    <rect class="bx" x="182" y="192" width="44" height="32" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text class="lb" x="204" y="212" fill="#1e3a8a">osd.3</text>
+    <rect class="bx" x="232" y="192" width="44" height="32" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text class="lb" x="254" y="212" fill="#1e3a8a">osd.4</text>
+    <rect class="bx" x="282" y="192" width="44" height="32" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text class="lb" x="304" y="212" fill="#1e3a8a">osd.5</text>
+
+    <rect class="bx" x="560" y="192" width="44" height="32" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text class="lb" x="582" y="212" fill="#1e3a8a">osd.12</text>
+    <rect class="bx" x="610" y="192" width="44" height="32" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text class="lb" x="632" y="212" fill="#1e3a8a">osd.13</text>
+    <rect class="bx" x="660" y="192" width="44" height="32" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text class="lb" x="682" y="212" fill="#1e3a8a">osd.14</text>
+  </g>
+  <text class="lb" x="440" y="212" font-size="11" fill="#94a3b8">… node-03/04/06 的 OSD 省略 …</text>
+
+  <!-- 权重说明 -->
+  <rect x="20" y="246" width="420" height="80" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="36" y="268" font-size="12.5" font-weight="700" fill="#0e7490">weight（权重）= 设备的相对容量</text>
+  <text x="36" y="287" font-size="11.5" fill="#475569">· 单位：以 1TB ≈ 1.0 为惯例（也可用其他基准）</text>
+  <text x="36" y="304" font-size="11.5" fill="#475569">· 4TB 盘 → weight = 4.0；800GB 盘 → weight = 0.8</text>
+  <text x="36" y="321" font-size="11.5" fill="#475569">· 父 bucket 权重 = 所有子项权重之和（自动累加）</text>
+
+  <!-- rule 说明 -->
+  <rect x="460" y="246" width="420" height="80" rx="8" fill="#f0fdfa" stroke="#5eead4"/>
+  <text x="476" y="268" font-size="12.5" font-weight="700" fill="#0f766e">failure domain（故障域）决定了"副本怎么散"</text>
+  <text x="476" y="287" font-size="11.5" fill="#115e59">· <tspan font-weight="600">host</tspan>：3 副本必须在 3 台不同机器（默认，最常用）</text>
+  <text x="476" y="304" font-size="11.5" fill="#115e59">· <tspan font-weight="600">rack</tspan>：3 副本必须在 3 个不同机柜（大集群推荐）</text>
+  <text x="476" y="321" font-size="11.5" fill="#115e59">· <tspan font-weight="600">osd</tspan>：只保证不同盘 —— 单机测试用，生产<b>绝不要用</b></text>
+</svg>
+<figcaption>图 4-1　CRUSH 层级树。root → rack → host → osd，每一层都可以作为故障域。</figcaption>
+</figure>
+
+<h3>4.2 选择算法：straw2（抽签）</h3>
+<p>CRUSH 在每一层选子节点时，用的是 <strong>straw2 算法</strong>。思想极其朴素但效果很好：</p>
+<ol>
+  <li>对每个候选 OSD，用 <code>hash(pg_id, osd_id, 尝试次数r)</code> 生成一个 <strong>0~1 之间的随机数</strong>；</li>
+  <li>把这个随机数按 OSD 权重做缩放：<code>抽签长度 = 随机数 ^ (1 / weight)</code>，权重越大抽签越长；</li>
+  <li>选"抽签最长"的那个 OSD。</li>
+</ol>
+<div class="note">
+<b>straw2 的两个关键性质：</b><br>
+① <b>权重成比例</b>：weight=4 的盘理论上拿到的数据量是 weight=1 的盘的 4 倍。<br>
+② <b>变动影响最小</b>：某个 OSD 的权重变化，<b>只会影响它自己那份数据</b>，其他 OSD 之间的抽签结果完全不受影响（这是相对于老 straw 算法的改进）。所以加一块盘，只会有约 (新盘容量/总容量) 比例的数据迁移过来 —— <b>这就是 Ceph 能做到"平滑扩容"的数学基础</b>。
+</div>
+
+<h3>4.3 CRUSH Rule：把策略写进集群</h3>
+<p>Rule 定义了"怎么选、选几个、按什么故障域避让"。看一个真实的 rule：</p>
+<pre><code># 查看当前集群的 CRUSH rule
+$ ceph osd crush rule dump replicated_rule
+
+{
+  "rule_id": 0,
+  "rule_name": "replicated_rule",
+  "type": 1,                       # 1 = 副本型, 3 = 纠删码型
+  "steps": [
+    { "op": "take",     "item": -1, "item_name": "default" },   # 从 root=default 开始
+    { "op": "chooseleaf_firstn", "num": 0, "type": "host" },    # 选 3 个不同的 host 下的叶子(osd)
+    { "op": "emit" }
+  ]
+}</code></pre>
+<p>"chooseleaf_firstn, num=0, type=host" 的意思是：<strong>选 N 个（N=池的副本数）不同 host 下的 OSD</strong>。如果某个 host 已经被选过，就跳过重抽，这就是故障域的实现方式。</p>
+
+<div class="tip">
+<b>实战：为 SSD 和 HDD 建立两套 rule（分级存储）</b>
+<pre style="margin-top:8px"># 1. 按设备类型自动分类（需要 OSD 上报 device_class）
+$ ceph osd crush class ls
+["hdd", "nvme", "ssd"]
+
+# 2. 创建只使用 SSD 的 rule
+$ ceph osd crush rule create-replicated ssd_rule default host ssd
+
+# 3. 创建只使用 HDD 的 rule，且故障域是机柜
+$ ceph osd crush rule create-replicated hdd_rack_rule default rack hdd
+
+# 4. 给池指定 rule
+$ ceph osd pool set my-fast-pool crush_rule ssd_rule</pre>
+</div>
+
+<h3>4.4 三种"权重"，别搞混</h3>
+<table>
+<thead><tr><th style="width:22%">名称</th><th style="width:22%">设置命令</th><th style="width:26%">作用域</th><th>什么时候用</th></tr></thead>
+<tbody>
+<tr><td><b>crush weight</b></td><td><code>ceph osd crush reweight osd.N &lt;w&gt;</code></td><td>CRUSH Map 里该 OSD 的容量权重</td><td>新盘加入 / 换更大或更小的盘 / 想改变长期容量占比</td></tr>
+<tr><td><b>reweight</b></td><td><code>ceph osd reweight osd.N &lt;0~1&gt;</code></td><td>在 CRUSH 结果之上再打的一个"乘数"（0=完全不用，1=100%使用）</td><td><b>临时微调</b>：把某块偏满的盘数据往外赶一点，不动 CRUSH Map 结构</td></tr>
+<tr><td><b>upmap 条目</b></td><td><code>ceph osd pg-upmap &lt;pgid&gt; &lt;new_osd_list&gt;</code></td><td>针对<b>单个 PG</b> 显式覆盖 CRUSH 的结果</td><td><b>精细均衡</b>：balancer 的默认模式，一次只动一个 PG，迁移量极小</td></tr>
+</tbody>
+</table>
+<div class="warn">
+<b>另一个容易踩的坑：primary-affinity。</b><code>ceph osd primary-affinity osd.N 0.8</code> 不影响数据分布，只影响"当主副本的概率"。主副本要处理客户端读写的转发，所以某些性能差的 OSD 可以调低它，让它少当 primary。默认 1.0。
+</div>
+
+<h3>4.5 CRUSH vs 一致性哈希</h3>
+<table>
+<thead><tr><th style="width:24%">维度</th><th style="width:38%">一致性哈希环</th><th>CRUSH</th></tr></thead>
+<tbody>
+<tr><td>拓扑感知</td><td>基本没有（靠虚拟节点 hack）</td><td><b>原生支持</b>：机房/机柜/主机/盘 任意层级</td></tr>
+<tr><td>权重</td><td>靠虚拟节点数量近似，不精确</td><td><b>原生支持</b>，任意浮点权重，成比例分配</td></tr>
+<tr><td>故障域约束</td><td>做不到</td><td><b>核心能力</b>：chooseleaf + type</td></tr>
+<tr><td>Map 大小</td><td>元数据随节点线性增长</td><td>极小（几千 OSD 的 CRUSH Map 只有几 MB）</td></tr>
+<tr><td>可控性</td><td>随机</td><td>可 rule 化、可手动覆盖（upmap）</td></tr>
+</tbody>
+</table>
+</section>
+<section id="ch5">
+<h2><span class="num">5</span>一致性：一次写入的完整旅程</h2>
+
+<p>本章回答三个问题：Ceph 是强一致还是最终一致？写操作到底走了几跳？机器坏了以后数据怎么保证不丢？</p>
+
+<h3>5.1 结论先行</h3>
+<div class="good">
+<b>Ceph 是强一致的（CP 系统）。</b>对同一个对象的写入，只有在<b>所有副本都持久化成功</b>后，才向客户端返回 ack。因此任何一次成功的写，之后的读一定能读到。<br>
+代价是：写入延迟 = 最慢那个副本的延迟（不是平均，是最慢）。这也是为什么调优时特别关注"长尾延迟"和网络 P99。
+</div>
+
+<h3>5.2 PG 是一致性单元</h3>
+<p>每个 PG 有自己的一套状态机，包含：</p>
+<ul>
+  <li><b>Acting Set</b>：当前持有该 PG 的 OSD 列表，第一个是 Primary。</li>
+  <li><b>PGLog</b>：这个 PG 最近的操作日志（默认保留 3000 条，<code>osd_pg_log_dups_tracked</code> 等参数可调）。<strong>它是故障恢复时判断"哪些对象不一致"的依据</strong>，避免了全量扫描。</li>
+  <li><b>last_update / last_complete</b>：已提交的最大版本、已完全同步的最大版本。</li>
+  <li><b>Peering 状态</b>：PG 是否完成了副本间的协商。</li>
+</ul>
+
+<h3>5.3 Primary 的职责</h3>
+<p>客户端<strong>永远只和 Primary OSD 通信</strong>（读和写都是）。Primary 负责：</p>
+<ul>
+  <li>把写请求<strong>串行化</strong>（同一个对象的并发写在 Primary 上排队，保证顺序）；</li>
+  <li>把写请求<strong>扇出</strong>给所有 Replica；</li>
+  <li>等所有副本 ack 后再回复客户端；</li>
+  <li>维护 PGLog，驱动恢复流程。</li>
+</ul>
+
+<h3>5.4 副本池写入时序图</h3>
+<figure>
+<svg viewBox="0 0 900 430" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a4" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#0e7490"/></marker>
+    <marker id="a4r" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#b45309"/></marker>
+  </defs>
+  <!-- 参与者 -->
+  <rect x="20" y="20" width="110" height="40" rx="8" fill="#f5f3ff" stroke="#6d28d9" stroke-width="1.6"/>
+  <text x="75" y="45" text-anchor="middle" font-size="13" font-weight="600" fill="#5b21b6">Client</text>
+  <rect x="230" y="20" width="130" height="40" rx="8" fill="#dcfce7" stroke="#15803d" stroke-width="1.8"/>
+  <text x="295" y="45" text-anchor="middle" font-size="13" font-weight="700" fill="#14532d">OSD.3 (Primary)</text>
+  <rect x="460" y="20" width="120" height="40" rx="8" fill="#dbeafe" stroke="#1d4ed8"/>
+  <text x="520" y="45" text-anchor="middle" font-size="13" font-weight="600" fill="#1e3a8a">OSD.17 (Rep)</text>
+  <rect x="680" y="20" width="120" height="40" rx="8" fill="#dbeafe" stroke="#1d4ed8"/>
+  <text x="740" y="45" text-anchor="middle" font-size="13" font-weight="600" fill="#1e3a8a">OSD.42 (Rep)</text>
+
+  <!-- 生命线 -->
+  <line x1="75" y1="60" x2="75" y2="400" stroke="#cbd5e1" stroke-dasharray="4 4"/>
+  <line x1="295" y1="60" x2="295" y2="400" stroke="#cbd5e1" stroke-dasharray="4 4"/>
+  <line x1="520" y1="60" x2="520" y2="400" stroke="#cbd5e1" stroke-dasharray="4 4"/>
+  <line x1="740" y1="60" x2="740" y2="400" stroke="#cbd5e1" stroke-dasharray="4 4"/>
+
+  <!-- 步骤 1 -->
+  <line x1="75" y1="90" x2="295" y2="90" stroke="#0e7490" stroke-width="1.8" marker-end="url(#a4)"/>
+  <text x="185" y="85" text-anchor="middle" font-size="11.5" fill="#0e7490">① WRITE obj, offset, data</text>
+  <text x="185" y="104" text-anchor="middle" font-size="10.5" fill="#64748b">客户端本地 CRUSH 算出 primary=osd.3</text>
+
+  <!-- 步骤2 -->
+  <line x1="295" y1="125" x2="520" y2="125" stroke="#0e7490" stroke-width="1.8" marker-end="url(#a4)"/>
+  <line x1="295" y1="145" x2="740" y2="145" stroke="#0e7490" stroke-width="1.8" marker-end="url(#a4)"/>
+  <text x="520" y="120" text-anchor="middle" font-size="11.5" fill="#0e7490">② 并行扇出：写副本（携带 pg_log entry）</text>
+  <text x="520" y="162" text-anchor="middle" font-size="10.5" fill="#64748b">Primary 分配版本号 version=e1144，写本地 PGLog 与数据</text>
+
+  <!-- 步骤3 落盘 -->
+  <rect x="440" y="175" width="160" height="30" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="520" y="195" text-anchor="middle" font-size="11" fill="#334155">③ 各副本：写 Journal → 落 BlueStore</text>
+  <rect x="655" y="175" width="170" height="30" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="740" y="195" text-anchor="middle" font-size="11" fill="#334155">③ 同上（各自独立落盘）</text>
+  <rect x="215" y="175" width="185" height="30" rx="6" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="307" y="195" text-anchor="middle" font-size="11" fill="#334155">③ Primary 自己也要落盘</text>
+
+  <!-- 步骤4 ack -->
+  <line x1="520" y1="225" x2="295" y2="225" stroke="#b45309" stroke-width="1.8" marker-end="url(#a4r)"/>
+  <line x1="740" y1="245" x2="295" y2="245" stroke="#b45309" stroke-width="1.8" marker-end="url(#a4r)"/>
+  <text x="520" y="220" text-anchor="middle" font-size="11.5" fill="#b45309">④ ack（副本已持久化）</text>
+
+  <!-- 步骤5 回复客户端 -->
+  <rect x="215" y="262" width="185" height="28" rx="6" fill="#dcfce7" stroke="#15803d"/>
+  <text x="307" y="280" text-anchor="middle" font-size="11" fill="#14532d">⑤ 全部 ack 收齐 → commit</text>
+  <line x1="295" y1="305" x2="75" y2="305" stroke="#15803d" stroke-width="2.2" marker-end="url(#a4)"/>
+  <text x="185" y="300" text-anchor="middle" font-size="11.5" font-weight="600" fill="#15803d">⑥ ack 客户端：写入成功</text>
+  <text x="185" y="322" text-anchor="middle" font-size="10.5" fill="#64748b">此刻起，任何一个副本挂掉，数据都不会丢</text>
+
+  <!-- 说明框 -->
+  <rect x="20" y="340" width="860" height="76" rx="9" fill="#fff7ed" stroke="#fb923c"/>
+  <text x="40" y="362" font-size="12.5" font-weight="700" fill="#9a3412">关键点拆解</text>
+  <text x="40" y="381" font-size="11.8" fill="#7c2d12">· <b>写入延迟 = max(所有副本)</b>，不是平均。所以一块慢盘会拖慢所有落到它上面 PG 的写 —— 这就是 <tspan font-family="monospace">ceph osd perf</tspan> 存在的意义。</text>
+  <text x="40" y="398" font-size="11.8" fill="#7c2d12">· <b>没有"两阶段提交"</b>：Ceph 靠 PGLog + 版本号在故障后补齐，而不是每次写都做 2PC，这是性能考虑。</text>
+  <text x="40" y="415" font-size="11.8" fill="#7c2d12">· <b>读永远走 Primary</b>（可配置 <tspan font-family="monospace">--primary-affinity</tspan> 或 read-from-replica 例外），因此读到的一定是最新数据 —— 强一致的来源。</text>
+</svg>
+<figcaption>图 5-1　三副本池的写入时序。6 个步骤，1 次 RTT 扇出，强一致。</figcaption>
+</figure>
+
+<h3>5.5 EC（纠删码）池的写入有什么不同</h3>
+<p>副本池每个副本存<strong>完整数据</strong>；EC 池每个分片存<strong>编码后的数据块或校验块</strong>。写入时：</p>
+<ul>
+  <li>Primary 需要<strong>先收齐完整的写请求数据</strong>（如果是部分写，需要先读出旧数据块和校验块重新编码，这就是 EC 小 I/O 慢的原因）；</li>
+  <li>编码后切成 k 个数据块 + m 个校验块，发给 k+m 个 OSD；</li>
+  <li>只需 <strong>k 个分片 ack</strong> 即可返回（不需要等 m 个校验块，因为它们可由数据块重算）。</li>
+</ul>
+
+<h3>5.6 心跳与故障检测</h3>
+<p>OSD 之间互相<strong>直连心跳</strong>（不经过 MON），这是 Ceph 故障检测的基础：</p>
+<table>
+<thead><tr><th style="width:26%">机制</th><th style="width:26%">默认参数</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>OSD 间心跳（前后邻居）</td><td>间隔 6s，超时 20s</td><td>每个 OSD 只跟 CRUSH 图里"相邻"的少数 OSD 心跳，避免 O(n²) 风暴</td></tr>
+<tr><td>OSD 间心跳（同 PG 伙伴）</td><td>间隔 6s，超时 20s</td><td>跟共享 PG 的 OSD 心跳</td></tr>
+<tr><td>OSD → MON 上报</td><td>每 5s（<code>osd_mon_report_interval_max</code>）</td><td>汇报自己的状态和同伴的 down 判定</td></tr>
+<tr><td>MON 确认 down</td><td><code>mon_osd_down_out_interval = 600s</code></td><td>OSD 被标记 down 后，<b>默认 10 分钟</b>才自动标记 out 并触发数据重建</td></tr>
+</tbody>
+</table>
+
+<div class="warn">
+<b>为什么默认 10 分钟才 out？</b>因为换一块盘、重启一台机器通常几分钟内完成。如果 down 30 秒就开始大规模重建，一次简单的重启就会引发 PB 级数据搬迁，这是灾难。<br>
+<b>生产建议：</b>不要随意调小这个参数。临时停机维护前，改用 <code>ceph osd set noout</code> 显式禁止 out，维护完再 <code>unset noout</code>。
+</div>
+
+<h3>5.7 集群状态标志（flags）</h3>
+<p>这些是运维最常用的"集群开关"，务必记住：</p>
+<pre><code>ceph osd set noout        # 禁止 OSD 自动 out（计划内维护必做）
+ceph osd unset noout      # 恢复
+ceph osd set nobackfill   # 禁止回填（只允许 recovery）
+ceph osd set norebalance  # 禁止再平衡（允许回填）
+ceph osd set norecover    # 禁止所有恢复
+ceph osd set noscrub      # 禁止 scrub（业务高峰前可用）
+ceph osd set nodeep-scrub # 禁止 deep scrub
+ceph osd set full         # 集群容量满时自动设置，禁止写入（危险！）
+
+# 查看当前设置了哪些 flag
+ceph osd dump | grep flags</code></pre>
+</section>
+
+<section id="ch6">
+<h2><span class="num">6</span>自愈：Recovery 与 Backfill</h2>
+
+<p>数据怕的不是"坏"，而是"坏了没人管"。Ceph 的自愈分两种机制，很多人搞混，这里彻底讲清。</p>
+
+<h3>6.1 Recovery vs Backfill：本质区别</h3>
+<table>
+<thead><tr><th style="width:18%">机制</th><th style="width:26%">适用场景</th><th style="width:26%">怎么找出缺失数据</th><th>代价</th></tr></thead>
+<tbody>
+<tr><td><b>Recovery</b><br>（恢复）</td><td>OSD 短暂离线后又回来了，只缺"离线期间新增/修改的少量对象"</td><td><b>查 PGLog</b>：对比各副本的 PGLog，精确定位到具体哪几个对象版本落后，只传这些对象</td><td><b>极小</b>。秒级~分钟级完成，几乎不影响业务</td></tr>
+<tr><td><b>Backfill</b><br>（回填）</td><td>新 OSD 加入、OSD 被 out 后数据迁走、PG 数量调整 —— 需要<b>全量</b>搬一个 PG 的数据</td><td><b>扫描整个 PG 的对象列表</b>，把缺失对象逐个传过去</td><td><b>大</b>。会占用大量网络和磁盘 I/O，必须限速</td></tr>
+</tbody>
+</table>
+
+<div class="note">
+<b>一句话记忆：</b>Recovery 是"补作业"（只补缺的那几页），Backfill 是"抄整本书"。<br>
+<b>触发条件：</b>Ceph 会先尝试 recovery；如果某个 OSD 缺失的数据太多、PGLog 已经覆盖不到（日志被截断），或者这个 OSD 根本就是全新的，就升级为 backfill。
+</div>
+
+<h3>6.2 PG 状态机与数据迁移流程</h3>
+<figure>
+<svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="a5" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto"><path d="M0,0 L0,6.5 L9,3.2 z" fill="#475569"/></marker></defs>
+  <text x="450" y="24" text-anchor="middle" font-size="14" font-weight="700" fill="#0e7490">一次"OSD 宕机 → 数据重建 → 回归均衡"的完整状态流转</text>
+
+  <rect x="20" y="50" width="130" height="52" rx="9" fill="#dcfce7" stroke="#15803d" stroke-width="1.6"/>
+  <text x="85" y="70" text-anchor="middle" font-size="12.5" font-weight="700" fill="#14532d">active+clean</text>
+  <text x="85" y="88" text-anchor="middle" font-size="10.5" fill="#166534">健康：3 副本齐全</text>
+
+  <path d="M150 76 L200 76" stroke="#475569" stroke-width="1.8" marker-end="url(#a5)"/>
+  <text x="175" y="66" text-anchor="middle" font-size="10" fill="#b91c1c">OSD.42</text>
+  <text x="175" y="94" text-anchor="middle" font-size="10" fill="#b91c1c">宕机</text>
+
+  <rect x="200" y="50" width="130" height="52" rx="9" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.6"/>
+  <text x="265" y="70" text-anchor="middle" font-size="12.5" font-weight="700" fill="#991b1b">active+degraded</text>
+  <text x="265" y="88" text-anchor="middle" font-size="10.5" fill="#b91c1c">降级：只剩 2 副本</text>
+
+  <path d="M330 76 L380 76" stroke="#475569" stroke-width="1.8" marker-end="url(#a5)"/>
+  <text x="355" y="66" text-anchor="middle" font-size="10" fill="#92400e">600s</text>
+  <text x="355" y="94" text-anchor="middle" font-size="10" fill="#92400e">后 out</text>
+
+  <rect x="380" y="50" width="150" height="52" rx="9" fill="#fef3c7" stroke="#b45309" stroke-width="1.6"/>
+  <text x="455" y="70" text-anchor="middle" font-size="12.5" font-weight="700" fill="#78350f">active+remapped</text>
+  <text x="455" y="88" text-anchor="middle" font-size="10.5" fill="#92400e">CRUSH 选出新 OSD.7</text>
+
+  <path d="M530 76 L580 76" stroke="#475569" stroke-width="1.8" marker-end="url(#a5)"/>
+
+  <rect x="580" y="50" width="150" height="52" rx="9" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.6"/>
+  <text x="655" y="70" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0c4a6e">backfilling /</text>
+  <text x="655" y="88" text-anchor="middle" font-size="10.5" fill="#0e7490">recovering</text>
+
+  <path d="M730 76 L780 76" stroke="#475569" stroke-width="1.8" marker-end="url(#a5)"/>
+  <rect x="780" y="50" width="100" height="52" rx="9" fill="#dcfce7" stroke="#15803d" stroke-width="1.6"/>
+  <text x="830" y="70" text-anchor="middle" font-size="12.5" font-weight="700" fill="#14532d">active</text>
+  <text x="830" y="88" text-anchor="middle" font-size="10.5" fill="#166534">+clean</text>
+
+  <!-- 循环箭头 -->
+  <path d="M830 102 L830 120 L85 120 L85 102" stroke="#15803d" stroke-width="1.5" fill="none" marker-end="url(#a5)" stroke-dasharray="5 3"/>
+  <text x="457" y="135" text-anchor="middle" font-size="10.5" fill="#15803d">重建完成后，老 OSD 从 acting set 移除，PG 回到健康</text>
+
+  <!-- 迁移示意图 -->
+  <text x="450" y="168" text-anchor="middle" font-size="13" font-weight="700" fill="#6d28d9">数据是怎么"搬"过去的？</text>
+
+  <rect x="70" y="185" width="200" height="90" rx="9" fill="#fafbfc" stroke="#cbd5e1"/>
+  <text x="170" y="205" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">迁移前</text>
+  <rect x="90" y="215" width="36" height="34" rx="5" fill="#dbeafe" stroke="#1d4ed8"/><text x="108" y="236" text-anchor="middle" font-size="10" fill="#1e3a8a">3</text>
+  <rect x="132" y="215" width="36" height="34" rx="5" fill="#dbeafe" stroke="#1d4ed8"/><text x="150" y="236" text-anchor="middle" font-size="10" fill="#1e3a8a">17</text>
+  <rect x="174" y="215" width="36" height="34" rx="5" fill="#fee2e2" stroke="#b91c1c"/><text x="192" y="236" text-anchor="middle" font-size="10" fill="#991b1b">42✗</text>
+  <text x="170" y="266" text-anchor="middle" font-size="10.5" fill="#64748b">PG 2.1f 的 3 副本，42 挂了</text>
+
+  <line x1="280" y1="230" x2="330" y2="230" stroke="#6d28d9" stroke-width="2" marker-end="url(#a5)"/>
+  <text x="305" y="222" text-anchor="middle" font-size="10" fill="#6d28d9">搬迁</text>
+
+  <rect x="340" y="185" width="200" height="90" rx="9" fill="#fafbfc" stroke="#cbd5e1"/>
+  <text x="440" y="205" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">迁移中（backfill）</text>
+  <rect x="360" y="215" width="36" height="34" rx="5" fill="#dbeafe" stroke="#1d4ed8"/><text x="378" y="236" text-anchor="middle" font-size="10" fill="#1e3a8a">3</text>
+  <rect x="402" y="215" width="36" height="34" rx="5" fill="#dbeafe" stroke="#1d4ed8"/><text x="420" y="236" text-anchor="middle" font-size="10" fill="#1e3a8a">17</text>
+  <rect x="444" y="215" width="36" height="34" rx="5" fill="#fef3c7" stroke="#b45309" stroke-dasharray="3 2"/><text x="462" y="236" text-anchor="middle" font-size="10" fill="#78350f">7…</text>
+  <text x="440" y="266" text-anchor="middle" font-size="10.5" fill="#64748b">OSD.7 正在接收，未就绪</text>
+
+  <line x1="550" y1="230" x2="600" y2="230" stroke="#6d28d9" stroke-width="2" marker-end="url(#a5)"/>
+  <text x="575" y="222" text-anchor="middle" font-size="10" fill="#6d28d9">完成</text>
+
+  <rect x="610" y="185" width="200" height="90" rx="9" fill="#fafbfc" stroke="#cbd5e1"/>
+  <text x="710" y="205" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">迁移后</text>
+  <rect x="630" y="215" width="36" height="34" rx="5" fill="#dbeafe" stroke="#1d4ed8"/><text x="648" y="236" text-anchor="middle" font-size="10" fill="#1e3a8a">3</text>
+  <rect x="672" y="215" width="36" height="34" rx="5" fill="#dbeafe" stroke="#1d4ed8"/><text x="690" y="236" text-anchor="middle" font-size="10" fill="#1e3a8a">17</text>
+  <rect x="714" y="215" width="36" height="34" rx="5" fill="#dcfce7" stroke="#15803d"/><text x="732" y="236" text-anchor="middle" font-size="10" fill="#14532d">7✓</text>
+  <text x="710" y="266" text-anchor="middle" font-size="10.5" fill="#64748b">新 3 副本，且满足 host 故障域</text>
+</svg>
+<figcaption>图 6-1　PG 状态流转与数据搬迁。理解这张图，你就能看懂 <code>ceph -s</code> 里所有异常状态。</figcaption>
+</figure>
+
+<h3>6.3 常见 PG 状态速查</h3>
+<table>
+<thead><tr><th style="width:28%">状态</th><th style="width:36%">含义</th><th>怎么办</th></tr></thead>
+<tbody>
+<tr><td><code>active+clean</code></td><td>健康，副本齐全且都已就绪</td><td>无需处理 ✅</td></tr>
+<tr><td><code>active+degraded</code></td><td>副本数不足（有 OSD 挂了）</td><td>等 OSD 恢复；或被标记 out 后自动重建</td></tr>
+<tr><td><code>active+remapped</code></td><td>PG 的 acting set 变了，正在等待/进行数据迁移</td><td>正常现象，等回填完成</td></tr>
+<tr><td><code>active+undersized</code></td><td>副本数不足且<b>无法</b>找到新的 OSD 安置（如故障域不够）</td><td><b>危险</b>：检查是否 rack/host 数 &lt; 副本数</td></tr>
+<tr><td><code>peering</code></td><td>副本间正在协商状态（比对 PGLog）</td><td>短暂正常；长时间卡住需查 OSD 日志和网络</td></tr>
+<tr><td><code>stale</code></td><td>PG 的主副本失联且 MON 无法判定（通常 OSD 全挂或网络分区）</td><td><b>严重</b>：查 MON/OSD 存活</td></tr>
+<tr><td><code>incomplete</code></td><td>Peering 失败：找不到足够完整的副本（PGLog 对不上且没有完整副本）</td><td><b>严重</b>：可能需要 <code>ceph pg repair</code> 或恢复 OSD</td></tr>
+<tr><td><code>inconsistent</code></td><td>scrub 发现副本数据不一致（静默损坏/位翻转）</td><td>执行 <code>ceph pg repair &lt;pgid&gt;</code>（先 deep-scrub 定位）</td></tr>
+<tr><td><code>down</code></td><td>PG 的 acting set 全部离线</td><td><b>数据不可访问</b>，查 OSD</td></tr>
+<tr><td><code>backfill_toofull</code></td><td>目标 OSD 空间不足，回填被拒绝</td><td>加盘 / 清理 / 调 <code>backfillfull_ratio</code></td></tr>
+</tbody>
+</table>
+
+<h3>6.4 Scrub：对抗"静默数据损坏"</h3>
+<p>副本机制能防"盘坏"，但防不了<strong>位翻转（bit rot）</strong>—— 磁盘某个扇区悄悄坏了，但盘不报错，读到的是错误数据。Scrub 就是为此设计的：</p>
+<table>
+<thead><tr><th style="width:20%">类型</th><th style="width:24%">默认周期</th><th style="width:26%">校验内容</th><th>代价</th></tr></thead>
+<tbody>
+<tr><td><b>light scrub</b></td><td>每天（<code>osd_scrub_min_interval=86400</code>）</td><td>只比对<b>对象元数据</b>（大小、属性），不读数据内容</td><td>低</td></tr>
+<tr><td><b>deep scrub</b></td><td>每周（<code>osd_deep_scrub_interval=604800</code>）</td><td>读全部数据并比对 <b>checksum</b></td><td>高（会显著消耗 I/O），务必限速并避开业务高峰</td></tr>
+</tbody>
+</table>
+<pre><code># 关键限速参数（生产必设）
+ceph config set osd osd_scrub_begin_hour 2        # 只在凌晨 2 点后开始
+ceph config set osd osd_scrub_end_hour 6          # 早上 6 点前结束
+ceph config set osd osd_scrub_load_threshold 2.0  # 负载高于此值不 scrub
+ceph config set osd osd_scrub_sleep 0.1           # 每个 chunk 之间 sleep，降低影响
+ceph config set osd osd_max_scrubs 1              # 每个 OSD 同时最多 1 个 scrub
+
+# 手动触发
+ceph pg scrub 2.1f
+ceph pg deep-scrub 2.1f
+ceph pg repair 2.1f      # 发现不一致后修复（以 primary 为准）</code></pre>
+</section>
+<section id="ch7">
+<h2><span class="num">7</span>数据均衡原理</h2>
+
+<p>"为什么我的 12 块盘，有的用了 92%，有的才 71%？" —— 这是 Ceph 运维最高频的问题。本章把这个问题的<strong>根因、度量方法、治理手段</strong>讲透。</p>
+
+<h3>7.1 先分清两个"均衡"</h3>
+<div class="grid2">
+  <div class="card" style="border-left:4px solid #0e7490">
+    <h5>PG 均衡（PG Count Balance）</h5>
+    <p>每个 OSD 上承载的 PG <strong>数量</strong>是否接近。CRUSH 是按 PG 分布的，它只保证"PG 数按权重成比例"，<strong>不知道每个 PG 里存了多少数据</strong>。</p>
+    <p style="margin-top:6px;color:#0e7490"><b>→ balancer 默认优化的就是这个。</b></p>
+  </div>
+  <div class="card" style="border-left:4px solid #b45309">
+    <h5>容量均衡（Utilization Balance）</h5>
+    <p>每个 OSD 的<strong>实际使用率</strong>（%）是否接近。这是你真正关心的 —— 集群能不能继续写，取决于<b>最满的那块盘</b>。</p>
+    <p style="margin-top:6px;color:#b45309"><b>→ 需要 reweight-by-utilization 或 balancer 的 upmap-read 模式。</b></p>
+  </div>
+</div>
+
+<div class="warn">
+<b>核心矛盾：</b>CRUSH 保证的是"PG 数量均衡"，而 PG 里的数据量是<b>随机且不均</b>的 —— 有的 PG 对应的 RBD 镜像被写满了，有的 PG 只存了几个小对象。<br>
+结果就是：<b>PG 数完全均衡，但使用率可以差 20 个百分点以上。</b>这是设计使然，不是 bug。
+</div>
+
+<h3>7.2 为什么会不均衡：四个根因</h3>
+<table>
+<thead><tr><th style="width:8%">#</th><th style="width:26%">根因</th><th style="width:32%">机理</th><th>典型表现</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><b>哈希本身的随机性</b></td><td>PG → OSD 是随机抽样，不是精确装箱。OSD 数量越少，相对方差越大（统计学上 std ≈ √(总PG数/OSD数)）</td><td>OSD 少于 50 个时，PG 数天然能差 ±10%</td></tr>
+<tr><td>2</td><td><b>PG 里的数据量不均</b></td><td>PG 是等值单位，但每个 PG 实际存储量不同</td><td>PG 数很齐，但 %USED 差很多 —— <b>最常见</b></td></tr>
+<tr><td>3</td><td><b>weight 与真实容量不符</b></td><td>把 8TB 盘和 4TB 盘设成同样 weight=1.0，那 8TB 盘会先满</td><td>混用不同容量盘时必现</td></tr>
+<tr><td>4</td><td><b>扩缩容的历史残留</b></td><td>新加的 OSD 只接收"CRUSH 新算出来落在它头上"的 PG，老 OSD 不会主动把存量数据分给它</td><td>扩容后新盘很空、老盘很满，长期不收敛</td></tr>
+</tbody>
+</table>
+
+<h3>7.3 不均衡长什么样（配图）</h3>
+<figure>
+<svg viewBox="0 0 900 330" xmlns="http://www.w3.org/2000/svg">
+  <text x="220" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="#b91c1c">扩容后未均衡（危险）</text>
+  <text x="680" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="#15803d">治理后均衡（健康）</text>
+  <line x1="450" y1="8" x2="450" y2="322" stroke="#cbd5e1" stroke-dasharray="5 4"/>
+
+  <!-- 左：不均衡柱状 -->
+  <g>
+    <text x="42" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.0</text>
+    <text x="82" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.1</text>
+    <text x="122" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.2</text>
+    <text x="162" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.3</text>
+    <text x="202" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.4</text>
+    <text x="242" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.5</text>
+    <text x="282" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.6</text>
+    <text x="322" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.7</text>
+    <text x="362" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.8</text>
+    <text x="402" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.9</text>
+
+    <!-- 老盘 8 块，很满 -->
+    <rect x="32" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <rect x="32" y="60" width="20" height="222" rx="3" fill="#ef4444"/><text x="42" y="292" font-size="9.5" fill="#b91c1c" text-anchor="middle">92%</text>
+    <rect x="72" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <rect x="72" y="60" width="20" height="216" rx="3" fill="#f87171"/><text x="82" y="292" font-size="9.5" fill="#b91c1c" text-anchor="middle">90%</text>
+    <rect x="112" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <rect x="112" y="60" width="20" height="230" rx="3" fill="#ef4444"/><text x="122" y="292" font-size="9.5" fill="#b91c1c" text-anchor="middle">95%</text>
+    <rect x="152" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <rect x="152" y="60" width="20" height="211" rx="3" fill="#fb923c"/><text x="162" y="292" font-size="9.5" fill="#c2410c" text-anchor="middle">88%</text>
+    <rect x="192" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <rect x="192" y="60" width="20" height="218" rx="3" fill="#f87171"/><text x="202" y="292" font-size="9.5" fill="#b91c1c" text-anchor="middle">90%</text>
+    <rect x="232" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <rect x="232" y="60" width="20" height="225" rx="3" fill="#ef4444"/><text x="242" y="292" font-size="9.5" fill="#b91c1c" text-anchor="middle">93%</text>
+    <rect x="272" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <rect x="272" y="60" width="20" height="204" rx="3" fill="#fb923c"/><text x="282" y="292" font-size="9.5" fill="#c2410c" text-anchor="middle">85%</text>
+    <rect x="312" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <rect x="312" y="60" width="20" height="216" rx="3" fill="#f87171"/><text x="322" y="292" font-size="9.5" fill="#b91c1c" text-anchor="middle">90%</text>
+    <!-- 新加的 2 块盘，很空 -->
+    <rect x="352" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <rect x="352" y="60" width="20" height="58" rx="3" fill="#86efac"/><text x="362" y="292" font-size="9.5" fill="#15803d" text-anchor="middle">24%</text>
+    <rect x="392" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <rect x="392" y="60" width="20" height="53" rx="3" fill="#86efac"/><text x="402" y="292" font-size="9.5" fill="#15803d" text-anchor="middle">22%</text>
+    <!-- 阈值线 -->
+    <line x1="24" y1="122" x2="420" y2="122" stroke="#b91c1c" stroke-width="1.6" stroke-dasharray="6 3"/>
+    <text x="424" y="119" font-size="10.5" fill="#b91c1c">nearfull 85%</text>
+    <line x1="24" y1="84" x2="420" y2="84" stroke="#7f1d1d" stroke-width="1.6" stroke-dasharray="6 3"/>
+    <text x="424" y="81" font-size="10.5" fill="#7f1d1d">full 95% → 集群只读</text>
+    <rect x="24" y="310" width="396" height="0" fill="none"/>
+    <text x="220" y="322" text-anchor="middle" font-size="11.5" fill="#b91c1c">最满 95% → 触发 full → <tspan font-weight="700">整个集群禁止写入</tspan></text>
+  </g>
+
+  <!-- 右：均衡 -->
+  <g>
+    <text x="472" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.0</text>
+    <text x="512" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.1</text>
+    <text x="552" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.2</text>
+    <text x="592" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.3</text>
+    <text x="632" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.4</text>
+    <text x="672" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.5</text>
+    <text x="712" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.6</text>
+    <text x="752" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.7</text>
+    <text x="792" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.8</text>
+    <text x="832" y="46" font-size="10" fill="#64748b" text-anchor="middle">osd.9</text>
+
+    <rect x="462" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/><rect x="462" y="60" width="20" height="172" rx="3" fill="#4ade80"/>
+    <rect x="502" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/><rect x="502" y="60" width="20" height="168" rx="3" fill="#4ade80"/>
+    <rect x="542" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/><rect x="542" y="60" width="20" height="176" rx="3" fill="#4ade80"/>
+    <rect x="582" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/><rect x="582" y="60" width="20" height="170" rx="3" fill="#4ade80"/>
+    <rect x="622" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/><rect x="622" y="60" width="20" height="174" rx="3" fill="#4ade80"/>
+    <rect x="662" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/><rect x="662" y="60" width="20" height="167" rx="3" fill="#4ade80"/>
+    <rect x="702" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/><rect x="702" y="60" width="20" height="173" rx="3" fill="#4ade80"/>
+    <rect x="742" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/><rect x="742" y="60" width="20" height="169" rx="3" fill="#4ade80"/>
+    <rect x="782" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/><rect x="782" y="60" width="20" height="171" rx="3" fill="#4ade80"/>
+    <rect x="822" y="60" width="20" height="240" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/><rect x="822" y="60" width="20" height="175" rx="3" fill="#4ade80"/>
+    <text x="472" y="292" font-size="9.5" fill="#15803d" text-anchor="middle">71%</text>
+    <text x="512" y="292" font-size="9.5" fill="#15803d" text-anchor="middle">70%</text>
+    <text x="552" y="292" font-size="9.5" fill="#15803d" text-anchor="middle">73%</text>
+    <text x="592" y="292" font-size="9.5" fill="#15803d" text-anchor="middle">71%</text>
+    <text x="632" y="292" font-size="9.5" fill="#15803d" text-anchor="middle">72%</text>
+    <text x="672" y="292" font-size="9.5" fill="#15803d" text-anchor="middle">69%</text>
+    <text x="712" y="292" font-size="9.5" fill="#15803d" text-anchor="middle">72%</text>
+    <text x="752" y="292" font-size="9.5" fill="#15803d" text-anchor="middle">70%</text>
+    <text x="792" y="292" font-size="9.5" fill="#15803d" text-anchor="middle">71%</text>
+    <text x="832" y="292" font-size="9.5" fill="#15803d" text-anchor="middle">73%</text>
+    <line x1="454" y1="122" x2="850" y2="122" stroke="#fb923c" stroke-width="1.6" stroke-dasharray="6 3"/>
+    <text x="700" y="115" text-anchor="middle" font-size="10.5" fill="#c2410c">均值 71%，极差仅 4 个百分点</text>
+    <text x="655" y="322" text-anchor="middle" font-size="11.5" fill="#15803d">所有盘同步逼近满载，<tspan font-weight="700">容量利用率最大化</tspan></text>
+  </g>
+</svg>
+<figcaption>图 7-1　数据不均衡的代价：不是"浪费空间"，而是<b>最满的那块盘会拖垮整个集群</b>。左图虽然总容量只用了 71%，但集群已因单盘 95% 而禁止写入。</figcaption>
+</figure>
+
+<h3>7.4 容量水位线：三个关键 ratio</h3>
+<table>
+<thead><tr><th style="width:22%">水位</th><th style="width:16%">默认值</th><th style="width:30%">触发行为</th><th>建议</th></tr></thead>
+<tbody>
+<tr><td><code>backfillfull_ratio</code></td><td>0.90 (90%)</td><td>拒绝向该 OSD 回填数据</td><td>保持默认</td></tr>
+<tr><td><code>nearfull_ratio</code></td><td>0.85 (85%)</td><td>告警：<code>OSD_NEARFULL</code>/<code>POOL_NEARFULL</code></td><td><b>这是你的扩容触发线</b>，收到告警就该规划加盘了</td></tr>
+<tr><td><code>full_ratio</code></td><td>0.95 (95%)</td><td><b>整个集群禁止写入</b>（<code>HEALTH_ERR ... full</code>）</td><td>绝不许到达。一旦到达，连删除都可能受限，只能加盘或调 ratio 临时救急</td></tr>
+</tbody>
+</table>
+<pre><code># 临时救急（集群已满，需要先恢复写入能力再删数据）
+ceph osd set-full-ratio 0.97
+# 调整某个 OSD 的水位
+ceph osd set-nearfull-ratio 0.88
+
+# 查看当前水位
+ceph osd dump | grep -E 'full_ratio|nearfull'</code></pre>
+
+<h3>7.5 治理工具一：按使用率自动调权重</h3>
+<p>最直接的办法：使用率高的盘降低 reweight，把数据赶走。</p>
+<pre><code># 1. 先看清楚现状
+$ ceph osd df tree
+ID  CLASS  WEIGHT   REWEIGHT  SIZE     RAW USE  DATA     OMAP   META   AVAIL    %USE  VAR   PGS
+-1         40.0000         -   40 TiB   28 TiB   28 TiB   1 GiB  40 GiB   12 TiB  71.20  1.00   -
+-3         8.00000         -  8.0 TiB  7.3 TiB  7.3 TiB  ...                       92.10  1.29  240   ← 满
+-5         8.00000         -  8.0 TiB  5.8 TiB  5.8 TiB  ...                       71.40  1.00  238
+-7         8.00000         -  8.0 TiB  1.9 TiB  1.9 TiB  ...                       24.30  0.34  181   ← 空（新盘）
+
+# 说明：VAR = 该 OSD 使用率 / 集群平均使用率。理想值 1.00，偏离越大越不均衡。
+
+# 2. 一键按使用率自动 reweight（最常用！）
+#    含义：把使用率偏离平均值超过 5% 的 OSD，按偏离程度调低 reweight
+$ ceph osd reweight-by-utilization 105
+
+# 3. 也可以按 PG 数均衡
+$ ceph osd reweight-by-pg 105
+
+# 4. 只想做"演练"，先看会做什么（不实际执行）
+$ ceph osd test-reweight-by-utilization 105 0.05 4</code></pre>
+
+<div class="note">
+<b>reweight-by-utilization 的工作原理：</b>它会计算目标 reweight = <code>1 - (该OSD使用率 - 平均使用率) * 调节系数</code>。使用率越高，reweight 越低，CRUSH 就越少往它上面放 PG，存量 PG 的一部分会被迁移走。<br>
+<b>注意：</b>它是<b>一次性的</b>，执行一次就按当前快照调一次。数据迁移后分布变了，需要再执行一次。所以生产上通常开启 balancer 做持续治理（见 7.6）。
+</div>
+
+<h3>7.6 治理工具二：MGR balancer 模块（推荐）</h3>
+<p>Balancer 是 MGR 的一个模块，<strong>周期性评估集群均衡度并自动执行优化</strong>。它有三种模式：</p>
+
+<table>
+<thead><tr><th style="width:18%">模式</th><th style="width:28%">工作方式</th><th style="width:26%">优点</th><th>适用</th></tr></thead>
+<tbody>
+<tr><td><b>upmap</b><br><span style="color:#15803d">（推荐·默认）</span></td><td>直接给<b>单个 PG</b> 写 <code>pg_upmap</code> 覆盖条目："这个 PG 从 [3,17] 改到 [3,7]"</td><td><b>迁移粒度最小</b>，一次只动 1 个 PG，对业务几乎无感；不修改 CRUSH Map 结构</td><td>所有生产环境<br><small>需 Luminous+，且客户端版本不能太老</small></td></tr>
+<tr><td><b>crush-compat</b></td><td>修改 CRUSH Map 里的 weight-set（兼容性权重），间接影响分布</td><td>一条记录影响一批 PG，Map 小；兼容老客户端</td><td>客户端版本过旧（&lt; Luminous）时</td></tr>
+<tr><td><b>read</b><br>(upmap-read)</td><td>不迁移数据，而是<b>改变读请求的路由</b>：把对"热 PG"的读引导到空闲 OSD</td><td>零数据迁移</td><td>读多写少的场景；或作为应急手段</td></tr>
+<tr><td><b>none</b></td><td>关闭</td><td>—</td><td>维护期间</td></tr>
+</tbody>
+</table>
+
+<pre><code># ===== 开启与配置（生产推荐）=====
+ceph mgr module enable balancer
+ceph balancer on
+
+# 使用 upmap 模式（最精细）
+ceph balancer mode upmap
+
+# 只在业务低峰执行（例如每天 00:00 - 06:00）
+ceph config set mgr mgr/balancer/begin_time 0000
+ceph config set mgr mgr/balancer/end_time 0600
+# 或者用星期限定：周一到周五
+ceph config set mgr mgr/balancer/begin_weekday 1
+ceph config set mgr mgr/balancer/end_weekday 5
+
+# 均衡判定的"容忍度"：评分低于此值才动手（默认 0，即只要能改善就动）
+ceph config set mgr mgr/balancer/threshold 0.01   # 1% 以内认为已均衡，不动
+
+# 目标：按 PG 数 还是 按容量（crush-compat 模式下可选）
+ceph config set mgr mgr/balancer/optimize_result pg   # 或 utilization
+
+# ===== 查看与执行 =====
+ceph balancer status          # 查看状态、上次执行时间、当前模式
+ceph balancer eval            # 评估当前均衡度（输出一个评分，越小越均衡）
+ceph balancer eval-verbose    # 详细：给出建议的优化方案
+ceph balancer optimize myplan # 生成一个优化计划（不执行）
+ceph balancer show myplan     # 查看计划内容
+ceph balancer execute myplan  # 执行计划
+ceph balancer dump myplan     # 导出计划 JSON
+
+# 手动触发一次立即均衡（不等周期）
+ceph balancer eval-verbose | head -50</code></pre>
+
+<div class="tip">
+<b>balancer 的评分怎么看？</b><code>ceph balancer eval</code> 输出一个 0~1 的分数，本质是所有 OSD 的"负载偏离度"的归一化标准差。<br>
+· <b>0.00 ~ 0.05</b>：非常均衡 ✅<br>
+· <b>0.05 ~ 0.15</b>：可接受<br>
+· <b>&gt; 0.15</b>：明显不均衡，值得处理<br>
+· <b>&gt; 0.30</b>：严重不均衡，集群容量被严重浪费
+</div>
+
+<h3>7.7 数据均衡的完整治理流程</h3>
+<figure>
+<svg viewBox="0 0 900 250" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="a6" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto"><path d="M0,0 L0,6.5 L9,3.2 z" fill="#0e7490"/></marker></defs>
+  <rect x="20" y="30" width="155" height="60" rx="9" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.6"/>
+  <text x="97" y="52" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0c4a6e">① 检查</text>
+  <text x="97" y="70" text-anchor="middle" font-size="10.5" fill="#0e7490">ceph osd df tree</text>
+  <text x="97" y="84" text-anchor="middle" font-size="10.5" fill="#0e7490">看 VAR 列</text>
+
+  <path d="M175 60 L205 60" stroke="#0e7490" stroke-width="1.8" marker-end="url(#a6)"/>
+  <text x="190" y="50" text-anchor="middle" font-size="10" fill="#b45309">VAR&gt;1.15?</text>
+
+  <rect x="205" y="30" width="155" height="60" rx="9" fill="#fef3c7" stroke="#b45309" stroke-width="1.6"/>
+  <text x="282" y="52" text-anchor="middle" font-size="12.5" font-weight="700" fill="#78350f">② 查根因</text>
+  <text x="282" y="70" text-anchor="middle" font-size="10.5" fill="#92400e">weight 设对了吗？</text>
+  <text x="282" y="84" text-anchor="middle" font-size="10.5" fill="#92400e">有混盘 / 新扩容吗？</text>
+
+  <path d="M360 60 L390 60" stroke="#0e7490" stroke-width="1.8" marker-end="url(#a6)"/>
+
+  <rect x="390" y="30" width="160" height="60" rx="9" fill="#ede9fe" stroke="#6d28d9" stroke-width="1.6"/>
+  <text x="470" y="52" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">③ 开启 balancer</text>
+  <text x="470" y="70" text-anchor="middle" font-size="10.5" fill="#6d28d9">mode = upmap</text>
+  <text x="470" y="84" text-anchor="middle" font-size="10.5" fill="#6d28d9">设置低峰时间窗</text>
+
+  <path d="M550 60 L580 60" stroke="#0e7490" stroke-width="1.8" marker-end="url(#a6)"/>
+  <text x="565" y="50" text-anchor="middle" font-size="10" fill="#b45309">急需?</text>
+
+  <rect x="580" y="30" width="160" height="60" rx="9" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.6"/>
+  <text x="660" y="52" text-anchor="middle" font-size="12.5" font-weight="700" fill="#991b1b">④ 应急：手动</text>
+  <text x="660" y="70" text-anchor="middle" font-size="10.5" fill="#b91c1c">reweight-by-utilization</text>
+  <text x="660" y="84" text-anchor="middle" font-size="10.5" fill="#b91c1c">+ 限速迁移</text>
+
+  <path d="M740 60 L770 60" stroke="#0e7490" stroke-width="1.8" marker-end="url(#a6)"/>
+
+  <rect x="770" y="30" width="110" height="60" rx="9" fill="#dcfce7" stroke="#15803d" stroke-width="1.6"/>
+  <text x="825" y="52" text-anchor="middle" font-size="12.5" font-weight="700" fill="#14532d">⑤ 验证</text>
+  <text x="825" y="70" text-anchor="middle" font-size="10.5" fill="#166534">balancer eval</text>
+  <text x="825" y="84" text-anchor="middle" font-size="10.5" fill="#166534">osd df tree</text>
+
+  <!-- 限速说明 -->
+  <rect x="20" y="115" width="400" height="120" rx="9" fill="#fff7ed" stroke="#fb923c"/>
+  <text x="38" y="138" font-size="12.5" font-weight="700" fill="#9a3412">⚠ 迁移必须限速，否则会打爆业务 I/O</text>
+  <text x="38" y="158" font-size="11.3" fill="#7c2d12" font-family="monospace">osd_max_backfills        = 1   # 每 OSD 并发回填数（默认 1，别调大）</text>
+  <text x="38" y="176" font-size="11.3" fill="#7c2d12" font-family="monospace">osd_recovery_max_active  = 3   # 每 OSD 并发恢复数</text>
+  <text x="38" y="194" font-size="11.3" fill="#7c2d12" font-family="monospace">osd_recovery_sleep       = 0.1 # 每个 op 后 sleep(秒)，HDD 必调</text>
+  <text x="38" y="212" font-size="11.3" fill="#7c2d12" font-family="monospace">osd_recovery_max_single_start = 1</text>
+  <text x="38" y="228" font-size="11.3" fill="#7c2d12">生产建议：HDD 集群 <tspan font-family="monospace">sleep=0.1~0.2</tspan>；全闪可设为 0</text>
+
+  <rect x="440" y="115" width="440" height="120" rx="9" fill="#f0fdfa" stroke="#5eead4"/>
+  <text x="458" y="138" font-size="12.5" font-weight="700" fill="#0f766e">✅ 预防措施（比治理更重要）</text>
+  <text x="458" y="158" font-size="11.5" fill="#115e59">1. <b>按容量精确设置 weight</b>：8TB→8.0，4TB→4.0，别全设 1.0</text>
+  <text x="458" y="176" font-size="11.5" fill="#115e59">2. <b>不要混用容量差异过大的盘</b>：4TB 和 16TB 混部必然失衡</text>
+  <text x="458" y="194" font-size="11.5" fill="#115e59">3. <b>一次性扩容足够的量</b>：加 2 块盘到 40 块盘的集群，改善有限</text>
+  <text x="458" y="212" font-size="11.5" fill="#115e59">4. <b>开启 balancer 并设低峰窗口</b>，让它持续治理而不是出事才救火</text>
+  <text x="458" y="228" font-size="11.5" fill="#115e59">5. <b>PG 数要够</b>：PG 太少 → 分布粒度粗 → 物理上无法均衡（见第 8 章）</text>
+</svg>
+<figcaption>图 7-2　数据均衡的治理流程与关键原则。</figcaption>
+</figure>
+
+<div class="good">
+<b>一句话总结均衡治理：</b><br>
+日常靠 <b>balancer + upmap 模式</b>持续微调（低峰执行、自动收敛）；<br>
+应急靠 <b>reweight-by-utilization</b> 一次性大幅纠偏；<br>
+根治靠 <b>正确的 weight 设置 + 合理的 PG 数量 + 避免混盘</b>。
+</div>
+</section>
+
+<section id="ch8">
+<h2><span class="num">8</span>PG 数量规划</h2>
+
+<p>PG 数量是<strong>部署时就要定对、事后很难改</strong>的关键参数。太多浪费资源，太少则数据无法均衡、恢复慢。</p>
+
+<h3>8.1 PG 太多 vs 太少的代价</h3>
+<table>
+<thead><tr><th style="width:16%">情况</th><th style="width:42%">代价</th><th>表现</th></tr></thead>
+<tbody>
+<tr><td><b>PG 太少</b><br><span style="color:#b91c1c">危险</span></td><td>① 数据分布粒度粗，CRUSH 再怎么优化也无法均衡；② 一个 PG 承载数据量过大，单盘故障恢复时间极长；③ 单 PG 的 peering 会锁住大量对象</td><td>VAR 常年 &gt;1.3；坏一块盘要恢复几十小时；<code>ceph -s</code> 长期 degraded</td></tr>
+<tr><td><b>PG 太多</b><br><span style="color:#b45309">浪费</span></td><td>① 每个 OSD 上 PG 数多 → 内存占用大涨（每 PG 约几十 KB~几百 KB）；② peering 开销激增，OSD 重启后要花很久；③ scrub 开销放大；④ MON 的 OSDMap 变大</td><td>OSD 进程 RSS 内存飙升；重启 OSD 后集群长时间 peering；<code>ceph -s</code> 里 <code>pgs</code> 数字巨大</td></tr>
+</tbody>
+</table>
+
+<h3>8.2 计算方法</h3>
+<div class="kv">
+<b>官方经验公式：</b><br>
+&nbsp;&nbsp;<b>每个 OSD 承载 100 ~ 200 个 PG</b>（副本池，按"有效副本数折算后"的 PG 计）<br><br>
+<b>计算步骤：</b><br>
+1. 总 PG 数（裸值） = <code>(OSD 总数 × 200) / 副本数</code>，然后向上取整到<b>最接近的 2 的幂</b><br>
+2. 按每个池的<b>容量占比</b>分摊<br>
+3. 如果有多个池，用 "PG 总量预算" 分摊，而不是各自独立算
+</div>
+
+<pre><code># 计算示例：30 个 OSD，3 副本，计划 3 个池
+# ① PG 总量预算
+Total PGs = (30 × 200) / 3 = 2000  →  向上取到 2 的幂 → 2048
+
+# ② 按池容量占比分摊（假设 rbd 占 60%，cephfs_data 占 30%，rgw 占 10%）
+rbd池          : 2048 × 0.6 = 1229  →  取 1024（2 的幂，且不要超过预算太多）
+cephfs_data池  : 2048 × 0.3 =  614  →  取 512
+rgw_data池     : 2048 × 0.1 =  205  →  取 256
+
+# ③ 校验：每 OSD 实际承载的 PG 数
+#    注意：每个池的每个 PG，会被复制到 3 个 OSD 上
+每 OSD 的 PG 数 = (1024 + 512 + 256) × 3 / 30 OSD = 179   ✅ 落在 100~200 区间内
+
+# 也可以直接用官方在线计算器：https://ceph.io/pgcalc/</code></pre>
+
+<h3>8.3 实战命令</h3>
+<pre><code># 创建池时指定 PG 数（Squid/Tentacle 建议同时设 pgp_num）
+ceph osd pool create rbd 1024 1024 replicated
+ceph osd pool application enable rbd rbd
+
+# 调整已有池的 pg_num（⚠ 会触发大量数据迁移，务必在低峰做，且分批加）
+ceph osd pool set rbd pg_num 2048       # 先加 pg_num（分裂 PG）
+ceph osd pool set rbd pgp_num 2048      # 再加 pgp_num（真正开始搬迁）
+
+# ⚠ 关键：pg_num 只能增不能减（除非开启 pg_num 缩减，且限制很多）
+#    所以宁可初始设小一点，也不要一上来设得过大</code></pre>
+
+<h3>8.4 PG Autoscaler（自动扩缩，推荐开启）</h3>
+<p>从 Nautilus 起，Ceph 提供 <code>pg_autoscaler</code> MGR 模块，能<strong>根据池的实际使用量自动调整 pg_num</strong>。这是新手的福音。</p>
+<pre><code># 查看状态（默认是 on）
+ceph mgr module enable pg_autoscaler
+ceph osd pool autoscale-status
+
+POOL    SIZE  TARGET SIZE  RATE  RAW CAPACITY   RATIO  TARGET RATIO  EFFECTIVE RATIO  BIAS  PG_NUM  NEW PG_NUM  AUTOSCALE
+rbd    1024G      3072G    3.0     60000G     0.0512                                  1.0    1024        2048      on
+#                                                                                                    ↑ 建议值
+
+# 每个池可单独设置模式
+ceph osd pool set rbd pg_autoscale_mode on    # 全自动（推荐）
+ceph osd pool set rbd pg_autoscale_mode warn  # 只给建议，不自动执行
+ceph osd pool set rbd pg_autoscale_mode off   # 关闭
+
+# 全局开关
+ceph config set global osd_pool_default_pg_autoscale_mode on
+
+# 给池设"目标容量占比"，让 autoscaler 更准确
+ceph osd pool set rbd target_size_ratio 0.6   # 这个池预计占集群 60% 容量
+
+# 设定每 OSD 的目标 PG 数（默认 100）
+ceph config set global mon_target_pg_per_osd 200</code></pre>
+
+<div class="warn">
+<b>关于 EC 池的 pg_num：</b>EC 池的 size = k+m（例如 4+2 = 6），所以<b>同样的数据量，EC 池在每块盘上产生的 PG 数是副本池(size=3)的两倍</b>。规划时要把这个算进去，或者干脆依赖 autoscaler。
+</div>
+</section>
+<section id="ch9">
+<h2><span class="num">9</span>BlueStore：Ceph 的存储引擎</h2>
+
+<p>从 Luminous(12.2) 开始，BlueStore 成为默认存储引擎，FileStore（基于 XFS + LevelDB）已被彻底淘汰。<strong>理解 BlueStore 是做性能调优的前提。</strong></p>
+
+<h3>9.1 为什么 FileStore 被淘汰</h3>
+<table>
+<thead><tr><th style="width:26%">问题</th><th style="width:38%">FileStore 的做法</th><th>BlueStore 的做法</th></tr></thead>
+<tbody>
+<tr><td><b>双重写放大</b></td><td>先写 Journal（独立 SSD），再写文件系统 → 一份数据写两遍</td><td>元数据写 RocksDB，数据<b>一次直接落裸设备</b></td></tr>
+<tr><td><b>无法原子写</b></td><td>依赖文件系统 journal 保证事务性，开销大</td><td>RocksDB 事务保证元数据原子性，数据大块追加写</td></tr>
+<tr><td><b>文件系统开销</b></td><td>每次写要走 VFS → XFS → block layer，且有目录查找开销</td><td>直接管理裸块设备，绕过文件系统</td></tr>
+<tr><td><b>元数据性能</b></td><td>对象属性存在文件的 xattr 里，读一次要多次 stat</td><td>全部放 RocksDB（有序 KV），一次查询搞定</td></tr>
+<tr><td><b>校验和缺失</b></td><td>依赖文件系统，无端到端校验</td><td><b>每份数据自带 checksum</b>，deep scrub 才能真正防位翻转</td></tr>
+</tbody>
+</table>
+
+<h3>9.2 BlueStore 的内部结构</h3>
+<figure>
+<svg viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="a7" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#0e7490"/></marker></defs>
+  <text x="450" y="20" text-anchor="middle" font-size="14" font-weight="700" fill="#0f766e">BlueStore = 数据直写裸设备 + 元数据交 RocksDB</text>
+
+  <!-- 上层 -->
+  <rect x="60" y="38" width="780" height="44" rx="9" fill="#f5f3ff" stroke="#6d28d9" stroke-width="1.5"/>
+  <text x="450" y="57" text-anchor="middle" font-size="12.5" font-weight="600" fill="#5b21b6">客户端写入：对象数据（4MB 对象）+ 元数据（大小/属性/omap/校验和）</text>
+  <text x="450" y="73" text-anchor="middle" font-size="11" fill="#6d28d9">↓ 分离：大块数据 与 小块元数据 走完全不同的路径</text>
+
+  <path d="M240 82 L240 108" stroke="#6d28d9" stroke-width="1.8" marker-end="url(#a7)"/>
+  <path d="M660 82 L660 108" stroke="#6d28d9" stroke-width="1.8" marker-end="url(#a7)"/>
+  <text x="240" y="100" text-anchor="middle" font-size="10.5" fill="#6d28d9">元数据</text>
+  <text x="660" y="100" text-anchor="middle" font-size="10.5" fill="#6d28d9">对象数据</text>
+
+  <!-- 元数据分支 -->
+  <rect x="60" y="110" width="360" height="52" rx="9" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.6"/>
+  <text x="240" y="130" text-anchor="middle" font-size="13" font-weight="700" fill="#0c4a6e">RocksDB（KV 数据库）</text>
+  <text x="240" y="148" text-anchor="middle" font-size="10.5" fill="#0e7490">存：对象元数据 / omap / 分配器元数据 / WAL</text>
+  <text x="240" y="160" text-anchor="middle" font-size="10.5" fill="#0e7490">有序 LSM-Tree，写入放大可控</text>
+
+  <path d="M240 162 L240 190" stroke="#0e7490" stroke-width="1.8" marker-end="url(#a7)"/>
+  <text x="300" y="180" font-size="10.5" fill="#0e7490">跑在 BlueFS 之上</text>
+
+  <rect x="60" y="192" width="360" height="46" rx="9" fill="#cffafe" stroke="#0891b2" stroke-width="1.5"/>
+  <text x="240" y="212" text-anchor="middle" font-size="12.5" font-weight="700" fill="#155e75">BlueFS（极简用户态文件系统）</text>
+  <text x="240" y="229" text-anchor="middle" font-size="10.5" fill="#0e7490">专为 RocksDB 设计，只做"把 SST 文件放到块设备上"这一件事</text>
+
+  <!-- 数据分支 -->
+  <rect x="480" y="110" width="360" height="128" rx="9" fill="#dcfce7" stroke="#15803d" stroke-width="1.6"/>
+  <text x="660" y="132" text-anchor="middle" font-size="13" font-weight="700" fill="#14532d">裸块设备直写（Block Device）</text>
+  <text x="660" y="152" text-anchor="middle" font-size="10.5" fill="#166534">· 绕过文件系统，ceph-osd 用 direct I/O 直接写</text>
+  <text x="660" y="169" text-anchor="middle" font-size="10.5" fill="#166534">· 大块（&gt;min_alloc_size，HDD 64KB / SSD 16KB）新数据</text>
+  <text x="660" y="186" text-anchor="middle" font-size="10.5" fill="#166534">  直接分配新空间写入 → 无需读改写，天然顺序化</text>
+  <text x="660" y="203" text-anchor="middle" font-size="10.5" fill="#166534">· 小于 min_alloc_size 的小写 → 先写 WAL(延迟写)，再合并</text>
+  <text x="660" y="222" text-anchor="middle" font-size="10.5" fill="#166534">· <b>每份数据自带 checksum（crc32c）</b>，读时校验</text>
+
+  <!-- 底层设备布局 -->
+  <text x="450" y="262" text-anchor="middle" font-size="13" font-weight="700" fill="#6d28d9">↓ 物理设备布局：为什么要把 db 和 wal 放到 SSD/NVMe 上？</text>
+
+  <!-- 场景A -->
+  <rect x="40" y="278" width="250" height="100" rx="9" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="165" y="298" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">场景 A：单设备（简单）</text>
+  <rect x="55" y="308" width="220" height="24" rx="4" fill="#dbeafe" stroke="#1d4ed8"/>
+  <text x="165" y="324" text-anchor="middle" font-size="10.5" fill="#1e3a8a">block（HDD/SSD 一整块）</text>
+  <rect x="55" y="336" width="220" height="24" rx="4" fill="#cffafe" stroke="#0891b2" stroke-dasharray="3 2"/>
+  <text x="165" y="352" text-anchor="middle" font-size="10.5" fill="#155e75">block.db + wal（同设备，占约 4%）</text>
+  <text x="165" y="372" text-anchor="middle" font-size="10" fill="#64748b">元数据 I/O 与数据 I/O 争抢 → 慢</text>
+
+  <!-- 场景B -->
+  <rect x="325" y="278" width="250" height="100" rx="9" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="450" y="298" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">场景 B：db/wal 分离（HDD 推荐）</text>
+  <rect x="340" y="308" width="220" height="24" rx="4" fill="#dbeafe" stroke="#1d4ed8"/>
+  <text x="450" y="324" text-anchor="middle" font-size="10.5" fill="#1e3a8a">block → HDD（大容量，存数据）</text>
+  <rect x="340" y="336" width="220" height="24" rx="4" fill="#a7f3d0" stroke="#059669"/>
+  <text x="450" y="352" text-anchor="middle" font-size="10.5" fill="#065f46">block.db + wal → SSD/NVMe</text>
+  <text x="450" y="372" text-anchor="middle" font-size="10" fill="#15803d">随机元数据 I/O 全部卸载到 SSD → 快很多</text>
+
+  <!-- 场景C -->
+  <rect x="610" y="278" width="250" height="100" rx="9" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="735" y="298" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">场景 C：全闪最优（wal/db/data 三分）</text>
+  <rect x="625" y="308" width="220" height="16" rx="4" fill="#fef3c7" stroke="#b45309"/>
+  <text x="735" y="320" text-anchor="middle" font-size="9.5" fill="#78350f">block.wal → 最快 NVMe（顺序写，极小）</text>
+  <rect x="625" y="328" width="220" height="16" rx="4" fill="#a7f3d0" stroke="#059669"/>
+  <text x="735" y="340" text-anchor="middle" font-size="9.5" fill="#065f46">block.db → NVMe（RocksDB，约 4% 容量）</text>
+  <rect x="625" y="348" width="220" height="16" rx="4" fill="#dbeafe" stroke="#1d4ed8"/>
+  <text x="735" y="360" text-anchor="middle" font-size="9.5" fill="#1e3a8a">block → NVMe / SSD（数据）</text>
+  <text x="735" y="372" text-anchor="middle" font-size="10" fill="#15803d">三层各自发挥介质特长 → 最优</text>
+</svg>
+<figcaption>图 9-1　BlueStore 架构与三种设备布局。<b>db/wal 分离是 HDD 集群性价比最高的优化。</b></figcaption>
+</figure>
+
+<h3>9.3 关键容量规则</h3>
+<div class="kv">
+<b>block.db（RocksDB 数据）建议大小 = block（数据设备）容量的 4%</b><br>
+· 官方推荐最小 30GB，常见做法是按 4% 规划，但 <b>至少给 30~50GB</b><br>
+· <b>如果 block.db 空间不足，RocksDB 会自动溢出（spillover）到慢设备</b>，性能断崖式下跌<br>
+· 监控： <code>ceph daemon osd.N perf dump | grep -i bluefs</code> 看 <code>bluefs_db_total_bytes</code> / <code>bluefs_slow_used_bytes</code><br>
+· 一旦出现 <code>slow_used_bytes &gt; 0</code>（溢出到慢设备），就要扩容 db 或用 <code>bluefs-stats</code> 迁移
+</div>
+<pre><code># 检查 db 是否溢出（这是最常见的"性能突然变差"原因）
+$ ceph daemon osd.0 perf dump | grep -E 'bluefs_(db|slow|wal)_(total|used)_bytes'
+    "bluefs_db_total_bytes": 42949672960,     # 40 GB
+    "bluefs_db_used_bytes":  40802189312,     # 已用 38 GB  ← 快满了
+    "bluefs_wal_total_bytes": 1073741824,
+    "bluefs_slow_used_bytes": 0,              # ← 只要这个 &gt; 0 就说明溢出了！
+
+# 更直观的工具
+$ ceph-bluestore-tool bluefs-stats --path /var/lib/ceph/osd/ceph-0</code></pre>
+
+<h3>9.4 内存模型：osd_memory_target</h3>
+<p>BlueStore 自己管理内存缓存（不再依赖 page cache）。关键参数：</p>
+<pre><code># 每个 OSD 进程的目标内存占用（默认 4GB）
+ceph config set osd osd_memory_target 4294967296     # 4GB
+# NVMe/高性能场景可调大（物理内存 128GB、跑 10 个 OSD 时，每 OSD 给 6~8GB）
+ceph config set osd osd_memory_target 8589934592     # 8GB
+
+# 缓存分配比例（默认）
+#   bluestore_cache_size_hdd   = 1GB     （HDD）
+#   bluestore_cache_size_ssd   = 3GB     （SSD）
+#   内部再按 kv_ratio / meta_ratio 分给 RocksDB 和元数据
+ceph config set osd bluestore_cache_kv_ratio 0.4      # RocksDB 占 40%
+ceph config set osd bluestore_cache_meta_ratio 0.4    # 元数据占 40%
+# 剩下 20% 给数据缓存</code></pre>
+<div class="warn">
+<b>内存规划公式：</b>如果一台机器有 <b>N</b> 个 OSD、物理内存 <b>M</b> GB，则 <code>osd_memory_target ≤ (M - 系统预留 8GB) / N</code>。<br>
+例：128GB 内存 + 12 个 OSD → 每 OSD 最多 (128-8)/12 = 10GB，保守取 8GB。<br>
+<b>内存不足会导致 OSD OOM 被杀 → 触发大规模数据迁移 → 雪崩</b>，这是生产事故的经典剧本。
+</div>
+</section>
+
+<section id="ch10">
+<h2><span class="num">10</span>副本 vs 纠删码（EC）</h2>
+
+<h3>10.1 核心取舍</h3>
+<table>
+<thead><tr><th style="width:18%">维度</th><th style="width:41%">多副本（Replicated）</th><th>纠删码（Erasure Coding）</th></tr></thead>
+<tbody>
+<tr><td>空间利用率</td><td>3 副本 = <b>33.3%</b>（1/3）</td><td>4+2 = <b>66.7%</b>；8+3 = <b>72.7%</b>；8+2=80%</td></tr>
+<tr><td>可靠性</td><td>3 副本可容忍同时坏 2 个 OSD</td><td>k+m 可容忍同时坏 <b>m</b> 个 OSD（4+2 容忍 2 个）</td></tr>
+<tr><td>读性能</td><td>快，直接读主副本</td><td>正常情况一样快；<b>降级读需要读 k 个分片重算 → 慢且吃网络</b></td></tr>
+<tr><td>写性能</td><td>好</td><td>编码有 CPU 开销；<b>部分写（partial write）需读-改-写，极慢</b></td></tr>
+<tr><td>CPU 开销</td><td>几乎无</td><td>编码/解码需要 CPU（ISA-L 插件可硬件加速）</td></tr>
+<tr><td>适用场景</td><td>RBD（虚拟机、数据库）、CephFS、热数据</td><td>RGW 对象存储、冷数据、备份归档、大文件</td></tr>
+<tr><td>支持 RBD/CephFS</td><td>✅</td><td>⚠ RBD 仅支持 EC 池做 data pool（元数据池必须副本）；CephFS 支持但需 <code>--allow-ec-overwrites</code></td></tr>
+</tbody>
+</table>
+
+<h3>10.2 EC 原理图解</h3>
+<figure>
+<svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="a8" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#0e7490"/></marker></defs>
+  <text x="200" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="#0e7490">编码：原始数据 → k 个数据块 + m 个校验块</text>
+  <text x="660" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="#15803d">解码：任意 k 个块即可还原原始数据</text>
+  <line x1="430" y1="8" x2="430" y2="290" stroke="#cbd5e1" stroke-dasharray="5 4"/>
+
+  <!-- 原始数据 -->
+  <rect x="30" y="40" width="120" height="150" rx="7" fill="#f5f3ff" stroke="#6d28d9" stroke-width="1.6"/>
+  <text x="90" y="60" text-anchor="middle" font-size="12" font-weight="700" fill="#5b21b6">原始对象</text>
+  <rect x="42" y="70" width="96" height="22" rx="4" fill="#ede9fe" stroke="#8b5cf6"/><text x="90" y="85" text-anchor="middle" font-size="10" fill="#4c1d95">chunk A</text>
+  <rect x="42" y="96" width="96" height="22" rx="4" fill="#ede9fe" stroke="#8b5cf6"/><text x="90" y="111" text-anchor="middle" font-size="10" fill="#4c1d95">chunk B</text>
+  <rect x="42" y="122" width="96" height="22" rx="4" fill="#ede9fe" stroke="#8b5cf6"/><text x="90" y="137" font-size="10" fill="#4c1d95" text-anchor="middle">chunk C</text>
+  <rect x="42" y="148" width="96" height="22" rx="4" fill="#ede9fe" stroke="#8b5cf6"/><text x="90" y="163" text-anchor="middle" font-size="10" fill="#4c1d95">chunk D</text>
+  <text x="90" y="184" text-anchor="middle" font-size="10" fill="#6d28d9">k = 4</text>
+
+  <path d="M150 115 L200 115" stroke="#0e7490" stroke-width="2" marker-end="url(#a8)"/>
+  <text x="175" y="106" text-anchor="middle" font-size="10" fill="#0e7490">编码</text>
+
+  <!-- 编码结果 -->
+  <g>
+    <rect x="205" y="45" width="88" height="26" rx="5" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text x="249" y="62" text-anchor="middle" font-size="10.5" fill="#1e3a8a">A（数据）</text>
+    <rect x="205" y="77" width="88" height="26" rx="5" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text x="249" y="94" text-anchor="middle" font-size="10.5" fill="#1e3a8a">B（数据）</text>
+    <rect x="205" y="109" width="88" height="26" rx="5" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text x="249" y="126" text-anchor="middle" font-size="10.5" fill="#1e3a8a">C（数据）</text>
+    <rect x="205" y="141" width="88" height="26" rx="5" fill="#dbeafe" stroke="#1d4ed8"/>
+    <text x="249" y="158" text-anchor="middle" font-size="10.5" fill="#1e3a8a">D（数据）</text>
+    <rect x="205" y="173" width="88" height="26" rx="5" fill="#fef3c7" stroke="#b45309"/>
+    <text x="249" y="190" text-anchor="middle" font-size="10.5" fill="#78350f">P1（校验）</text>
+    <rect x="205" y="205" width="88" height="26" rx="5" fill="#fef3c7" stroke="#b45309"/>
+    <text x="249" y="222" text-anchor="middle" font-size="10.5" fill="#78350f">P2（校验）</text>
+    <text x="249" y="248" text-anchor="middle" font-size="10" fill="#0e7490">4 + 2 = 6 个分片</text>
+    <text x="249" y="264" text-anchor="middle" font-size="10" fill="#0e7490">散到 6 个不同 OSD</text>
+    <text x="249" y="280" text-anchor="middle" font-size="10.5" font-weight="700" fill="#15803d">空间开销 150%</text>
+  </g>
+
+  <!-- 右：解码 -->
+  <g>
+    <text x="660" y="45" text-anchor="middle" font-size="11" fill="#64748b">坏掉 2 个块（m=2，可容忍上限）</text>
+    <rect x="480" y="55" width="88" height="26" rx="5" fill="#dbeafe" stroke="#1d4ed8"/><text x="524" y="72" text-anchor="middle" font-size="10.5" fill="#1e3a8a">A ✓</text>
+    <rect x="480" y="87" width="88" height="26" rx="5" fill="#fee2e2" stroke="#b91c1c" stroke-dasharray="3 2"/><text x="524" y="104" text-anchor="middle" font-size="10.5" fill="#991b1b">B ✗ 丢失</text>
+    <rect x="480" y="119" width="88" height="26" rx="5" fill="#dbeafe" stroke="#1d4ed8"/><text x="524" y="136" text-anchor="middle" font-size="10.5" fill="#1e3a8a">C ✓</text>
+    <rect x="480" y="151" width="88" height="26" rx="5" fill="#dbeafe" stroke="#1d4ed8"/><text x="524" y="168" text-anchor="middle" font-size="10.5" fill="#1e3a8a">D ✓</text>
+    <rect x="480" y="183" width="88" height="26" rx="5" fill="#fee2e2" stroke="#b91c1c" stroke-dasharray="3 2"/><text x="524" y="200" text-anchor="middle" font-size="10.5" fill="#991b1b">P1 ✗ 丢失</text>
+    <rect x="480" y="215" width="88" height="26" rx="5" fill="#fef3c7" stroke="#b45309"/><text x="524" y="232" text-anchor="middle" font-size="10.5" fill="#78350f">P2 ✓</text>
+
+    <path d="M568 168 L610 168" stroke="#0e7490" stroke-width="2" marker-end="url(#a8)"/>
+    <text x="589" y="158" text-anchor="middle" font-size="10" fill="#0e7490">解码</text>
+
+    <rect x="615" y="120" width="120" height="96" rx="7" fill="#dcfce7" stroke="#15803d" stroke-width="1.6"/>
+    <text x="675" y="142" text-anchor="middle" font-size="11.5" font-weight="700" fill="#14532d">解得方程组</text>
+    <text x="675" y="162" text-anchor="middle" font-size="10" fill="#166534">A+C+D+P2 共 4 块</text>
+    <text x="675" y="178" text-anchor="middle" font-size="10" fill="#166534">= k = 4 个未知数</text>
+    <text x="675" y="196" text-anchor="middle" font-size="10.5" font-weight="600" fill="#15803d">→ 还原出 B 和 P1</text>
+    <text x="675" y="210" text-anchor="middle" font-size="10" fill="#166534">数据完好无损 ✅</text>
+  </g>
+  <rect x="480" y="250" width="255" height="40" rx="7" fill="#fff7ed" stroke="#fb923c"/>
+  <text x="607" y="267" text-anchor="middle" font-size="10.5" fill="#9a3412">代价：降级读需从 k 个 OSD 拉数据 + CPU 解码</text>
+  <text x="607" y="282" text-anchor="middle" font-size="10.5" fill="#9a3412">→ 网络流量放大 k 倍，延迟显著上升</text>
+</svg>
+<figcaption>图 10-1　EC 4+2 的编码与解码。<b>数学本质：解一个 k 元一次方程组</b>（范德蒙德/柯西矩阵，保证任意 k 行可逆）。</figcaption>
+</figure>
+
+<h3>10.3 EC Profile 与创建</h3>
+<pre><code># 创建一个 4+2、故障域为 host 的 EC profile
+ceph osd erasure-code-profile set ec42 \
+    k=4 m=2 \
+    crush-failure-domain=host \
+    plugin=jerasure \
+    technique=reed_sol_van \
+    crush-device-class=hdd
+
+# 常用参数说明
+#   k/m              : 数据块 / 校验块数量
+#   crush-failure-domain : host / rack / osd   —— 决定分片怎么散
+#   plugin           : jerasure(通用) / isa(Intel CPU 加速) / lrc(局部重建) / clay(节省修复带宽)
+#   technique        : reed_sol_van(默认) / cauchy / liberation 等
+#   crush-device-class   : 限定使用 ssd / hdd / nvme
+
+# 用 profile 创建 EC 池
+ceph osd pool create ec-pool 512 512 erasure ec42
+
+# ⚠ 关键：EC 池默认不支持部分写（overwrite），需要显式开启
+ceph osd pool set ec-pool allow_ec_overwrites true
+# 开启后才可用于 RBD(需配合副本元数据池) / CephFS
+
+# 查看
+ceph osd erasure-code-profile get ec42
+ceph osd pool get ec-pool all</code></pre>
+
+<div class="warn">
+<b>EC 池用于 RBD 的正确姿势：</b>不能直接把 RBD 镜像放 EC 池。正确做法是<b>分层</b>：<br>
+<pre style="margin-top:6px">ceph osd pool create rbd-ec-meta 64 64 replicated          # 元数据池：必须副本
+ceph osd pool create rbd-ec-data 512 512 erasure ec42       # 数据池：EC
+ceph osd pool set rbd-ec-data allow_ec_overwrites true
+rbd create --size 100G --data-pool rbd-ec-data rbd-ec-meta/myimage</pre>
+这样镜像的元数据放副本池（快），数据放 EC 池（省空间）。
+</div>
+
+<div class="tip">
+<b>插件选型建议：</b><br>
+· <b>jerasure + reed_sol_van</b>：通用默认，稳<br>
+· <b>isa</b>：Intel CPU 上编码速度快 2~3 倍（需 CPU 支持 SSE/AVX）<br>
+· <b>lrc（Local Reconstruction Code）</b>：牺牲一点空间，换<b>故障修复时网络流量大幅下降</b>。大集群强烈建议考虑<br>
+· <b>clay</b>：修复时流量和 I/O 都最优，但 CPU 开销略高
+</div>
+</section>
+
+<section id="ch11">
+<h2><span class="num">11</span>三种存储接口</h2>
+
+<h3>11.1 RBD（块存储）</h3>
+<p>把 RADOS 对象模拟成一块硬盘。<strong>不需要 MDS</strong>——"块的第 N 个扇区在哪个对象"这件事由 RBD 元数据（存在镜像头部对象里）自己算，纯计算。</p>
+<ul>
+  <li><b>对象映射</b>：LBA → 对象名 + 偏移，简单算术，客户端本地完成</li>
+  <li><b>精简配置</b>：写过的才分配空间（依赖 object-map 特性）</li>
+  <li><b>快照/克隆</b>：COW（写时复制），秒级完成，几乎不占空间</li>
+  <li><b>两种访问方式</b>：<code>krbd</code>（内核模块，性能好但功能受内核版本限制）vs <code>librbd</code>（用户态，功能全，K8s 和 QEMU 用这个）</li>
+</ul>
+<pre><code># 常用操作
+rbd create --size 100G --pool rbd --image-feature layering,exclusive-lock,object-map,fast-diff,deep-flatten vm-disk-01
+rbd map rbd/vm-disk-01                 # 映射为 /dev/rbd0
+rbd snap create rbd/vm-disk-01@snap1   # 秒级快照
+rbd snap rollback rbd/vm-disk-01@snap1
+rbd clone rbd/vm-disk-01@snap1 rbd/vm-disk-02   # 克隆
+rbd flatten rbd/vm-disk-02             # 解除与父镜像的依赖
+
+# 性能参数（客户端侧，写在 /etc/ceph/ceph.conf 的 [client] 段）
+rbd_cache = true
+rbd_cache_size = 32MB           # 用户态缓存大小
+rbd_cache_max_dirty = 24MB      # 脏数据上限，超过开始回写
+rbd_cache_writethrough_until_flush = true   # 保证数据安全（推荐 true）</code></pre>
+
+<h3>11.2 RGW（对象存储）</h3>
+<p>一个<strong>无状态</strong>的 HTTP 网关，把 S3/Swift 请求翻译成 RADOS 操作。可以横向扩展 + 前面挂 LB（HAProxy/Nginx）。</p>
+<ul>
+  <li><b>一个对象的构成</b>：RGW 对象 = 1 个 head 对象 + 若干 4MB 分片（>4MB 才分片，或进行分片上传）</li>
+  <li><b>bucket index 池</b>：存桶内对象列表（<code>rgw.buckets.index</code>）。<strong>强烈建议放在 SSD 上</strong>——桶内对象多时，list 操作全靠它</li>
+  <li><b>多站点</b>：通过 multisite 实现跨集群异步复制</li>
+</ul>
+<pre><code># 关键调优
+ceph config set client.rgw rgw_thread_pool_size 512        # 默认 100，高并发要调大
+ceph config set client.rgw rgw_num_rados_handles 1
+ceph config set client.rgw rgw_max_concurrent_requests 1024
+ceph config set client.rgw rgw_obj_stripe_size 4194304     # 4MB 分片
+ceph config set client.rgw rgw_bucket_index_max_aio 16
+# 分片上传的单块大小（大文件上传性能关键）
+ceph config set client.rgw rgw_multipart_part_size 16777216  # 16MB
+
+# bucket index 分片（一个桶对象很多时必做）
+radosgw-admin bucket reshard --bucket=my-bucket --num-shards=32</code></pre>
+
+<h3>11.3 CephFS（文件存储）</h3>
+<p>唯一<strong>需要 MDS</strong> 的接口。MDS 只管元数据（目录树、文件名、权限、inode），<strong>文件数据本身仍然直接由客户端写进 RADOS</strong>——这是 CephFS 与传统 NAS 的根本区别，也是它不会遇到元数据 I/O 瓶颈的原因。</p>
+<ul>
+  <li><b>MDS 高可用</b>：1 个 active + N 个 standby（standby-replay 可做热备，秒级接管）</li>
+  <li><b>多活 MDS</b>：把目录树分片给多个 active MDS，支撑超大目录；可配 affinity 把热目录固定到指定 MDS</li>
+  <li><b>配额</b>：支持目录级容量/文件数配额</li>
+  <li><b>NFS 导出</b>：通过 NFS-Ganesha 把 CephFS 导出为 NFS</li>
+</ul>
+<pre><code>ceph fs volume create cephfs                 # 一条命令建 fs + 两个池 + MDS
+ceph fs status
+ceph fs get cephfs
+
+# 多活 MDS
+ceph fs set cephfs max_mds 2
+# 把某个目录固定到 MDS.1
+setfattr -n ceph.dir.pin -v 1 /mnt/cephfs/hot-dir
+
+# 常用参数
+ceph config set mds mds_cache_memory_limit 4GB   # MDS 缓存上限
+ceph config set mds mds_bal_fragment_size_max 100000   # 目录过大时自动分片
+ceph config set mds mds_max_file_recover 64</code></pre>
+
+<h3>11.4 三者对比决策表</h3>
+<table>
+<thead><tr><th style="width:14%">场景</th><th style="width:16%">选型</th><th style="width:26%">池配置建议</th><th>理由</th></tr></thead>
+<tbody>
+<tr><td>虚拟机 / 数据库</td><td><b>RBD</b></td><td>副本 3，SSD/NVMe，PG 按 200/OSD</td><td>需要低延迟、随机写、快照</td></tr>
+<tr><td>Kubernetes PV</td><td><b>RBD</b>（主力）<br>CephFS（RWX）</td><td>RBD：副本 3；CephFS：副本 3</td><td>RWO 用 RBD；多 Pod 共享用 CephFS</td></tr>
+<tr><td>备份 / 归档 / 视频</td><td><b>RGW</b></td><td>EC 4+2 或 8+3，HDD</td><td>大文件顺序读写，省空间最重要</td></tr>
+<tr><td>AI 训练数据集</td><td><b>RGW</b> 或 <b>CephFS</b></td><td>RGW+EC 或 CephFS+副本3</td><td>看访问协议；海量小文件用 CephFS 需调优 MDS</td></tr>
+<tr><td>共享目录 / HPC</td><td><b>CephFS</b></td><td>副本 3，元数据池用 SSD/NVMe</td><td>POSIX 语义，多机共享</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="ch12">
+<h2><span class="num">12</span>网络设计：Ceph 最容易低估的一环</h2>
+
+<h3>12.1 双网分离：public network 与 cluster network</h3>
+<figure>
+<svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a9b" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#0e7490"/></marker>
+    <marker id="a9r" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#b45309"/></marker>
+  </defs>
+  <rect x="20" y="30" width="130" height="70" rx="9" fill="#f5f3ff" stroke="#6d28d9" stroke-width="1.6"/>
+  <text x="85" y="55" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">Client</text>
+  <text x="85" y="72" text-anchor="middle" font-size="10.5" fill="#6d28d9">业务服务器</text>
+  <text x="85" y="88" text-anchor="middle" font-size="10.5" fill="#6d28d9">K8s / VM / App</text>
+
+  <rect x="20" y="150" width="130" height="70" rx="9" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="85" y="175" text-anchor="middle" font-size="12.5" font-weight="700" fill="#334155">node-01</text>
+  <text x="85" y="192" text-anchor="middle" font-size="10.5" fill="#64748b">MON + MGR + OSD</text>
+  <text x="85" y="208" text-anchor="middle" font-size="10.5" fill="#64748b">osd.0 ~ osd.5</text>
+
+  <rect x="20" y="235" width="130" height="50" rx="9" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="85" y="256" text-anchor="middle" font-size="12.5" font-weight="700" fill="#334155">node-02 … node-N</text>
+  <text x="85" y="272" text-anchor="middle" font-size="10" fill="#64748b">其余 OSD 节点</text>
+
+  <!-- public switch -->
+  <rect x="300" y="40" width="180" height="56" rx="9" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.8"/>
+  <text x="390" y="62" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0c4a6e">Public Switch</text>
+  <text x="390" y="80" text-anchor="middle" font-size="10.5" fill="#0e7490">10/25 GbE · 业务网</text>
+
+  <!-- cluster switch -->
+  <rect x="300" y="160" width="180" height="56" rx="9" fill="#fef3c7" stroke="#b45309" stroke-width="1.8"/>
+  <text x="390" y="182" text-anchor="middle" font-size="12.5" font-weight="700" fill="#78350f">Cluster Switch</text>
+  <text x="390" y="200" text-anchor="middle" font-size="10.5" fill="#92400e">25/100 GbE · 存储内网</text>
+
+  <!-- 连线 public -->
+  <line x1="150" y1="58" x2="300" y2="58" stroke="#0e7490" stroke-width="2.2" marker-end="url(#a9b)"/>
+  <line x1="150" y1="175" x2="300" y2="70" stroke="#0e7490" stroke-width="2.2" marker-end="url(#a9b)"/>
+  <line x1="150" y1="252" x2="300" y2="80" stroke="#0e7490" stroke-width="2.2" marker-end="url(#a9b)"/>
+
+  <!-- 连线 cluster -->
+  <line x1="150" y1="188" x2="300" y2="182" stroke="#b45309" stroke-width="2.2" marker-end="url(#a9r)"/>
+  <line x1="150" y1="262" x2="300" y2="196" stroke="#b45309" stroke-width="2.2" marker-end="url(#a9r)"/>
+
+  <!-- 说明 -->
+  <rect x="540" y="34" width="340" height="76" rx="9" fill="#f0fdfa" stroke="#5eead4"/>
+  <text x="558" y="56" font-size="12.5" font-weight="700" fill="#0f766e">public network（前端/业务网）</text>
+  <text x="558" y="75" font-size="11" fill="#115e59">· 客户端 ↔ OSD 的数据读写</text>
+  <text x="558" y="92" font-size="11" fill="#115e59">· 客户端 ↔ MON 的认证与 Map 获取</text>
+  <text x="558" y="105" font-size="11" fill="#115e59">· 配置：<tspan font-family="monospace">public_network = 10.10.10.0/24</tspan></text>
+
+  <rect x="540" y="126" width="340" height="100" rx="9" fill="#fff7ed" stroke="#fb923c"/>
+  <text x="558" y="148" font-size="12.5" font-weight="700" fill="#9a3412">cluster network（后端/复制网）★ 强烈建议分离</text>
+  <text x="558" y="167" font-size="11" fill="#7c2d12">· OSD ↔ OSD 的<b>副本复制</b></text>
+  <text x="558" y="184" font-size="11" fill="#7c2d12">· OSD ↔ OSD 的<b>心跳</b></text>
+  <text x="558" y="201" font-size="11" fill="#7c2d12">· <b>数据恢复/回填</b>（流量最大的时候）</text>
+  <text x="558" y="218" font-size="11" fill="#7c2d12">· 配置：<tspan font-family="monospace">cluster_network = 192.168.100.0/24</tspan></text>
+
+  <rect x="540" y="240" width="340" height="46" rx="9" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="558" y="260" font-size="11.5" fill="#475569">为什么必须分离？3 副本写入时，集群网流量 = 业务网 × 2</text>
+  <text x="558" y="277" font-size="11.5" fill="#475569">恢复/扩容时更可达业务网的 5~10 倍 → 不分就互相拖垮</text>
+</svg>
+<figcaption>图 12-1　双网分离。生产环境<b>强烈建议</b>配置独立的 cluster network。</figcaption>
+</figure>
+
+<h3>12.2 网络要求速查</h3>
+<table>
+<thead><tr><th style="width:24%">集群规模</th><th style="width:20%">public</th><th style="width:20%">cluster</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>测试 / PoC（≤6 OSD）</td><td>1 GbE</td><td>可共用</td><td>能用，但性能别指望</td></tr>
+<tr><td>小规模 HDD（≤20 OSD）</td><td>10 GbE</td><td>10 GbE</td><td>最低生产要求</td></tr>
+<tr><td>中规模 HDD / 混合</td><td>10~25 GbE</td><td>25 GbE</td><td>推荐起点</td></tr>
+<tr><td>全闪（SSD/NVMe）</td><td>25 GbE</td><td><b>100 GbE</b></td><td><b>网络会成为瓶颈</b>，NVMe 集群必须上百 G</td></tr>
+<tr><td>大规模（&gt;100 OSD）</td><td>25~100 GbE</td><td>100 GbE</td><td>考虑 Spine-Leaf，避免超售</td></tr>
+</tbody>
+</table>
+
+<h3>12.3 网络调优要点</h3>
+<pre><code># ① 开启巨帧（Jumbo Frame，MTU 9000）—— 全链路（交换机+网卡）都要配
+#    /etc/sysconfig/network-scripts/ifcfg-eth1 或 netplan
+MTU=9000
+#    Ceph 侧也要同步：
+ceph config set global ms_tcp_prefetch_max_size 65536
+
+# ② 使用 msgr2（msgr2 协议，Octopus 起默认，支持加密和更好的多路复用）
+ceph config set global ms_bind_msgr2 true
+#    确认端口：3300 (msgr2) / 6789 (legacy msgr1)
+ceph mon enable-msgr2
+
+# ③ 内核网络参数（/etc/sysctl.d/99-ceph.conf）
+net.core.rmem_max = 56623104
+net.core.wmem_max = 56623104
+net.core.rmem_default = 56623104
+net.core.wmem_default = 56623104
+net.core.netdev_max_backlog = 250000
+net.core.somaxconn = 65535
+net.ipv4.tcp_rmem = 4096 87380 56623104
+net.ipv4.tcp_wmem = 4096 65536 56623104
+net.ipv4.tcp_congestion_control = bbr      # 或 cubic
+
+# ④ 网卡多队列 + 中断绑定（CPU 密集型场景必做）
+ethtool -L eth1 combined 8                  # 开 8 队列
+#    用 irqbalance 或手动把中断绑到不同 NUMA 节点核心</code></pre>
+
+<div class="warn">
+<b>mtu 不一致是经典故障。</b>如果集群里<b>只有一台机器的 MTU 是 1500 而其余是 9000</b>，会出现"部分 OSD 心跳超时、集群反复 flapping"的诡异现象。用 <code>ping -M do -s 8972 &lt;目标IP&gt;</code> 逐台验证巨帧连通性。
+</div>
+</section>
+<section id="ch13">
+<h2><span class="num">13</span>性能调优全景</h2>
+
+<div class="note">
+<b>调优的第一原则：先定位瓶颈，再改参数。</b><br>
+绝大多数"慢"是硬件布局问题（没分离 db/wal、网络不够、盘混用），而不是某个 magic 参数没设。<b>盲目调参只会掩盖问题。</b>
+</div>
+
+<h3>13.1 瓶颈定位方法论</h3>
+<figure>
+<svg viewBox="0 0 900 260" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="a10" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#475569"/></marker></defs>
+  <text x="450" y="20" text-anchor="middle" font-size="13.5" font-weight="700" fill="#0e7490">"Ceph 慢" —— 自顶向下四层定位法</text>
+
+  <rect x="30" y="40" width="180" height="60" rx="9" fill="#f5f3ff" stroke="#6d28d9" stroke-width="1.6"/>
+  <text x="120" y="60" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">第 1 层：客户端</text>
+  <text x="120" y="78" text-anchor="middle" font-size="10.5" fill="#6d28d9">fio / rbd bench</text>
+  <text x="120" y="92" text-anchor="middle" font-size="10.5" fill="#6d28d9">单客户端能跑满吗？</text>
+
+  <line x1="210" y1="70" x2="240" y2="70" stroke="#475569" stroke-width="1.6" marker-end="url(#a10)"/>
+
+  <rect x="240" y="40" width="180" height="60" rx="9" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.6"/>
+  <text x="330" y="60" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0c4a6e">第 2 层：网络</text>
+  <text x="330" y="78" text-anchor="middle" font-size="10.5" fill="#0e7490">iperf3 / sar -n DEV</text>
+  <text x="330" y="92" text-anchor="middle" font-size="10.5" fill="#0e7490">带宽满了吗？重传多吗？</text>
+
+  <line x1="420" y1="70" x2="450" y2="70" stroke="#475569" stroke-width="1.6" marker-end="url(#a10)"/>
+
+  <rect x="450" y="40" width="180" height="60" rx="9" fill="#fef3c7" stroke="#b45309" stroke-width="1.6"/>
+  <text x="540" y="60" text-anchor="middle" font-size="12.5" font-weight="700" fill="#78350f">第 3 层：OSD 进程</text>
+  <text x="540" y="78" text-anchor="middle" font-size="10.5" fill="#92400e">ceph osd perf / perf dump</text>
+  <text x="540" y="92" text-anchor="middle" font-size="10.5" fill="#92400e">有慢盘吗？CPU 打满吗？</text>
+
+  <line x1="630" y1="70" x2="660" y2="70" stroke="#475569" stroke-width="1.6" marker-end="url(#a10)"/>
+
+  <rect x="660" y="40" width="200" height="60" rx="9" fill="#dcfce7" stroke="#15803d" stroke-width="1.6"/>
+  <text x="760" y="60" text-anchor="middle" font-size="12.5" font-weight="700" fill="#14532d">第 4 层：物理设备</text>
+  <text x="760" y="78" text-anchor="middle" font-size="10.5" fill="#166534">iostat -x 1 / smartctl</text>
+  <text x="760" y="92" text-anchor="middle" font-size="10.5" fill="#166534">磁盘 %util？await？有坏道？</text>
+
+  <!-- 判定表 -->
+  <rect x="30" y="125" width="400" height="120" rx="9" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="48" y="147" font-size="12.5" font-weight="700" fill="#334155">现象 → 瓶颈</text>
+  <text x="48" y="167" font-size="11" fill="#475569">单客户端慢，多客户端并发能上去　→ 客户端/并发度问题</text>
+  <text x="48" y="184" font-size="11" fill="#475569">写延迟高但吞吐正常　　　　　　　→ 网络 RTT 或 WAL 瓶颈</text>
+  <text x="48" y="201" font-size="11" fill="#475569">某几个 OSD 的 commit_latency 特别高 → <tspan fill="#b91c1c">慢盘，换盘</tspan></text>
+  <text x="48" y="218" font-size="11" fill="#475569">全闪集群 CPU 先打满　　　　　　　→ NVMe 场景正常，加 CPU 或调 shard</text>
+  <text x="48" y="235" font-size="11" fill="#475569">读很慢写还行　　　　　　　　　　→ 缓存不足 / 内存不足</text>
+
+  <rect x="450" y="125" width="410" height="120" rx="9" fill="#1e293b"/>
+  <text x="468" y="147" font-size="12" fill="#7dd3fc" font-family="monospace"># 最有价值的三条命令</text>
+  <text x="468" y="167" font-size="11.5" fill="#e2e8f0" font-family="monospace">ceph osd perf            # 找慢盘（commit/apply latency）</text>
+  <text x="468" y="185" font-size="11.5" fill="#e2e8f0" font-family="monospace">ceph osd df tree         # 找不均衡（VAR 列）</text>
+  <text x="468" y="203" font-size="11.5" fill="#e2e8f0" font-family="monospace">ceph daemon osd.N perf dump  # 深度指标（bluestore/rocksdb）</text>
+  <text x="468" y="221" font-size="11.5" fill="#e2e8f0" font-family="monospace">iostat -x 1              # 磁盘真实 %util / await</text>
+  <text x="468" y="238" font-size="11.5" fill="#fbbf24" font-family="monospace">rados bench -p rbd 60 write --no-cleanup  # 集群基准</text>
+</svg>
+<figcaption>图 13-1　四层定位法。从客户端往下逐层排除，比瞎调参数有效得多。</figcaption>
+</figure>
+
+<pre><code># ===== 基准测试三板斧 =====
+# ① 集群原始性能（绕过 RBD/CephFS，直接测 RADOS）
+rados bench -p rbd 60 write --no-cleanup -t 32     # 写 60 秒，32 并发
+rados bench -p rbd 60 seq                          # 顺序读
+rados bench -p rbd 60 rand                         # 随机读
+rados cleanup
+
+# ② RBD 性能
+rbd bench --io-type write --io-size 4K --io-threads 32 --io-total 1G rbd/test-img
+rbd bench --io-type randread --io-size 4K --io-threads 32 --io-total 1G rbd/test-img
+
+# ③ 真实业务模拟（最准）
+fio --name=test --ioengine=rbd --pool=rbd --rbdname=test-img \
+    --rw=randwrite --bs=4k --iodepth=32 --numjobs=4 --runtime=120 --group_reporting
+
+# ===== 找慢盘 =====
+$ ceph osd perf
+osd  commit_latency(ms)  apply_latency(ms)
+  3                   8                 12
+ 17                   7                 11
+ 42                 187                210      ← 明显异常，检查这块盘
+# commit_latency = 写请求从收到到"已持久化"的时间
+# apply_latency  = 从收到到"已应用到后端存储"的时间
+# 健康值：HDD &lt; 50ms，SSD &lt; 10ms，NVMe &lt; 3ms</code></pre>
+
+<h3>13.2 硬件层调优</h3>
+<table>
+<thead><tr><th style="width:14%">部件</th><th style="width:30%">建议</th><th>理由</th></tr></thead>
+<tbody>
+<tr><td><b>CPU</b></td><td>HDD 集群：1 核 / OSD<br>SSD/NVMe 集群：<b>2~4 核 / OSD</b></td><td>NVMe 场景下 CPU 往往是第一瓶颈（CRC 校验、RocksDB compaction、网络协议栈）。全闪集群别省 CPU</td></tr>
+<tr><td><b>内存</b></td><td>系统 8GB + 每 OSD 4~8GB<br>（见 9.4 的公式）</td><td>BlueStore 自管缓存，内存不足直接导致性能崩塌和 OOM</td></tr>
+<tr><td><b>磁盘</b></td><td>OS 盘与数据盘分离；<br>不要超售（1 OSD : 1 物理盘）</td><td>系统盘 I/O 会干扰 OSD；一块盘跑多个 OSD 会导致随机 I/O 加剧</td></tr>
+<tr><td><b>SSD/NVMe</b></td><td>选<b>高 DWPD</b>（每日全盘写入次数）的企业级盘</td><td>OSD 的写放大很大，消费级 SSD 的 TBW 很快耗尽，且掉电保护缺失有数据风险</td></tr>
+<tr><td><b>RAID 卡</b></td><td><b>必须配置为 JBOD / 直通（IT 模式）</b>，禁用 RAID</td><td>Ceph 自己做多副本，RAID 是多余的，且会屏蔽 SMART 信息、增加延迟</td></tr>
+<tr><td><b>NUMA</b></td><td>NVMe 集群注意 CPU 与网卡/磁盘的 NUMA 亲和性</td><td>跨 NUMA 访问内存/设备延迟增加 30%+</td></tr>
+</tbody>
+</table>
+
+<h3>13.3 操作系统层调优</h3>
+<pre><code># ===== 磁盘调度器 =====
+# HDD：改为 deadline 或 mq-deadline（不要 cfq）
+echo deadline > /sys/block/sda/queue/scheduler
+# NVMe/SSD：用 none（noop）最佳
+echo none > /sys/block/nvme0n1/queue/scheduler
+# 持久化（grub）：elevator=noop 或 用 udev rule
+
+# ===== 关闭交换分区 =====
+swapoff -a && sed -i '/swap/d' /etc/fstab
+sysctl -w vm.swappiness=1
+
+# ===== 透明大页（THP）—— Ceph 强烈建议关闭 =====
+echo never > /sys/kernel/mm/transparent_hugepage/enabled
+echo never > /sys/kernel/mm/transparent_hugepage/defrag
+# 持久化：在 /etc/rc.d/rc.local 或用 tuned profile
+
+# ===== 文件描述符与进程数 =====
+cat >> /etc/security/limits.d/99-ceph.conf &lt;&lt;EOF
+*       soft    nofile  1048576
+*       hard    nofile  1048576
+*       soft    nproc   1048576
+*       hard    nproc   1048576
+EOF
+
+# ===== readahead（HDD 顺序读场景）=====
+echo 8192 > /sys/block/sda/queue/read_ahead_kb
+
+# ===== 使用 tuned 一键优化（推荐）=====
+dnf install tuned
+tuned-adm profile latency-performance     # 低延迟
+# 或 throughput-performance               # 高吞吐（HDD 冷数据场景）</code></pre>
+
+<h3>13.4 BlueStore 层参数</h3>
+<table>
+<thead><tr><th style="width:34%">参数</th><th style="width:18%">默认 / 建议</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td><code>bluestore_cache_size_hdd</code></td><td>1G / 保持或 2G</td><td>HDD OSD 的缓存总量</td></tr>
+<tr><td><code>bluestore_cache_size_ssd</code></td><td>3G / 4~8G</td><td>SSD/NVMe OSD 缓存，内存充足可调大</td></tr>
+<tr><td><code>bluestore_cache_kv_ratio</code></td><td>0.4</td><td>给 RocksDB 的缓存比例。omap 多的场景（RGW index、CephFS）可调到 0.6</td></tr>
+<tr><td><code>bluestore_cache_meta_ratio</code></td><td>0.4</td><td>给元数据的缓存比例</td></tr>
+<tr><td><code>bluestore_min_alloc_size_hdd</code></td><td>65536 (64K)</td><td>HDD 最小分配单元。大文件顺序写场景可保持；小文件多会浪费空间</td></tr>
+<tr><td><code>bluestore_min_alloc_size_ssd</code></td><td>16384 (16K)</td><td>SSD 最小分配单元</td></tr>
+<tr><td><code>bluestore_wal_size</code> / <code>_db_size</code></td><td>自动</td><td>若手动建 OSD，指定 block.wal / block.db 的大小</td></tr>
+<tr><td><code>bluestore_rocksdb_options</code></td><td>—</td><td>NVMe 场景可加 <code>compression=kNoCompression</code> 降低 CPU 开销</td></tr>
+<tr><td><code>bluestore_compression_mode</code></td><td>none</td><td>可选 <code>aggressive</code>/<code>passive</code>。冷数据池可开压缩省空间，代价是 CPU</td></tr>
+<tr><td><code>bluestore_throttle_bytes</code></td><td>自动</td><td>延迟写（deferred write）阈值，超出后转为直写</td></tr>
+</tbody>
+</table>
+<pre><code># 典型全闪集群 BlueStore 调优
+ceph config set osd bluestore_cache_size_ssd 8G
+ceph config set osd bluestore_cache_kv_ratio 0.4
+ceph config set osd bluestore_cache_meta_ratio 0.45
+# NVMe 上关闭 RocksDB 压缩，省 CPU
+ceph config set osd bluestore_rocksdb_options "compression=kNoCompression,max_write_buffer_number=16,min_write_buffer_number_to_merge=4,recycle_log_file_num=16,write_buffer_size=268435456,level0_file_num_compaction_trigger=8,level0_slowdown_writes_trigger=32,level0_stop_writes_trigger=64"</code></pre>
+
+<h3>13.5 OSD 层参数</h3>
+<pre><code># ===== 并发与线程（全闪必调）=====
+# 每个 OSD 的 OP 处理队列分片数（默认 5，NVMe 建议 8~20）
+ceph config set osd osd_op_num_shards 8          # SSD
+ceph config set osd osd_op_num_shards 20         # NVMe（按 CPU 核数调整）
+# 每个 shard 的线程数
+ceph config set osd osd_op_num_threads_per_shard 2
+
+# ===== 恢复/回填限速（生产必调！）=====
+ceph config set osd osd_max_backfills 1              # 每 OSD 并发回填数
+ceph config set osd osd_recovery_max_active 3        # 每 OSD 并发恢复数
+ceph config set osd osd_recovery_max_active_hdd 3
+ceph config set osd osd_recovery_max_active_ssd 10
+ceph config set osd osd_recovery_sleep 0.1           # HDD 设 0.1~0.2，全闪设 0
+ceph config set osd osd_recovery_sleep_hdd 0.2
+ceph config set osd osd_recovery_sleep_ssd 0
+ceph config set osd osd_recovery_max_single_start 1
+ceph config set osd osd_recovery_op_priority 3       # 恢复操作优先级（相对客户端）
+ceph config set osd osd_client_op_priority 63        # 客户端操作优先级（更高）
+# → 保证恢复期间客户端 I/O 不被饿死
+
+# ===== 内存 =====
+ceph config set osd osd_memory_target 4294967296     # 4GB/OSD
+# 或用 autotune（需 OSD 能被 cgroup 限制）
+ceph config set osd osd_memory_base 2GB
+ceph config set osd osd_memory_cache_min 1GB
+ceph config set osd osd_memory_autotune true         # Tentacle 推荐
+
+# ===== 心跳（网络较差时放宽）=====
+ceph config set osd osd_heartbeat_interval 6
+ceph config set osd osd_heartbeat_grace 20
+
+# ===== 其他 =====
+ceph config set osd osd_deep_scrub_randomize_ratio 0.15   # 随机化 deep scrub，避免同批爆发
+ceph config set osd osd_op_thread_suicide_timeout 150
+ceph config set osd osd_mon_report_interval_min 5
+ceph config set osd osd_mon_report_interval_max 600</code></pre>
+
+<h3>13.6 客户端层参数</h3>
+<pre><code># ===== RBD（/etc/ceph/ceph.conf 的 [client] 段）=====
+[client]
+rbd_cache = true
+rbd_cache_size = 64MB                     # 默认 32MB
+rbd_cache_max_dirty = 48MB                # 脏数据上限，超过触发回写
+rbd_cache_target_dirty = 32MB
+rbd_cache_max_dirty_age = 2               # 脏数据最长驻留秒数
+rbd_cache_writethrough_until_flush = true # 收到 flush 前用透写（数据安全）
+rbd_readahead_trigger_requests = 10       # 顺序读预读
+rbd_readahead_max_bytes = 524288
+rbd_concurrent_management_ops = 20        # 管理操作并发
+
+# 镜像特性（性能相关）
+# layering       : 快照/克隆基础，必开
+# exclusive-lock : 独占锁，object-map/fast-diff 的前提
+# object-map     : 记录哪些对象已分配 → 稀疏镜像的读/删除快很多
+# fast-diff      : 快照 diff 加速
+# deep-flatten   : 扁平化加速
+rbd create -s 100G rbd/img --image-feature layering,exclusive-lock,object-map,fast-diff,deep-flatten
+
+# ===== CephFS =====
+[client]
+# 内核挂载
+# mount -t ceph mon1:6789,mon2:6789,mon3:6789:/ /mnt/cephfs -o name=admin,secret=xxx,ms_mode=crc
+ceph_config_max_read_size = 10485760
+# 用户态挂载（ceph-fuse）性能低于内核态，但对小文件元数据操作有优势
+
+# ===== RGW =====
+ceph config set client.rgw rgw_thread_pool_size 512
+ceph config set client.rgw rgw_frontends "beast port=7480 num_threads=512"
+ceph config set client.rgw rgw_max_concurrent_requests 2048
+ceph config set client.rgw rgw_override_bucket_index_max_shards 32</code></pre>
+
+<h3>13.7 调优参数速查（一张表带走）</h3>
+<table>
+<thead><tr><th style="width:24%">场景</th><th style="width:36%">最该做的事（按优先级）</th><th>不要做</th></tr></thead>
+<tbody>
+<tr><td><b>HDD 集群慢</b></td><td>① block.db/wal 分离到 SSD　② 开 balancer　③ 恢复限速　④ 调度器改 deadline</td><td>别指望靠加并发解决，HDD 的物理 IOPS 就那么多</td></tr>
+<tr><td><b>全闪集群慢</b></td><td>① 网络升 100G　② osd_op_num_shards 调大　③ 加 CPU　④ 关 RocksDB 压缩</td><td>别用 10G 网络跑 NVMe，那是浪费</td></tr>
+<tr><td><b>恢复/扩容期间业务卡</b></td><td>① 限速（sleep + max_backfills）　② 低峰执行　③ 提高 client 优先级</td><td>别在白天做大批量扩容</td></tr>
+<tr><td><b>小文件/元数据慢</b></td><td>① RGW bucket index 放 SSD　② 调 kv_ratio　③ 加 MDS 内存</td><td>别用 EC 池存元数据</td></tr>
+<tr><td><b>写延迟高</b></td><td>① 查慢盘　② 查网络 RTT/P99　③ 检查 WAL 是否在快设备上</td><td>别关写日志换性能（那是丢数据）</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="ch14">
+<h2><span class="num">14</span>容量规划与监控</h2>
+
+<h3>14.1 可用容量到底怎么算</h3>
+<div class="kv">
+<b>裸容量 → 可用容量 的四次扣减：</b><br><br>
+① <b>进制换算</b>：厂商 1TB = 10¹²，系统 1TiB = 2⁴⁰ → 约打 <b>0.909</b> 折<br>
+② <b>冗余开销</b>：3 副本 → ÷3（利用率 33%）；EC 4+2 → ÷1.5（利用率 67%）<br>
+③ <b>安全水位</b>：不能用到 100%，要留到 85%（nearfull）→ 再乘 <b>0.85</b><br>
+④ <b>恢复余量</b>：坏一块盘时，重建需要备用空间 → 再预留 <b>5~10%</b><br>
+</div>
+
+<pre><code># 计算示例：10 台服务器 × 12 块 8TB HDD，3 副本
+裸容量      = 10 × 12 × 8 TB          = 960 TB（厂商单位）
+转为 TiB    = 960 × 0.909             ≈ 873 TiB
+3 副本后    = 873 / 3                 ≈ 291 TiB
+85% 水位    = 291 × 0.85              ≈ 247 TiB
+预留 8%     = 247 × 0.92              ≈ <b>227 TiB  ← 这才是你能承诺给业务的容量</b>
+
+# 反推：要给业务 100TiB 可用（3 副本），需要多少裸容量？
+100 / 0.92 / 0.85 × 3 / 0.909 ≈ <b>420 TB 裸容量</b>（约 53 块 8TB 盘）</code></pre>
+
+<div class="warn">
+<b>一个反直觉的真相：</b>3 副本集群的"利用率"只有 <b>~26%</b>（0.909 × 0.333 × 0.85 × 0.92）。<br>
+这就是为什么 EC 池在冷数据场景能省一半以上的钱 —— 4+2 EC 的利用率约 <b>52%</b>，正好是 3 副本的两倍。
+</div>
+
+<h3>14.2 必须监控的指标</h3>
+<table>
+<thead><tr><th style="width:22%">指标</th><th style="width:26%">获取方式</th><th style="width:22%">告警阈值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>集群健康状态</td><td><code>ceph health detail</code></td><td>非 HEALTH_OK 即告警</td><td>最基础的</td></tr>
+<tr><td>集群可用容量</td><td><code>ceph df</code></td><td>&gt; 75% 警告，&gt; 85% 严重</td><td><b>最重要</b>：满了就全集群只读</td></tr>
+<tr><td>OSD 使用率偏差 (VAR)</td><td><code>ceph osd df tree</code></td><td>VAR &gt; 1.15</td><td>数据不均衡</td></tr>
+<tr><td>非 clean 的 PG 数</td><td><code>ceph pg stat</code></td><td>&gt; 0 持续 10min</td><td>有数据不一致或正在恢复</td></tr>
+<tr><td>慢请求 (slow requests)</td><td><code>ceph health detail</code></td><td>出现即关注</td><td><code>REQUEST_SLOW</code>，通常指向慢盘或网络</td></tr>
+<tr><td>OSD commit/apply 延迟</td><td><code>ceph osd perf</code></td><td>HDD&gt;100ms, SSD&gt;20ms</td><td>找慢盘最直接的方法</td></tr>
+<tr><td>MON quorum 数量</td><td><code>ceph quorum_status</code></td><td>&lt; 2（3 MON 集群）</td><td>quorum 丢失 = 集群只读</td></tr>
+<tr><td>OSD 上下线频率</td><td>日志 / Prometheus</td><td>1 小时内 &gt; 3 次 flapping</td><td>通常是网络或磁盘问题</td></tr>
+<tr><td>MDS 缓存/健康</td><td><code>ceph fs status</code></td><td>laggy / 缓存命中率低</td><td>CephFS 专用</td></tr>
+<tr><td>bluefs slow_used_bytes</td><td><code>perf dump</code></td><td>&gt; 0</td><td>block.db 溢出 → 性能骤降</td></tr>
+</tbody>
+</table>
+
+<pre><code># ===== 启用 Prometheus 监控（生产标准做法）=====
+ceph mgr module enable prometheus
+# 访问 http://&lt;mgr-host&gt;:9283/metrics
+# 导入 Grafana 官方 Dashboard：Ceph Cluster (ID 2842) / Ceph OSD (ID 5336)
+
+# ===== 常用监控命令 =====
+ceph -w                          # 实时跟踪集群事件
+ceph df detail                   # 各池容量细节
+ceph pg dump --format json | jq '.pg_stats[] | select(.state != "active+clean")'   # 找异常 PG
+ceph osd perf                    # 慢盘
+ceph health detail               # 健康详情
+ceph crash ls-new                # 查看守护进程崩溃记录（很实用！）
+
+# ===== 慢请求排查 =====
+ceph daemon osd.N dump_ops_in_flight     # 当前在飞的操作
+ceph daemon osd.N dump_historic_ops      # 历史慢操作
+ceph daemon osd.N dump_blocked_ops       # 被阻塞的操作</code></pre>
+</section>
+
+<section id="ch15">
+<h2><span class="num">15</span>故障场景与排障手册</h2>
+
+<h3>15.1 八大经典故障场景</h3>
+<table>
+<thead><tr><th style="width:22%">故障</th><th style="width:26%">现象</th><th style="width:26%">原因</th><th>处置</th></tr></thead>
+<tbody>
+<tr><td><b>集群变只读</b></td><td><code>HEALTH_ERR: full</code>，写入报错</td><td>某 OSD 达到 full_ratio(95%)</td><td>① 紧急 <code>ceph osd set-full-ratio 0.97</code><br>② 立即删数据或加盘<br>③ 治本：加盘 + 开 balancer</td></tr>
+<tr><td><b>OSD 反复 up/down</b><br>(flapping)</td><td><code>ceph -w</code> 里 OSD 不停上下线</td><td>网络丢包/MTU 不一致/磁盘间歇性故障</td><td>① 查 <code>dmesg</code> 有无磁盘错误<br>② 验证 MTU<br>③ 检查 cluster network 连通性</td></tr>
+<tr><td><b>PG 卡在 peering</b></td><td>大量 PG 长期 <code>peering</code></td><td>某 OSD 上 PGLog 过大 / OSD 无法启动 / 网络分区</td><td>看 OSD 日志；<code>ceph pg &lt;pgid&gt; query</code> 看详细信息</td></tr>
+<tr><td><b>incomplete PG</b></td><td>数据无法访问</td><td>Peering 找不到完整副本（多盘同时故障）</td><td>尝试找回离线 OSD；<br>极端情况 <code>ceph osd force-create-pg</code>（<b>会丢数据，慎用</b>）</td></tr>
+<tr><td><b>block.db 溢出</b></td><td>性能突然大幅下降</td><td>db 设备空间不足，RocksDB 溢出到慢设备</td><td>扩容 db LV；<br>或重建 OSD 用更大的 db</td></tr>
+<tr><td><b>OSD 内存 OOM</b></td><td>OSD 被 kill，触发大规模重建</td><td>osd_memory_target 设置过大 / PG 太多</td><td>降低 memory_target；减少 PG 数；加内存</td></tr>
+<tr><td><b>MON quorum 丢失</b></td><td>集群完全不可写</td><td>多数 MON 挂掉 / MON 间通信中断</td><td>恢复足够数量的 MON；<br>紧急时可单 MON 强制进入 quorum（<b>有风险，先备份</b>）</td></tr>
+<tr><td><b>slow requests</b></td><td><code>REQUEST_SLOW</code> 告警</td><td>慢盘、网络拥塞、CPU 饱和、恢复抢占</td><td>按 13.1 四层定位法逐层排查</td></tr>
+</tbody>
+</table>
+
+<h3>15.2 排障命令速查（按场景）</h3>
+<pre><code># ===== 集群整体 =====
+ceph -s / ceph status / ceph -w
+ceph health detail
+ceph df / ceph df detail
+ceph quorum_status --format json-pretty
+ceph mon stat
+ceph mgr stat
+
+# ===== OSD =====
+ceph osd stat / ceph osd tree / ceph osd df tree
+ceph osd dump
+ceph osd perf                       # 慢盘
+ceph osd find &lt;osd-id&gt;             # OSD 在哪台机器
+ceph osd metadata &lt;osd-id&gt;         # OSD 的设备信息
+ceph daemon osd.N perf dump         # 深度指标
+ceph daemon osd.N config show       # 运行时配置
+systemctl status ceph-osd@N
+tail -100f /var/log/ceph/ceph-osd.N.log
+
+# ===== PG =====
+ceph pg stat
+ceph pg dump pgs_brief              # 精简输出
+ceph pg &lt;pgid&gt; query                # 某 PG 的详细状态（排障神器）
+ceph pg map &lt;pgid&gt;
+ceph pg &lt;pgid&gt; list_missing         # 缺失对象
+ceph pg repair &lt;pgid&gt;               # 修复不一致
+
+# ===== 池 / 对象 =====
+ceph osd pool ls detail
+ceph osd pool stats
+rados df
+rados -p &lt;pool&gt; ls                  # 列对象
+rados -p &lt;pool&gt; stat &lt;obj&gt;
+ceph osd map &lt;pool&gt; &lt;object&gt;        # 对象在哪个 OSD
+
+# ===== 守护进程崩溃（非常有用但常被忽略）=====
+ceph crash ls
+ceph crash ls-new
+ceph crash info &lt;crash-id&gt;
+ceph crash archive-all              # 清理已处理
+
+# ===== 静默打开调试日志（临时）=====
+ceph tell osd.* injectargs --debug_osd 20 --debug_bluestore 20
+# 记得用完调回
+ceph tell osd.* injectargs --debug_osd 0 --debug_bluestore 0</code></pre>
+
+<div class="good">
+<b>排障心法：</b><br>
+1. <code>ceph health detail</code> 是起点，它会告诉你<b>具体哪个 PG、哪个 OSD 出问题</b>，不要只看 <code>ceph -s</code>。<br>
+2. 90% 的问题能在 <code>/var/log/ceph/</code> 里找到直接答案。<br>
+3. 先恢复服务（加盘、隔离坏盘、限速），再查根因。<b>不要在业务高峰做破坏性排查。</b><br>
+4. 任何"强制"命令（force-create-pg、mark-complete、unsafe 参数）执行前<b>先备份 /var/lib/ceph</b> 和 mon 数据。
+</div>
+</section>
+
+<section id="ch16">
+<h2><span class="num">16</span>术语速查表</h2>
+<table>
+<thead><tr><th style="width:20%">术语</th><th style="width:36%">含义</th><th>类比理解</th></tr></thead>
+<tbody>
+<tr><td><b>RADOS</b></td><td>可靠的自治分布式对象存储，Ceph 的底层</td><td>地基</td></tr>
+<tr><td><b>Object</b></td><td>最小存储单元（默认 4MB），包含数据+元数据</td><td>一个个包裹</td></tr>
+<tr><td><b>PG</b></td><td>归置组，对象和 OSD 之间的中间层</td><td>包裹的分类箱子</td></tr>
+<tr><td><b>PGP</b></td><td>pgp_num，真正参与 CRUSH 计算的 PG 数量</td><td>实际投入使用的箱子数</td></tr>
+<tr><td><b>CRUSH</b></td><td>计算式数据分布算法</td><td>快递分拣规则</td></tr>
+<tr><td><b>Pool</b></td><td>存储池，逻辑命名空间，有自己的副本数/CRUSH rule/PG 数</td><td>一个大仓库分区</td></tr>
+<tr><td><b>Acting Set</b></td><td>被授权持有某 PG 的 OSD 列表</td><td>应该负责的快递员</td></tr>
+<tr><td><b>Up Set</b></td><td>当前实际提供服务的 OSD 列表</td><td>实际在岗的快递员</td></tr>
+<tr><td><b>Primary OSD</b></td><td>Acting Set 的第一个，负责串行化和转发</td><td>组长</td></tr>
+<tr><td><b>Peering</b></td><td>同一 PG 的各副本协商状态的过程</td><td>交接班对齐</td></tr>
+<tr><td><b>Recovery</b></td><td>依据 PGLog 精确补齐少量缺失对象</td><td>补作业</td></tr>
+<tr><td><b>Backfill</b></td><td>全量扫描并搬运整个 PG 的数据</td><td>抄整本书</td></tr>
+<tr><td><b>Scrub</b></td><td>副本间一致性校验（防位翻转）</td><td>定期盘点</td></tr>
+<tr><td><b>epoch</b></td><td>OSDMap 的版本号，每次拓扑变化 +1</td><td>地图版本号</td></tr>
+<tr><td><b>weight</b></td><td>OSD 的容量权重，决定数据分配比例</td><td>快递员的承载能力</td></tr>
+<tr><td><b>reweight</b></td><td>覆盖 weight 的临时乘数（0~1）</td><td>临时限流阀</td></tr>
+<tr><td><b>upmap</b></td><td>针对单个 PG 的显式映射覆盖</td><td>特殊情况手动派单</td></tr>
+<tr><td><b>omap</b></td><td>对象的键值数据（RGW index、CephFS 目录项在用）</td><td>包裹的备注清单</td></tr>
+<tr><td><b>BlueStore</b></td><td>当前默认存储引擎，直写裸设备</td><td>仓库的货架系统</td></tr>
+<tr><td><b>BlueFS</b></td><td>BlueStore 内为 RocksDB 服务的极简文件系统</td><td>货架的索引柜</td></tr>
+<tr><td><b>msgr2</b></td><td>Ceph 的第二代网络协议（端口 3300），支持加密</td><td>新版通信协议</td></tr>
+<tr><td><b>quorum</b></td><td>MON 的多数派，集群能正常运作的前提</td><td>投票过半数</td></tr>
+</tbody>
+</table>
+</section>
+<nav class="doc-series">
+  <p class="lb">Ceph 四部曲</p>
+  <ol>
+<li class="cur"><a href="../posts/ceph-principles.html">① Ceph 原理详解：从寻址到数据均衡</a></li>
+<li class=""><a href="../posts/ceph-deployment.html">② Ceph 完整部署手册（手动 + Ansible）</a></li>
+<li class=""><a href="../posts/ceph-operations.html">③ Ceph 日常运维实战手册</a></li>
+<li class=""><a href="../posts/ceph-tuning.html">④ Ceph 性能瓶颈分析与调优</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../feed.xml">RSS</a>
+      <a href="../storage.html">存储专题</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rensongqi · 个人笔记</title>
+<meta name="description" content="个人技术笔记 —— 分布式存储、后端工程与实践记录。">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="feed.xml">
+</head>
+<body>
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="index.html" class="is-active">首页</a>
+      <a href="archive.html">归档</a>
+      <a href="storage.html">存储</a>
+      <a href="about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <h1>写下来的才算想清楚</h1>
+    <p>这里是我的个人技术笔记。目前主要收录<strong>分布式存储</strong>方向的内容 —— 从原理、部署到运维与性能调优，尽量写成"下次遇到问题能直接照着做"的样子。</p>
+    <div class="meta">
+      共 <span id="total">4</span> 篇 · 最近更新 2026-09-14 ·
+      <a href="feed.xml">RSS</a> · <a href="https://github.com/rensongqi">GitHub</a>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block__head">
+      <h2>专题模块</h2>
+    </div>
+    <div class="modules">
+      <a class="module" href="storage.html">
+        <h3>存储 / Storage</h3>
+        <p>Ceph 四部曲：原理、部署、运维、调优。含 30 张手绘原理图与可复制的命令。</p>
+        <span class="n">4 篇</span>
+      </a>
+      <a class="module" href="archive.html">
+        <h3>全部文章</h3>
+        <p>按时间倒序的完整列表，支持关键词搜索。</p>
+        <span class="n">Archive</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block__head">
+      <h2>最近文章</h2>
+      <a class="more" href="archive.html">查看全部 →</a>
+    </div>
+    <ul class="card-list" id="recent"></ul>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>© 2026 rensongqi</span>
+    <span class="r">
+      <a href="feed.xml">RSS</a>
+      <a href="about.html">关于</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="assets/js/main.js"></script>
+<script>
+(function () {
+  var P = window.POSTS;
+  document.getElementById('total').textContent = P.length;
+  document.getElementById('recent').innerHTML = P.map(function (p) {
+    return '<li>' +
+      '<h3><a href="' + p.url + '">' + p.title + '</a></h3>' +
+      '<p>' + p.desc + '</p>' +
+      '<div class="meta">' + p.date + ' · ' + p.module + ' · ' + p.words +
+      ' · ' + p.tags.map(function (t) { return '#' + t; }).join(' ') + '</div>' +
+      '</li>';
+  }).join('');
+})();
+</script>
+</body>
+</html>

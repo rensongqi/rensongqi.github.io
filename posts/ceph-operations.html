@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ceph 日常运维实战手册 · rensongqi</title>
+<meta name="description" content="命令体系 · slow ops 排查 · PG 均衡 · 扩缩容换盘 · 巡检与故障速查">
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../feed.xml">
+<style>
+
+:root{
+  --bg:#f5f7fa; --card:#ffffff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+  --accent:#0e7490; --accent-soft:#e0f2f7; --amber:#b45309; --amber-soft:#fef3c7;
+  --green:#15803d; --green-soft:#dcfce7; --red:#b91c1c; --red-soft:#fee2e2;
+  --purple:#6d28d9; --purple-soft:#ede9fe; --code-bg:#f6f8fa; --code-ink:#243b53;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif;
+  font-size:15px;line-height:1.8;}
+.layout{display:flex;max-width:1400px;margin:0 auto;gap:24px;padding:0 16px;}
+.toc{position:sticky;top:0;align-self:flex-start;width:270px;flex:0 0 270px;
+  height:100vh;overflow-y:auto;padding:24px 12px 60px 0;border-right:1px solid var(--line);}
+.toc h4{margin:0 0 12px;font-size:13px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+.toc a{display:block;text-decoration:none;color:#374151;font-size:13.5px;padding:5px 10px;border-radius:6px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.toc a:hover{background:var(--accent-soft);color:var(--accent);}
+.toc a.sub{padding-left:24px;font-size:12.5px;color:var(--muted);}
+.toc .part{margin:14px 0 6px;font-weight:700;color:var(--accent);font-size:12.5px;}
+main{flex:1;min-width:0;padding:24px 0 100px;}
+header.hero{background:linear-gradient(135deg,#0e7490 0%,#155e75 45%,#1e3a5f 100%);
+  color:#fff;border-radius:16px;padding:38px 40px;margin-bottom:28px;}
+header.hero h1{margin:0 0 10px;font-size:30px;letter-spacing:.5px;}
+header.hero p{margin:0;opacity:.9;font-size:15px;}
+header.hero .tags{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px;}
+header.hero .tags span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);
+  padding:3px 12px;border-radius:999px;font-size:12.5px;}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:28px 32px;margin-bottom:22px;}
+h2{font-size:23px;margin:0 0 6px;padding-bottom:12px;border-bottom:2px solid var(--accent-soft);
+  color:#0f172a;scroll-margin-top:20px;}
+h2 .num{display:inline-block;background:var(--accent);color:#fff;font-size:14px;
+  width:30px;height:30px;line-height:30px;text-align:center;border-radius:8px;margin-right:10px;vertical-align:2px;}
+h3{font-size:18px;margin:30px 0 10px;color:#0e7490;border-left:4px solid var(--accent);padding-left:10px;}
+h4{font-size:15.5px;margin:20px 0 8px;color:#334155;}
+p{margin:10px 0;}
+ul,ol{padding-left:22px;margin:10px 0;}
+li{margin:5px 0;}
+code{background:var(--code-bg);color:#b91c1c;padding:1.5px 5px;border-radius:4px;
+  font-family:"JetBrains Mono",Consolas,"Courier New",monospace;font-size:13px;}
+pre{background:var(--code-bg);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:8px;padding:14px 16px;overflow-x:auto;font-size:12.8px;line-height:1.65;color:var(--code-ink);}
+pre code{background:none;color:inherit;padding:0;font-size:12.8px;}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+th{background:#eef2f7;color:#0f172a;text-align:left;padding:9px 12px;border:1px solid var(--line);font-weight:600;}
+td{padding:8px 12px;border:1px solid var(--line);vertical-align:top;}
+tbody tr:nth-child(even){background:#fafbfc;}
+.note,.warn,.good,.tip{border-radius:10px;padding:12px 16px;margin:16px 0;font-size:14px;border-left:4px solid;}
+.note{background:var(--accent-soft);border-color:var(--accent);}
+.warn{background:var(--amber-soft);border-color:var(--amber);}
+.good{background:var(--green-soft);border-color:var(--green);}
+.tip{background:var(--purple-soft);border-color:var(--purple);}
+.note b,.warn b,.good b,.tip b{color:inherit;}
+figure{margin:20px 0;text-align:center;}
+figure svg{max-width:100%;height:auto;}
+figcaption{font-size:13px;color:var(--muted);margin-top:8px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#fcfdfe;}
+.card h5{margin:0 0 6px;font-size:14.5px;color:#0f172a;}
+.card p{margin:0;font-size:13.3px;color:#475569;line-height:1.7;}
+.kv{background:#f8fafc;border:1px dashed var(--line);border-radius:8px;padding:10px 14px;margin:10px 0;font-size:13.3px;}
+.q{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:12px 0;}
+.q .qq{font-weight:600;color:#0e7490;}
+.cmd{font-family:"JetBrains Mono",Consolas,"Courier New",monospace;}
+.bad{color:#b91c1c;font-weight:600;}
+.ok{color:#15803d;font-weight:600;}
+.footer{text-align:center;color:var(--muted);font-size:13px;padding:30px 0;}
+@media(max-width:1080px){.toc{display:none}.layout{padding:0 10px}}
+@media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}section{padding:20px 16px}}
+
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../index.html">首页</a>
+      <a href="../archive.html">归档</a>
+      <a href="../storage.html" class="is-active">存储</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../index.html">首页</a> / <a href="../storage.html">存储</a> / <span>Ceph 日常运维实战手册</span></div>
+
+<div class="doc-title">
+  <h1>Ceph 日常运维实战手册</h1>
+  <div class="meta">2026-09-14 · 约 1.6 万字 · 更新于 2026-09-14</div>
+  <div class="doc-tags"><span>#Ceph</span><span>#运维</span><span>#排障</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc">
+  <h4>目录</h4>
+  <div class="part">基础</div>
+  <a href="#s1">1. 运维对象地图</a>
+  <a href="#s2">2. 命令体系全景</a>
+  <a href="#s2-1" class="sub">2.1 命令命名规律</a>
+  <a href="#s2-2" class="sub">2.2 集群 / 健康</a>
+  <a href="#s2-3" class="sub">2.3 MON / MGR</a>
+  <a href="#s2-4" class="sub">2.4 OSD</a>
+  <a href="#s2-5" class="sub">2.5 Pool / PG</a>
+  <a href="#s2-6" class="sub">2.6 RBD / RGW / CephFS</a>
+  <a href="#s2-7" class="sub">2.7 ceph -s 逐行解读</a>
+  <div class="part">排障</div>
+  <a href="#s3">3. slow ops 深度排查</a>
+  <a href="#s3-1" class="sub">3.1 什么是 slow ops</a>
+  <a href="#s3-2" class="sub">3.2 五层定位法</a>
+  <a href="#s3-3" class="sub">3.3 抓取现场的三把刀</a>
+  <a href="#s3-4" class="sub">3.4 根因速查表</a>
+  <a href="#s3-5" class="sub">3.5 六个真实案例</a>
+  <a href="#s3-6" class="sub">3.6 止血十招</a>
+  <a href="#s3-7" class="sub">3.7 监控与告警</a>
+  <div class="part">均衡与容量</div>
+  <a href="#s4">4. PG 均衡实战</a>
+  <a href="#s4-1" class="sub">4.1 两种均衡必须分清</a>
+  <a href="#s4-2" class="sub">4.2 三种权重与生效顺序</a>
+  <a href="#s4-3" class="sub">4.3 手动均衡</a>
+  <a href="#s4-4" class="sub">4.4 balancer 自动均衡</a>
+  <a href="#s4-5" class="sub">4.5 pg_num 规划与调整</a>
+  <a href="#s4-6" class="sub">4.6 PG 状态机与卡死处理</a>
+  <a href="#s5">5. 扩容</a>
+  <a href="#s5-1" class="sub">5.1 三种扩容场景</a>
+  <a href="#s5-2" class="sub">5.2 加 OSD 全流程</a>
+  <a href="#s5-3" class="sub">5.3 加节点</a>
+  <a href="#s5-4" class="sub">5.4 限速与业务影响</a>
+  <a href="#s5-5" class="sub">5.5 full 急救</a>
+  <a href="#s6">6. 缩容与换盘</a>
+  <a href="#s6-1" class="sub">6.1 安全摘除 OSD</a>
+  <a href="#s6-2" class="sub">6.2 摘除节点</a>
+  <a href="#s6-3" class="sub">6.3 换盘</a>
+  <a href="#s6-4" class="sub">6.4 缩容容量红线</a>
+  <div class="part">体系</div>
+  <a href="#s7">7. 巡检清单 + 脚本</a>
+  <a href="#s8">8. 故障速查表 24 条</a>
+  <a href="#s9">9. 变更红线与规范</a>
+  <a href="#s10">10. 附录：速查卡</a>
+</nav>
+<main>
+<p class="lead">命令体系 · slow ops 排查 · PG 均衡 · 扩缩容换盘 · 巡检与故障速查</p>
+<section id="s1">
+<h2><span class="num">1</span>运维对象地图：先知道你在管什么</h2>
+<p>Ceph 运维的本质是<strong>管理五类对象</strong>，所有命令都围绕它们展开。遇到告警时，第一件事是判断"这是哪一层的锅"，而不是急着敲命令。</p>
+
+<figure>
+<svg viewBox="0 0 680 400" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="680" height="400" fill="#ffffff"/>
+  <!-- 顶层 -->
+  <rect x="230" y="12" width="220" height="42" rx="8" fill="#0e7490"/>
+  <text x="340" y="38" font-size="15" fill="#fff" text-anchor="middle" font-weight="600">客户端 Client</text>
+  <text x="230" y="66" font-size="12" fill="#6b7280">RBD / RGW / CephFS / librados</text>
+  <line x1="340" y1="54" x2="340" y2="86" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
+  <!-- 控制面 -->
+  <rect x="20" y="90" width="300" height="130" rx="10" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.5"/>
+  <text x="30" y="112" font-size="14" fill="#0e7490" font-weight="700">控制面（必须奇数、必须轻量）</text>
+  <rect x="34" y="122" width="126" height="46" rx="7" fill="#fff" stroke="#0e7490"/>
+  <text x="97" y="144" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="600">MON</text>
+  <text x="97" y="160" font-size="11" fill="#6b7280" text-anchor="middle">集群地图 / 认证</text>
+  <rect x="176" y="122" width="130" height="46" rx="7" fill="#fff" stroke="#0e7490"/>
+  <text x="241" y="144" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="600">MGR</text>
+  <text x="241" y="160" font-size="11" fill="#6b7280" text-anchor="middle">dashboard/监控/编排</text>
+  <rect x="34" y="180" width="272" height="30" rx="6" fill="#fff" stroke="#cbd5e1"/>
+  <text x="170" y="200" font-size="11.5" fill="#475569" text-anchor="middle">MDS（仅 CephFS）· RGW（仅对象网关）</text>
+  <!-- 数据面 -->
+  <rect x="340" y="90" width="320" height="130" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
+  <text x="350" y="112" font-size="14" fill="#b45309" font-weight="700">数据面（性能与容量的主战场）</text>
+  <rect x="352" y="122" width="140" height="46" rx="7" fill="#fff" stroke="#b45309"/>
+  <text x="422" y="144" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="600">OSD</text>
+  <text x="422" y="160" font-size="11" fill="#6b7280" text-anchor="middle">一进程一盘 · 承载 IO</text>
+  <rect x="504" y="122" width="140" height="46" rx="7" fill="#fff" stroke="#b45309"/>
+  <text x="574" y="144" font-size="13" fill="#1f2937" text-anchor="middle" font-weight="600">PG</text>
+  <text x="574" y="160" font-size="11" fill="#6b7280" text-anchor="middle">逻辑分片 · 均衡单位</text>
+  <rect x="352" y="180" width="292" height="30" rx="6" fill="#fff" stroke="#cbd5e1"/>
+  <text x="498" y="200" font-size="11.5" fill="#475569" text-anchor="middle">Pool（副本 / EC）· CRUSH Map（故障域）</text>
+  <!-- 底座 -->
+  <rect x="20" y="240" width="640" height="72" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="1.5"/>
+  <text x="30" y="262" font-size="14" fill="#15803d" font-weight="700">底座（出问题往往伪装成 Ceph 问题）</text>
+  <text x="30" y="284" font-size="12" fill="#374151">网络：public（前端/客户端）与 cluster（后端/复制）—— 丢包、抖动、带宽打满</text>
+  <text x="30" y="302" font-size="12" fill="#374151">磁盘：HDD / SATA SSD / NVMe —— 慢盘、坏道、block.db 溢出</text>
+  <line x1="170" y1="220" x2="170" y2="240" stroke="#94a3b8" marker-end="url(#ar)"/>
+  <line x1="500" y1="220" x2="500" y2="240" stroke="#94a3b8" marker-end="url(#ar)"/>
+  <!-- 运维动作 -->
+  <text x="30" y="336" font-size="13" fill="#0e7490" font-weight="700">运维动作 → 对应命令族</text>
+  <rect x="30" y="346" width="140" height="34" rx="7" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="100" y="367" font-size="11.5" fill="#374151" text-anchor="middle">看状态：ceph -s / -w</text>
+  <rect x="182" y="346" width="140" height="34" rx="7" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="252" y="367" font-size="11.5" fill="#374151" text-anchor="middle">看容量：ceph df / osd df</text>
+  <rect x="334" y="346" width="140" height="34" rx="7" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="404" y="367" font-size="11.5" fill="#374151" text-anchor="middle">看延迟：osd perf / dump_ops</text>
+  <rect x="486" y="346" width="158" height="34" rx="7" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="565" y="367" font-size="11.5" fill="#374151" text-anchor="middle">改分布：crush / balancer</text>
+</svg>
+<figcaption>图 1：Ceph 运维对象全景。排查时自上而下定位层级，能省掉 80% 的无效操作。</figcaption>
+</figure>
+
+<div class="tip"><b>黄金三步：</b>任何告警先回答三个问题 —— ① 集群现在 <code>HEALTH</code> 是什么（<code>ceph health detail</code>）？② 影响范围多大（几个 OSD / 几个 PG / 哪个 pool）？③ 是突发的还是渐进的（对比昨天这个点的监控）？答不上来就先别动手。</div>
+
+<h3>各对象的"健康标准"速判</h3>
+<table>
+<thead><tr><th style="width:16%">对象</th><th style="width:42%">健康标准</th><th>异常时的典型表现</th></tr></thead>
+<tbody>
+<tr><td><b>MON</b></td><td>奇数个（3/5），quorum 完整，时钟偏移 &lt; 0.05s，磁盘 &lt; 60%</td><td>集群整体不可读写、<code>mon election</code>、<code>clock skew</code></td></tr>
+<tr><td><b>MGR</b></td><td>1 主 1 备，<code>mgr stat</code> 显示 active+standby</td><td>dashboard 打不开、prometheus 无数据、PG 不自动均衡</td></tr>
+<tr><td><b>OSD</b></td><td>全部 <code>up</code> 且 <code>in</code>，commit/apply 延迟正常，<code>VAR</code> 0.8~1.2</td><td>slow ops、PG degraded、容量不均</td></tr>
+<tr><td><b>PG</b></td><td>100% <code>active+clean</code>，无 stuck/inconsistent</td><td>业务 IO 卡顿、数据不一致风险</td></tr>
+<tr><td><b>Pool</b></td><td>使用率 &lt; 70%（HDD 建议更低），PG 数合理</td><td><code>nearfull</code> / <code>backfillfull</code> / <code>full</code> → 只读</td></tr>
+<tr><td><b>网络</b></td><td>前端/后端分离，无丢包，PPS 未打满</td><td>slow ops 大面积、<code>heartbeat_check</code> 失败</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="s2">
+<h2><span class="num">2</span>命令体系全景：记住规律而不是背命令</h2>
+
+<h3 id="s2-1">2.1 命令命名规律（看懂这节等于少背 100 条）</h3>
+<p>Ceph 命令是<strong>树状结构</strong>，<code>ceph &lt;对象&gt; &lt;动作&gt; [参数]</code>。掌握规律后可以"猜"出命令。</p>
+<div class="grid3">
+<div class="card"><h5>看列表</h5><p><code>ls</code> / <code>stat</code> / <code>dump</code> / <code>tree</code><br>例：<code>ceph osd ls</code>、<code>ceph osd tree</code>、<code>ceph osd dump</code></p></div>
+<div class="card"><h5>看详情</h5><p><code>detail</code> / <code>... &lt;id&gt; get</code><br>例：<code>ceph health detail</code>、<code>ceph osd.0 perf dump</code></p></div>
+<div class="card"><h5>改配置</h5><p><code>set</code> / <code>unset</code> / <code>ceph tell ... injectargs</code><br>例：<code>ceph osd set noout</code>、<code>ceph tell osd.* injectargs '--osd-max-backfills=1'</code></p></div>
+</div>
+
+<div class="kv">
+<b>动作动词对照：</b><br>
+<code>ls</code> 列表 → <code>stat</code> 摘要 → <code>dump</code> 全量（JSON/详细）→ <code>get</code> 取单个 → <code>set</code> 设置 → <code>add/rm</code> 增删 → <code>create/delete</code> 建删 → <code>enable/disable</code> 开关 → <code>fail</code> 强制切换 → <code>repair/scrub</code> 修复
+</div>
+
+<div class="note"><b>三条最省时间的用法：</b><br>
+① <code>ceph --admin-daemon /var/run/ceph/ceph-osd.0.asok &lt;cmd&gt;</code> —— 绕过网络直连本地 OSD 拿数据，集群卡死时救命；<br>
+② <code>ceph tell osd.* &lt;cmd&gt;</code> —— 对所有 OSD 批量下发（改参数、清 slow ops 计数都用它）；<br>
+③ <code>--format=json-pretty</code> + <code>jq</code> —— 任何命令加这个后缀都能被脚本消费。</div>
+
+<h3 id="s2-2">2.2 集群与健康（每天必敲）</h3>
+<pre><code># ── 看状态 ──────────────────────────────────────────
+ceph -s                       # 状态摘要（最常用）
+ceph -w                       # 持续刷新（按 Ctrl+C 退出）
+ceph health                   # 只要 HEALTH_OK / WARN / ERR
+ceph health detail            # ★ 出问题时第一个敲这个，直接告诉你原因
+ceph status --format=json-pretty | jq '.health.cheks'   # 脚本消费
+
+# ── 看容量 ──────────────────────────────────────────
+ceph df                       # 池维度（USED / AVAIL / USED%）
+ceph df detail                # 含 raw used、压缩收益
+ceph osd df                   # OSD 维度（★ 看 VAR 列判断均衡）
+ceph osd df tree              # 按 host/rack 聚合，看节点间是否均衡
+
+# ── 看实时流量 ──────────────────────────────────────
+ceph -s                       # 头部有 client io: read/write
+watch -n1 'ceph -s | tail -5' # 盯 IO
+rados df                      # 池级对象数与占用
+ceph osd pool stats           # 每个池的 IO 速率
+
+# ── 集群开关（运维必备）────────────────────────────
+ceph osd set noout            # ★ 禁止 OSD 自动 out（换盘/停机维护前必做）
+ceph osd unset noout          # 恢复
+ceph osd set norecover        # 暂停恢复
+ceph osd set nobackfill       # 暂停回填（比 norecover 更常用，只停全量回填）
+ceph osd set noscrub; ceph osd set nodeep-scrub   # 停 scrub（压测/应急时）
+ceph osd set full             # 人工置 full（紧急熔断，慎用）
+ceph osd unset nobackfill noscrub nodeep-scrub noout   # 一次性全部解除
+ceph osd dump | grep flags    # 查看当前设置了哪些 flag</code></pre>
+
+<div class="warn"><b>flag 使用铁律：</b><code>noout</code> 设了一定要记得 unset。见过太多次"三个月前维护时设了 noout 忘了取消"，结果后来真有 OSD 挂了却不触发恢复，直到第二块盘也挂 → 数据丢失。建议在变更单里强制写"解除时间"。</div>
+
+<h3 id="s2-3">2.3 MON / MGR</h3>
+<pre><code># ── MON ────────────────────────────────────────────
+ceph mon stat                 # 摘要：几个 mon，谁在 quorum
+ceph mon dump                 # 全量：地址、rank、选举 epoch
+ceph quorum_status -f json-pretty | jq '.quorum_names, .quorum_leader_name'
+ceph tell mon.* mon_status    # 每个 mon 自身视角
+ceph mon add &lt;name&gt; &lt;addr&gt;    # 加 mon（也可写 monmap）
+ceph mon remove &lt;name&gt;        # 删 mon
+ceph daemon mon.&lt;id&gt; config show | grep clock   # 查时钟偏移配置
+
+# 时钟偏移排查（MON 最常见告警之一）
+ceph health detail | grep -i clock
+systemctl status chronyd      # 或 ntpd
+chronyc sources -v            # 看时钟源是否可达
+
+# ── MGR ────────────────────────────────────────────
+ceph mgr stat                 # {active_name, standby_names}
+ceph mgr module ls            # 模块列表（on/off 状态）
+ceph mgr module enable dashboard
+ceph mgr module disable telemetry
+ceph mgr fail &lt;name&gt;          # 强制主备切换
+ceph mgr services             # ★ 直接给出 dashboard / prometheus 的 URL
+ceph dashboard get-login-credentials   # 忘记 admin 密码时用（部分版本）</code></pre>
+
+<h3 id="s2-4">2.4 OSD（运维最密集的一块）</h3>
+<pre><code># ── 拓扑与状态 ──────────────────────────────────────
+ceph osd tree                 # 树状：host / rack / osd 的权重与状态
+ceph osd tree up              # 只看 up 的
+ceph osd tree out             # 只看 out 的
+ceph osd stat                 # 一行摘要（x osds: y up, z in）
+ceph osd dump                 # 全量（含 flags、pool、pg_num）
+ceph osd metadata 0           # ★ 单盘硬件信息：型号/固件/rotational/bluestore 布局
+ceph osd find 3               # osd.3 在哪台机器、crush 位置
+
+# ── 性能（★ 排障核心）──────────────────────────────
+ceph osd perf                 # ★ 每个 OSD 的 commit_latency / apply_latency（ms）
+ceph osd perf | sort -k3 -n -r | head   # 找出最慢的 10 个
+ceph osd.12 perf dump         # 单 OSD 全部计数器（几百项）
+ceph osd.12 perf dump | jq '.bluestore.kv_commit_lat, .osd.op_w_latency'
+ceph tell osd.12 dump_ops_in_flight     # ★ 正在跑的慢请求（见第 3 章）
+ceph tell osd.12 dump_historic_ops      # 历史上最慢的请求
+ceph tell osd.12 dump_blocked_ops       # 被阻塞的（等 scrub / 等 pg lock）
+ceph tell osd.12 dump_ops_in_flight --format=json-pretty | jq '.ops[0].description'
+ceph daemon osd.12 dump_osd_network 1700000000   # 指定时间点的网络延迟矩阵</code></pre>
+
+<pre><code># ── 上下线与剔除 ────────────────────────────────────
+ceph osd out 12               # 标记 out（开始迁移数据）★ 缩容第一步
+ceph osd in 12                # 标记 in（数据迁回）
+ceph osd down 12              # 标记 down（不迁移，仅测试用，慎点）
+ceph osd stop 12              # 停进程（等效 systemctl stop ceph-osd@12）
+ceph osd reweight 12 0.8      # ★ 临时降权（0~1），不触发大范围迁移，止血首选
+ceph osd reweight 12 1.0      # 恢复
+ceph osd crush reweight osd.12 3.6      # ★ 按容量改 crush weight（TB 数）
+ceph osd crush remove osd.12            # 从 crush 树移除
+ceph osd purge 12 --yes-i-really-mean-it  # ★ 一条命令完成 out+crush rm+auth rm
+ceph osd safe-to-destroy 12   # ★ 剔除前必问：这个 OSD 上的数据是否可安全丢弃
+ceph osd destroy 12 --yes-i-really-mean-it
+ceph osd lost 12 --yes-i-really-mean-it  # 极端情况：强制宣告丢失（★ 高危）
+
+# 单盘 scrub（怀疑坏道 / 校验失败时）
+ceph osd scrub 12             # 轻量 scrub（只比元数据）
+ceph osd deep-scrub 12        # 深度 scrub（比全部数据内容，IO 压力大）
+ceph pg repair &lt;pgid&gt;         # 发现 inconsistent 后修复（★ 先确认哪份是权威）</code></pre>
+
+<div class="grid2">
+<div class="card"><h5>reweight vs crush reweight 怎么选？</h5>
+<p><code>osd reweight</code>（0~1）是"覆盖层"，不改 crush map，<b>立刻生效、迁移量小</b>，用于临时救急（某盘慢/快满）。<br><code>osd crush reweight</code> 改的是 crush map 里的 weight（=TB 数），<b>永久生效</b>，用于磁盘容量真的变了（换大盘/换小盘）。</p></div>
+<div class="card"><h5>out 和 down 的区别</h5>
+<p><code>down</code> = 进程不在（心跳断），但<b>数据仍算它的</b>，PG 会 degraded 但<b>不迁移</b>。<br><code>out</code> = 数据不算它的了，<b>立刻触发迁移</b>。<br>短暂停机维护 → 只需 down（配合 noout）；永久摘除 → out。</p></div>
+</div>
+
+<h3 id="s2-5">2.5 Pool / PG</h3>
+<pre><code># ── Pool ───────────────────────────────────────────
+ceph osd pool ls / ceph osd lspools
+ceph osd pool ls detail       # ★ 含 size / min_size / pg_num / crush_rule / 压缩
+ceph osd pool create &lt;pool&gt; &lt;pg_num&gt; [&lt;pgp_num&gt;] [replicated] [rule] [--autoscale-mode=on]
+ceph osd pool set &lt;pool&gt; size 3
+ceph osd pool set &lt;pool&gt; min_size 2        # min_size 决定还能否写入
+ceph osd pool set &lt;pool&gt; pg_num 2048       # 扩容 PG（见 4.5）
+ceph osd pool set &lt;pool&gt; pgp_num 2048      # ★ pg_num 改完必须同步改 pgp_num 才生效
+ceph osd pool application enable &lt;pool&gt; rbd  # 声明用途，否则报 1 pool(s) do not have an application enabled
+ceph osd pool get &lt;pool&gt; all               # 查看所有可调参数
+ceph osd pool set &lt;pool&gt; noscrub true      # 单池关闭 scrub
+ceph osd pool stats &lt;pool&gt;
+ceph osd pool delete &lt;pool&gt; &lt;pool&gt; --yes-i-really-really-mean-it   # 需开 mon_allow_pool_delete
+
+# ── PG ─────────────────────────────────────────────
+ceph pg stat                  # 一行：PG 总数 + 各状态计数
+ceph pg dump                  # 全量（大集群慎用，可能几十 MB）
+ceph pg dump pgs_brief        # 精简版（推荐）
+ceph pg ls                    # 等价于 dump pgs，可加 --state
+ceph pg ls degraded | head    # ★ 只看异常状态的
+ceph pg ls-by-osd 12          # 某 OSD 上有哪些 PG
+ceph pg ls-by-pool &lt;pool&gt;
+ceph pg &lt;pgid&gt; query          # ★ 单个 PG 的完整状态机信息（排障神器）
+ceph pg map &lt;pgid&gt;            # 这个 PG 在哪几个 OSD
+ceph osd map &lt;pool&gt; &lt;objname&gt; # ★ 对象落在哪（验证 crush 是否符合预期）
+ceph pg &lt;pgid&gt; mark_unfound_lost revert|delete   # 极端：处理 unfound 对象</code></pre>
+
+<div class="tip"><b><code>ceph pg &lt;pgid&gt; query</code> 输出怎么看：</b>重点看四段 —— ① <code>state</code> 当前状态；② <code>up</code>/<code>acting</code>（期望副本组 / 实际副本组，两者不一致就是 remapped）；③ <code>recovery_state</code> 里的 <code>enter_time</code>（卡在某一状态多久了）；④ <code>blocked</code>（是否因 backfill_full 等被阻塞）。</div>
+
+<h3 id="s2-6">2.6 RBD / RGW / CephFS（按接口给常用命令）</h3>
+<div class="grid3">
+<div class="card"><h5>RBD 块存储</h5><p><code>rbd ls &lt;pool&gt;</code><br><code>rbd create img --size 100G</code><br><code>rbd info &lt;pool&gt;/img</code><br><code>rbd map &lt;pool&gt;/img</code><br><code>rbd showmapped</code><br><code>rbd unmap /dev/rbd0</code><br><code>rbd resize --size 200G</code><br><code>rbd snap create/ls/rollback</code><br><code>rbd du</code>（实际占用）<br><code>rbd status &lt;img&gt;</code>（谁在用）</p></div>
+<div class="card"><h5>RGW 对象网关</h5><p><code>radosgw-admin user list</code><br><code>radosgw-admin user info --uid=</code><br><code>radosgw-admin bucket list</code><br><code>radosgw-admin bucket stats</code><br><code>radosgw-admin bucket limit check</code><br><code>radosgw-admin gc list</code>（垃圾回收积压）<br><code>radosgw-admin sync status</code>（多站点）</p></div>
+<div class="card"><h5>CephFS 文件存储</h5><p><code>ceph fs ls</code><br><code>ceph fs status</code><br><code>ceph fs get &lt;fs&gt;</code><br><code>ceph mds stat</code><br><code>ceph fs required_client_features</code><br><code>ceph tell mds.&lt;id&gt; session ls</code><br><code>ceph fs authorize</code>/<code>ceph auth</code><br><code>ceph tell mds.* cache drop</code>（清缓存）</p></div>
+</div>
+
+<h3 id="s2-7">2.7 <code>ceph -s</code> 逐行解读（新手最容易看漏的信息）</h3>
+<pre><code>  cluster:
+    id:     4a2b3c4d-...        # fsid，集群唯一 ID
+    health: HEALTH_WARN
+            2 osds down          # ← 原因 1
+            1 pool(s) full       # ← 原因 2（可能致命）
+
+  services:
+    mon: 3 daemons, quorum a,b,c (age 5h)
+    mgr: a(active, since 3d), standbys: b   # ★ 必须有 active
+    osd: 24 osds: 22 up (since 10m), 22 in (since 10m)
+                    ↑ up=进程在     ↑ in=参与数据分布
+    rgw: 2 daemons active
+
+  data:
+    pools:   4 pools, 1024 pgs
+    objects: 128.5M objects, 486 TB
+    usage:   1.4 PB used, 780 TB / 2.1 PB avail     # raw used / 可用
+    pgs:     1018 active+clean
+             4    active+clean+scrubbing
+             2    active+undersized+degraded        # ← 有副本缺失，需处理
+
+  io:
+    client:   210 MB/s rd, 85 MB/s wr, 12.4k op/s rd, 3.1k op/s wr
+    recovery: 340 MB/s, 8 objects/s   # ★ 有 recovery 说明在迁移/自愈</code></pre>
+<div class="note"><b>三处最容易忽略：</b>① <code>up</code> 数与 <code>in</code> 数不一致 → 有 OSD 被 out 了但进程还在；② <code>age</code>（mon quorum 稳定多久）→ 老在变说明 MON 在反复选举，通常是网络或时钟问题；③ <code>io.recovery</code> 常年不为 0 → 集群一直在自愈，说明有慢性问题（慢盘频繁 up/down、或容量不均导致反复 rebalance）。</div>
+</section>
+
+<section id="s3">
+<h2><span class="num">3</span>OSD slow ops 深度排查</h2>
+<p><strong>slow ops（慢请求）是 Ceph 运维里最高频、也最容易被误判的告警。</strong>它的含义是"某个请求在 OSD 内部排队或执行的时间超过了阈值"，但它<strong>并不等于</strong>这块盘坏了 —— 它只是"结果"，根因可能在五个不同层级。这一章给一套可复现的排查路径。</p>
+
+<h3 id="s3-1">3.1 什么是 slow ops：两种告警要分清</h3>
+<table>
+<thead><tr><th style="width:26%">告警</th><th style="width:20%">出处</th><th>含义与判定</th></tr></thead>
+<tbody>
+<tr><td><b>SLOW_OPS</b><br><code>slow request N sec old</code></td><td>OSD 日志<br><code>ceph health detail</code></td><td>客户端请求在 OSD 里滞留 &gt; <code>osd_op_complaint_time</code>（默认 <b>30s</b>）。<b>业务可感知的卡顿</b>，优先级最高。</td></tr>
+<tr><td><b>OSD_SLOW_PING_TIME</b><br><code>osd.N 慢心跳</code></td><td>OSD 间心跳</td><td>后端网络（cluster network）或某 OSD 响应慢，ping 时间超 <code>osd_heartbeat_grace</code> 比例。<b>可能是网络抖动</b>，不一定影响 IO。</td></tr>
+<tr><td><b>MON_DOWN / MON_CLOCK_SKEW</b></td><td>MON</td><td>常与 slow ops 伴生，是"控制面不稳"的信号。</td></tr>
+<tr><td><b>PG_AVAILABILITY / PG_DEGRADED</b></td><td>PG 层</td><td>副本数不足，读可能变慢（要重试别的副本）。</td></tr>
+</tbody>
+</table>
+
+<div class="kv">
+<b>关键阈值参数（可用 <code>ceph tell osd.* injectargs</code> 临时改）：</b><br>
+<code>osd_op_complaint_time = 30</code>　超过多久记为 slow request<br>
+<code>osd_op_log_threshold = 5</code>　每秒最多打印几条 slow 日志（避免刷爆日志）<br>
+<code>osd_op_history_size = 20</code>　保留多少条 historic op<br>
+<code>osd_op_history_duration = 600</code>　历史保留时长<br>
+<code>osd_heartbeat_grace = 20</code>　心跳宽限，与 <code>osd_heartbeat_interval(6)</code> 配合<br>
+<code>osd_mon_report_interval = 5</code> / <code>mon_osd_report_timeout = 900</code>　上报与判死
+</div>
+
+<h3 id="s3-2">3.2 五层定位法：从"哪一层慢"反推根因</h3>
+<figure>
+<svg viewBox="0 0 680 470" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
+  <defs><marker id="a2" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#94a3b8"/></marker></defs>
+  <rect x="0" y="0" width="680" height="470" fill="#fff"/>
+  <text x="20" y="22" font-size="14" font-weight="700" fill="#0e7490">slow ops 五层定位树：每层都有"一票否决"的判据</text>
+
+  <!-- L1 -->
+  <rect x="20" y="36" width="640" height="72" rx="9" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.4"/>
+  <circle cx="46" cy="72" r="15" fill="#0e7490"/><text x="46" y="77" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">1</text>
+  <text x="72" y="60" font-size="13.5" font-weight="700" fill="#0e7490">客户端层：是个别客户端还是全集群？</text>
+  <text x="72" y="80" font-size="12" fill="#374151">判据：只有某个业务慢 → 客户端问题；所有客户端都慢 → 往下查。</text>
+  <text x="72" y="98" font-size="11.5" fill="#6b7280">命令：rbd status / ceph tell mds.* session ls / 客户端 iostat、内核日志（rbd: map 的客户端看 dmesg）</text>
+
+  <!-- L2 -->
+  <rect x="20" y="118" width="640" height="72" rx="9" fill="#fef3c7" stroke="#b45309" stroke-width="1.4"/>
+  <circle cx="46" cy="154" r="15" fill="#b45309"/><text x="46" y="159" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">2</text>
+  <text x="72" y="142" font-size="13.5" font-weight="700" fill="#b45309">网络层：丢包 / 重传 / 打满 / MTU 不一致</text>
+  <text x="72" y="162" font-size="12" fill="#374151">判据：多 OSD 同时 slow + 交换机端口有错包/利用率 100% → 网络问题。</text>
+  <text x="72" y="180" font-size="11.5" fill="#6b7280">命令：ethtool -S | grep -i err; ip -s link; sar -n DEV 1; ping -M do -s 8972（测巨帧）; ceph daemon osd.N dump_osd_network</text>
+
+  <!-- L3 -->
+  <rect x="20" y="200" width="640" height="72" rx="9" fill="#ede9fe" stroke="#6d28d9" stroke-width="1.4"/>
+  <circle cx="46" cy="236" r="15" fill="#6d28d9"/><text x="46" y="241" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">3</text>
+  <text x="72" y="224" font-size="13.5" font-weight="700" fill="#6d28d9">OSD 进程层：单核打满 / GC / 队列积压 / 锁竞争</text>
+  <text x="72" y="244" font-size="12" fill="#374151">判据：某几个 OSD 的 op_queue 长度持续 &gt; 0、CPU 单核 100% → 进程层。</text>
+  <text x="72" y="262" font-size="11.5" fill="#6b7280">命令：top -H -p $(pidof ceph-osd); perf dump 看 op_queue/等待计数; dump_ops_in_flight; perf top -p</text>
+
+  <!-- L4 -->
+  <rect x="20" y="282" width="640" height="72" rx="9" fill="#dcfce7" stroke="#15803d" stroke-width="1.4"/>
+  <circle cx="46" cy="318" r="15" fill="#15803d"/><text x="46" y="323" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">4</text>
+  <text x="72" y="306" font-size="13.5" font-weight="700" fill="#15803d">磁盘层：慢盘 / 坏道 / 写放大 / block.db 溢出</text>
+  <text x="72" y="326" font-size="12" fill="#374151">判据：特定 OSD 的 commit/apply 延迟高且恒定，iostat await 高、%util 100% → 磁盘。</text>
+  <text x="72" y="344" font-size="11.5" fill="#6b7280">命令：ceph osd perf; iostat -xmt 1; smartctl -a /dev/sdX; ceph-volume lvm list; bluestore 的 spillover 计数</text>
+
+  <!-- L5 -->
+  <rect x="20" y="364" width="640" height="72" rx="9" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.4"/>
+  <circle cx="46" cy="400" r="15" fill="#b91c1c"/><text x="46" y="405" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">5</text>
+  <text x="72" y="388" font-size="13.5" font-weight="700" fill="#b91c1c">集群行为层：recovery/backfill/scrub 抢 IO、PG 卡死</text>
+  <text x="72" y="408" font-size="12" fill="#374151">判据：ceph -s 里 recovery 流量大、或 pgs 有 stuck/backfilling 状态 → 集群行为。</text>
+  <text x="72" y="426" font-size="11.5" fill="#6b7280">命令：ceph -s（io 段）; ceph pg stat; ceph osd pool ls detail | grep scrub; ceph tell osd.* injectargs 降速</text>
+
+  <text x="20" y="456" font-size="12.5" fill="#334155" font-weight="600">实战顺序建议：先 5（集群行为，最快排除）→ 再 3/4（OSD+磁盘）→ 再 2 → 最后 1。</text>
+</svg>
+<figcaption>图 2：slow ops 五层定位树。按此顺序排查，通常 10 分钟内能锁定层级。</figcaption>
+</figure>
+
+<h3 id="s3-3">3.3 抓取现场的三把刀</h3>
+<p>slow ops 是<strong>瞬时现象</strong>，等你看告警时可能已经恢复。所以要抓"现场"。</p>
+
+<h4>① <code>dump_ops_in_flight</code> —— 现在卡的是什么</h4>
+<pre><code>ceph tell osd.12 dump_ops_in_flight --format=json-pretty | jq '.ops[] | {
+  desc: .description, dur: .duration, type: .type,
+  client: .client_info.client, events: [.events[].event] }'   # 精简输出
+
+# 典型输出解读
+{
+  "description": "osd_op(client.12345.0:88213 3.4f 3:4f3d2c1b::rbd_data.xxx.0000000000000a1f:12 [write 4096~4096] ...)",
+  "duration": 47.318,          # ★ 已经卡了 47 秒
+  "type": "osd_op",
+  "events": [
+    "started",                 # 进入队列
+    "commit_queued_for_journal_write",   # 排进 journal(bluestore wal) 写队列
+    "queued_for_journal_write",
+    "doing_journal_write",     # ★ 卡在写 WAL/盘 → 磁盘层问题
+    "done_journal_write",
+    "commit_sent"              # 已回复 ack
+  ]
+}</code></pre>
+<div class="note"><b>events 数组就是"案发现场录像"。</b>卡在哪个 event 就指向哪个组件：<br>
+• 只有 <code>started</code> / 一直 <code>queued</code> → 队列积压（OSD 忙或 throttling）<br>
+• 停在 <code>doing_journal_write</code> → <b>WAL 盘慢</b>（NVMe 故障或 db 分区写满）<br>
+• 停在 <code>waiting for rw locks</code> → 对象/集合锁竞争（常见：rbd 大并发写同一对象、RGW 索引热点）<br>
+• 停在 <code>waiting for scrub</code> / <code>blocked by scrub</code> → <b>scrub 抢 IO</b><br>
+• 停在 <code>reached_pg</code> + <code>waiting_peering</code> → <b>PG 在做 peering</b>，即该 PG 有副本异常<br>
+• 出现 <code>sub_op</code> 相关 → 主 OSD 在等从 OSD（网络或从盘慢）
+</div>
+
+<h4>② <code>dump_historic_ops</code> —— 过去了也要知道谁最慢</h4>
+<pre><code>ceph tell osd.12 dump_historic_ops --format=json-pretty | \
+  jq -r '.ops | sort_by(-.duration) | .[0:5][] | "\(.duration)s  \(.description[0:90])"'
+
+# 建议先调大保留量（默认只留 20 条，很快被覆盖）
+ceph tell osd.* injectargs '--osd_op_history_size=200 --osd_op_history_duration=1800'</code></pre>
+
+<h4>③ <code>dump_blocked_ops</code> / <code>perf dump</code> —— 看是否是 scrub 或锁</h4>
+<pre><code>ceph tell osd.12 dump_blocked_ops
+ceph tell osd.12 perf dump | jq '{opq: .osd.op_queue_ops, qlen: .osd.op_wip,
+   wal: .bluestore.kv_commit_lat, apply: .bluestore.commit_lat.avgcount,
+   commit: .osd.op_w_latency, subop: .osd.op_r_out_bytes}'</code></pre>
+
+<h3 id="s3-4">3.4 根因速查表（按出现频率排序）</h3>
+<table>
+<thead><tr><th style="width:18%">根因</th><th style="width:30%">典型特征</th><th style="width:26%">确认方法</th><th>处理动作</th></tr></thead>
+<tbody>
+<tr><td><b>① 慢盘 / 亚健康盘</b><br>（最常见）</td><td>个别 OSD 的 commit 延迟长期 50~500ms，其他盘 &lt;10ms</td><td><code>ceph osd perf</code> 排序；<code>iostat -xmt 1</code> 看 await</td><td><code>osd reweight</code> 降权止血 → 择机 <code>out</code> 换盘</td></tr>
+<tr><td><b>② 机械盘坏道 / 重试</b></td><td>延迟忽高忽低，SMART <code>Current_Pending_Sector &gt; 0</code></td><td><code>smartctl -a</code>；dmesg 有 <code>I/O error</code></td><td>立即 out 换盘（这种盘随时可能彻底挂）</td></tr>
+<tr><td><b>③ block.db / WAL 溢出或写满</b></td><td>原本快的 SSD 集群突然整体变慢；<code>spillover</code> 计数增长</td><td><code>perf dump | grep spillover</code>；看 db 分区使用率</td><td>扩容 db LV / 重建 OSD（db ≥ 主盘 4%，NVMe 建议 2%–4% 但至少 30G）</td></tr>
+<tr><td><b>④ recovery / backfill 洪峰</b></td><td><code>ceph -s</code> 的 io.recovery 很大；扩缩容或 OSD 反复 up/down 后出现</td><td><code>ceph -s</code>；<code>ceph pg stat</code></td><td><code>osd_max_backfills=1</code>、<code>osd_recovery_max_active=1</code>、限速（5.4 节）</td></tr>
+<tr><td><b>⑤ deep scrub 抢 IO</b></td><td>周期性（每周/每天固定时段）卡顿，与业务高峰重叠</td><td><code>ceph pg dump | grep scrubbing</code></td><td>调整 scrub 时间窗 <code>osd_scrub_begin_hour/end_hour</code>，或临时 <code>nodeep-scrub</code></td></tr>
+<tr><td><b>⑥ 网络丢包 / 抖动</b></td><td>多个 OSD 同时 slow，且与某台交换机/网卡相关</td><td><code>ethtool -S</code> 的 <code>rx_/tx_errors</code>、<code>retrans</code>；<code>sar -n DEV</code></td><td>换光模块/网线/端口；检查 bonding 模式与 MTU</td></tr>
+<tr><td><b>⑦ 前端网打满</b></td><td>客户端带宽跑满（大块顺序读/写、备份任务）</td><td>交换机端口 ≥90%；<code>ceph -s</code> 的 client io 巨大</td><td>限速业务；扩前端网（bond/万兆改 25G）；错峰备份</td></tr>
+<tr><td><b>⑧ OSD 单核 CPU 打满</b></td><td><code>top -H</code> 里某个 <code>tp_osd_tp</code>/<code>msgr-worker</code> 线程 100%，整体 CPU 不高</td><td><code>top -H -p &lt;pid&gt;</code></td><td>增加 <code>osd_op_num_threads_per_shard</code>；升级 CPU；开 RDMA/msgr V2 减少软中断</td></tr>
+<tr><td><b>⑨ 内存不足 / swap</b></td><td>OSD 被 OOM 或延迟整体抬升，<code>free</code> 里 swap 有使用</td><td><code>free -g</code>；<code>dmesg | grep oom</code></td><td>按每 OSD 4~8G 规划内存；<code>vm.swappiness=1</code>；降低 OSD 内存目标</td></tr>
+<tr><td><b>⑩ MON 频繁选举 / 时钟偏移</b></td><td><code>ceph -s</code> 的 mon quorum age 一直是几秒；<code>clock skew</code> 告警</td><td><code>ceph health detail</code>；<code>chronyc sources</code></td><td>修 chrony；给 MON 独立盘；保证 MON 数 ≥3 且奇数</td></tr>
+<tr><td><b>⑪ RGW 索引池热点</b></td><td>只有 RGW 慢，且单 bucket 对象数上亿</td><td><code>radosgw-admin bucket stats</code>；索引池 OSD 延迟高</td><td>开 index sharding（<code>bucket_index_max_shards</code>）；或改动态分片</td></tr>
+<tr><td><b>⑫ 客户端问题</b></td><td>仅单台宿主机慢，集群侧无异常</td><td>客户端 <code>dmesg</code>；librbd 版本</td><td>升级 librbd/内核；检查客户端自身 CPU/网络</td></tr>
+</tbody>
+</table>
+
+<h3 id="s3-5">3.5 六个真实案例（现象 → 排查 → 结论 → 修复）</h3>
+
+<div class="q"><span class="qq">案例 1：全集群周期性卡顿，每周日凌晨 3 点准时发生</span><br>
+<b>现象：</b>周日凌晨业务报 IO 超时，白天一切正常。<br>
+<b>排查：</b><code>ceph -s</code> 显示大量 PG 处于 <code>scrubbing</code>；查参数 <code>osd_scrub_begin_hour=0 / end_hour=24</code>，deep scrub 周期 7 天，恰好落在周日。机械盘集群 deep scrub 全量读盘，把 IOPS 吃光。<br>
+<b>结论：</b>deep scrub 与业务窗口重叠 + 未限速。<br>
+<b>修复：</b><code>ceph tell osd.* injectargs '--osd_deep_scrub_interval=1209600 --osd_scrub_begin_hour=1 --osd_scrub_end_hour=6 --osd_scrub_sleep=0.1'</code>，并写入 <code>ceph.conf</code> 持久化。对 HDD 集群，scrub 期间 sleep 参数比什么都管用。</div>
+
+<div class="q"><span class="qq">案例 2：扩容后持续 slow ops 三天不消</span><br>
+<b>现象：</b>新加 12 块 OSD 后，recovery 一直跑，业务延迟从 5ms 涨到 100ms+。<br>
+<b>排查：</b><code>ceph -s</code> 中 <code>io.recovery: 800 MB/s</code>；<code>ceph osd df</code> 显示新 OSD 已经 60%，老 OSD 才降到 85% —— 迁移目标选择不均。<br>
+<b>结论：</b>backfill 并发过高（默认 1，但 <code>osd_recovery_max_active</code> 默认 3，加上 <code>osd_recovery_sleep</code> 未设），把前端网和磁盘 IO 占满。<br>
+<b>修复：</b><code>ceph tell osd.* injectargs '--osd_max_backfills=1 --osd_recovery_max_active=1 --osd_recovery_sleep=0.1 --osd_recovery_op_priority=1'</code>（优先级降到最低，让业务 IO 优先）。恢复后 unset。</div>
+
+<div class="q"><span class="qq">案例 3：NVMe 集群用了一年后性能下降 60%</span><br>
+<b>现象：</b>全闪集群随机写 IOPS 从 12 万掉到 5 万。<br>
+<b>排查：</b><code>ceph tell osd.5 perf dump | jq '.bluestore'</code> 发现 <code>bluefs_db_total</code> 与 <code>bluefs_db_used</code> 接近，<code>spillover</code> 计数不断涨 —— <b>block.db 溢出</b>，元数据被迫写到慢的主设备（HDD 或满盘 SSD）。<br>
+<b>结论：</b>db 分区（每盘 10G）太小，Rocksdb 元数据增长后溢出。<br>
+<b>修复：</b>① 立即：<code>ceph tell osd.* compact</code>（手动触发 RocksDB 压缩，回收空间，临时缓解）；② 根治：重建 OSD，db 按主盘容量 4%（HDD）分配，并做 compaction 定期任务。这是全闪/混闪集群<b>最常见的性能衰减原因</b>。</div>
+
+<div class="q"><span class="qq">案例 4：某台机器上所有 OSD 同时 slow</span><br>
+<b>现象：</b>node-07 上的 12 个 OSD 全部 commit 延迟 &gt; 200ms，其他节点正常。<br>
+<b>排查：</b>登机器 <code>iostat -xmt 1</code> 发现所有盘 <code>%util</code> 都 100% 但 <code>r/s+w/s</code> 很低 —— 不是真 IO；<code>dmesg</code> 有 <code>megaraid_sas: ... reset adapter</code>。<br>
+<b>结论：</b><b>RAID 卡故障/固件 bug</b>，控制器反复重置。典型"伪装成 Ceph 问题的硬件问题"。<br>
+<b>修复：</b><code>ceph osd set noout</code> → 整机 <code>out</code> → 停机更换/升级 RAID 卡固件 → 恢复。教训：Ceph 必须用 HBA/JBOD 模式，不要用硬件 RAID。</div>
+
+<div class="q"><span class="qq">案例 5：PG 卡在 active+remapped，永远不 clean</span><br>
+<b>现象：</b>10 个 PG 长期 remapped，<code>ceph -s</code> 一直 HEALTH_WARN。<br>
+<b>排查：</b><code>ceph pg &lt;pgid&gt; query</code> 显示 <code>up</code> 与 <code>acting</code> 不一致，<code>blocked</code> 字段为 <code>backfill: backfill_full</code>。<br>
+<b>结论：</b>目标 OSD 的使用率超过 <code>osd_backfillfull_ratio</code>（默认 90%），拒绝接收回填数据。<br>
+<b>修复：</b>① 短期：调低源 OSD 权重让数据先分散；② 中期：清数据/扩容；③ 注意<b>不要简单调高 backfillfull 阈值</b>绕过，那会让某个 OSD 直接冲到 full 导致集群只读。</div>
+
+<div class="q"><span class="qq">案例 6：RGW 上传小文件特别慢，块存储却正常</span><br>
+<b>现象：</b>S3 上传 100KB 对象要 2 秒，RBD 一切正常。<br>
+<b>排查：</b><code>ceph osd perf</code> 正常；<code>radosgw-admin bucket stats --bucket=X</code> 显示该 bucket 有 1.2 亿对象，<code>num_shards=0</code>（老版本默认不分片）。<br>
+<b>结论：</b><b>bucket index 单分片热点</b>，所有上传都串行写同一个 index 对象所在的 OSD。<br>
+<b>修复：</b>新 bucket 设 <code>radosgw-admin bucket reshard --num-shards=...</code>；全局配置 <code>bucket_index_max_shards</code>（RGW）。单分片建议不超过 10 万对象。</div>
+
+<h3 id="s3-6">3.6 止血十招（按风险从低到高，出事时依次尝试）</h3>
+<ol>
+<li><b>先确认范围</b>：<code>ceph health detail</code> + <code>ceph osd perf | sort -k3 -nr | head</code>，别盲目操作。</li>
+<li><b>停 scrub</b>：<code>ceph osd set noscrub; ceph osd set nodeep-scrub</code>。零风险，见效快。</li>
+<li><b>降 recovery 优先级</b>：<code>ceph tell osd.* injectargs '--osd_recovery_op_priority=1 --osd_max_backfills=1'</code>。</li>
+<li><b>给慢盘降权</b>：<code>ceph osd reweight 12 0.7</code>（比 <code>out</code> 温和，迁移量小）。</li>
+<li><b>单盘限速</b>：<code>ceph tell osd.12 injectargs '--osd_recovery_max_active=1'</code>。</li>
+<li><b>清理积压</b>：RGW 场景 <code>radosgw-admin gc process</code>（GC 队列积压会拖慢写入）。</li>
+<li><b>触发 RocksDB 压缩</b>：<code>ceph tell osd.12 compact</code>（db 溢出时非常有效，但会短暂增加 IO）。</li>
+<li><b>释放缓存</b>：CephFS 场景 <code>ceph tell mds.* cache drop</code>（MDS 缓存过大导致卡顿）。</li>
+<li><b>重启单个慢 OSD</b>：<code>systemctl restart ceph-osd@12</code>（先 <code>set noout</code>！否则触发大规模迁移）。</li>
+<li><b>整机隔离</b>：<code>ceph osd crush reweight-by-utilization</code> 或直接把问题 host 的 OSD 全部 out —— 最后手段，需要有足够剩余容量。</li>
+</ol>
+<div class="warn"><b>绝对不要做的三件事：</b>① 不看 <code>ceph osd safe-to-destroy</code> 就 purge OSD；② 在没 <code>set noout</code> 的情况下批量重启 OSD；③ 为了消除告警而把 <code>nearfull/full</code> 阈值往上调（等于拆掉烟雾报警器）。</div>
+
+<h3 id="s3-7">3.7 长效监控：把 slow ops 变成可预警的指标</h3>
+<pre><code># Prometheus 关键指标（ceph-mgr prometheus 模块自带，默认 9283 端口）
+ceph_health_status                      # 0=OK 1=WARN 2=ERR
+ceph_osd_op_latency_sum / _count        # 平均延迟 = sum/count
+ceph_osd_apply_latency_ms               # ★ apply 延迟（磁盘落盘）
+ceph_osd_commit_latency_ms              # ★ commit 延迟（写入 WAL）
+ceph_pg_degraded / ceph_pg_undersized   # 副本缺失数
+ceph_osd_numpg                          # 每 OSD 的 PG 数（均衡度）
+ceph_cluster_total_used_bytes / _avail_bytes
+ceph_pool_bytes_used / ceph_pool_max_avail</code></pre>
+<pre><code># 告警规则示例（Alertmanager）
+- alert: CephOSDSlowOps
+  expr: ceph_health_detail{name="SLOW_OPS"} &gt; 0
+  for: 5m
+  labels: {severity: warning}
+- alert: CephOSDHighApplyLatency
+  expr: ceph_osd_apply_latency_ms &gt; 100        # HDD &gt;100ms / SSD &gt;20ms
+  for: 10m
+  labels: {severity: critical}
+- alert: CephDiskNearFull
+  expr: ceph_osd_stat_bytes_used / ceph_osd_stat_bytes &gt; 0.80
+  for: 30m
+  labels: {severity: warning}
+- alert: CephPGNotClean
+  expr: ceph_pg_total - ceph_pg_active_clean &gt; 0
+  for: 15m
+  labels: {severity: critical}</code></pre>
+</section>
+
+<section id="s4">
+<h2><span class="num">4</span>PG 均衡实战</h2>
+
+<h3 id="s4-1">4.1 两种均衡必须分清（90% 的人只做了第一种）</h3>
+<figure>
+<svg viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
+  <rect x="0" y="0" width="680" height="300" fill="#fff"/>
+  <!-- 左：PG 均衡 -->
+  <text x="30" y="26" font-size="14" font-weight="700" fill="#0e7490">① PG 数量均衡</text>
+  <text x="30" y="46" font-size="11.5" fill="#6b7280">关注：每个 OSD 承载多少 PG（决定并发度与压力）</text>
+  <rect x="30" y="58" width="280" height="100" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <g font-size="11" fill="#1f2937">
+    <text x="42" y="80">osd.0</text><rect x="90" y="70" width="60" height="12" rx="3" fill="#0e7490"/>
+    <text x="160" y="80">60 PG</text>
+    <text x="42" y="100">osd.1</text><rect x="90" y="90" width="60" height="12" rx="3" fill="#0e7490"/>
+    <text x="160" y="100">60 PG</text>
+    <text x="42" y="120">osd.2</text><rect x="90" y="110" width="60" height="12" rx="3" fill="#0e7490"/>
+    <text x="160" y="120">60 PG</text>
+    <text x="42" y="140">osd.3</text><rect x="90" y="130" width="180" height="12" rx="3" fill="#b91c1c"/>
+    <text x="280" y="140" fill="#b91c1c">180 PG ✗</text>
+  </g>
+  <text x="30" y="180" font-size="11.5" fill="#374151">osd.3 要处理 3 倍的元数据与心跳 → <tspan fill="#b91c1c">先成为瓶颈</tspan></text>
+  <text x="30" y="200" font-size="11.5" fill="#374151">看：<code style="font-size:11px">ceph osd df tree</code> 的 PGS 列</text>
+
+  <!-- 右：容量均衡 -->
+  <text x="370" y="26" font-size="14" font-weight="700" fill="#b45309">② 容量均衡</text>
+  <text x="370" y="46" font-size="11.5" fill="#6b7280">关注：每个 OSD 实际存了多少数据（决定会不会满）</text>
+  <rect x="370" y="58" width="280" height="100" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <g font-size="11" fill="#1f2937">
+    <text x="382" y="80">osd.0（4T）</text><rect x="460" y="70" width="60" height="12" rx="3" fill="#b45309"/>
+    <text x="530" y="80">50%</text>
+    <text x="382" y="100">osd.1（4T）</text><rect x="460" y="90" width="66" height="12" rx="3" fill="#b45309"/>
+    <text x="530" y="100">55%</text>
+    <text x="382" y="120">osd.2（8T）</text><rect x="460" y="110" width="42" height="12" rx="3" fill="#b45309"/>
+    <text x="510" y="120">35%</text>
+    <text x="382" y="140">osd.3（4T）</text><rect x="460" y="130" width="110" height="12" rx="3" fill="#b91c1c"/>
+    <text x="580" y="140" fill="#b91c1c">92% ✗</text>
+  </g>
+  <text x="370" y="180" font-size="11.5" fill="#374151">PG 数一样多，但 <tspan fill="#b91c1c">osd.3 先满</tspan> → 触发 nearfull/backfillfull</text>
+  <text x="370" y="200" font-size="11.5" fill="#374151">看：<code style="font-size:11px">ceph osd df</code> 的 USED% 与 VAR 列</text>
+
+  <line x1="340" y1="20" x2="340" y2="210" stroke="#e5e7eb" stroke-width="1"/>
+  <rect x="30" y="222" width="620" height="58" rx="9" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.3"/>
+  <text x="44" y="244" font-size="13" font-weight="700" fill="#0e7490">核心结论</text>
+  <text x="44" y="264" font-size="12" fill="#374151">CRUSH 保证的是「按权重分配 PG」，不是「按剩余容量分配」。当 OSD 容量不等、或数据本身分布不均时，</text>
+  <text x="44" y="278" font-size="12" fill="#374151">PG 均衡 ≠ 容量均衡。所以：容量均衡必须靠 <tspan font-weight="700">reweight-by-utilization</tspan> 或 <tspan font-weight="700">balancer（upmap）</tspan> 额外做。</text>
+</svg>
+<figcaption>图 3：PG 均衡与容量均衡是两件事，前者由 CRUSH 保证，后者需要额外干预。</figcaption>
+</figure>
+
+<h4>怎么判断"不均衡"？看这三个指标</h4>
+<pre><code>ceph osd df tree
+#  ID  CLASS  WEIGHT  REWEIGHT  SIZE    RAW USE  DATA    OMAP  META  AVAIL   %USE  VAR   PGS
+#  -1         43.6e3        -    43 TiB  20 TiB  19 TiB  42 GiB 98 GiB 23 TiB  46.2  1.00   -
+#  -3         14.5e3        -    14 TiB  8.1 TiB 7.9 TiB  14 GiB 33 GiB 6.4 TiB 55.6  1.20  512
+#  -5         14.5e3        -    14 TiB  5.9 TiB 5.8 TiB  14 GiB 32 GiB 8.6 TiB 40.7 <b style="color:#b91c1c">0.88</b> 510
+#  12   hdd   3.63859  1.00000  3.6 TiB  2.9 TiB ...                              79.8 <b style="color:#b91c1c">1.73</b>  128</code></pre>
+<table>
+<thead><tr><th style="width:14%">指标</th><th style="width:26%">怎么看</th><th>健康范围与动作</th></tr></thead>
+<tbody>
+<tr><td><b>VAR</b></td><td>该 OSD 使用率 / 集群平均使用率</td><td><b>0.85 ~ 1.15 良好</b>；1.15~1.30 观察；<b>&gt;1.30 需要处理</b>；&gt;1.5 紧急</td></tr>
+<tr><td><b>%USE 极差</b></td><td>最高 OSD 与最低 OSD 的差</td><td>差 &lt; 10% 可接受；&gt; 20% 必须干预（否则容量利用率上不去）</td></tr>
+<tr><td><b>PGS 列</b></td><td>各 OSD 的 PG 数</td><td>同规格磁盘间偏差 &lt; 15%；偏差大会导致单盘压力集中</td></tr>
+</tbody>
+</table>
+<pre><code># 一行命令看均衡度（强烈建议做成日常巡检项）
+ceph osd df --format=json | \
+ jq -r '.nodes[] | select(.type=="osd") |
+        "\(.name)\t\(.utilization)\t\(.var)\t\(.pgs)"' | \
+ sort -k3 -nr | head -20
+
+# 统计偏差：计算 VAR 的标准差
+ceph osd df --format=json | jq '[.nodes[]|select(.type=="osd")|.var]' | \
+ jq 'add/length as $m | map(. - $m | . * .) | add/length | sqrt'
+# 结果 &lt; 0.10 → 很均衡；&gt; 0.20 → 明显不均，需要 balancer</code></pre>
+
+<h3 id="s4-2">4.2 三种权重与生效顺序（改错顺序会白干）</h3>
+<figure>
+<svg viewBox="0 0 680 250" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
+  <defs><marker id="a3" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#94a3b8"/></marker></defs>
+  <rect x="0" y="0" width="680" height="250" fill="#fff"/>
+  <text x="20" y="22" font-size="13.5" font-weight="700" fill="#0e7490">请求到来时，OSD 选择的三层过滤</text>
+
+  <rect x="20" y="38" width="180" height="86" rx="9" fill="#e0f2f7" stroke="#0e7490" stroke-width="1.4"/>
+  <text x="110" y="60" font-size="13" font-weight="700" fill="#0e7490" text-anchor="middle">① crush weight</text>
+  <text x="34" y="80" font-size="11.5" fill="#374151">定义在 CRUSH map</text>
+  <text x="34" y="97" font-size="11.5" fill="#374151">单位：TB（设备容量）</text>
+  <text x="34" y="114" font-size="11.5" fill="#374151">改：osd crush reweight</text>
+
+  <rect x="250" y="38" width="180" height="86" rx="9" fill="#fef3c7" stroke="#b45309" stroke-width="1.4"/>
+  <text x="340" y="60" font-size="13" font-weight="700" fill="#b45309" text-anchor="middle">② reweight</text>
+  <text x="264" y="80" font-size="11.5" fill="#374151">存在 OSDMap（覆盖层）</text>
+  <text x="264" y="97" font-size="11.5" fill="#374151">0~1，1.0 = 不干预</text>
+  <text x="264" y="114" font-size="11.5" fill="#374151">改：osd reweight</text>
+
+  <rect x="480" y="38" width="180" height="86" rx="9" fill="#ede9fe" stroke="#6d28d9" stroke-width="1.4"/>
+  <text x="570" y="60" font-size="13" font-weight="700" fill="#6d28d9" text-anchor="middle">③ upmap 显式映射</text>
+  <text x="494" y="80" font-size="11.5" fill="#374151">PG → 具体 OSD 列表</text>
+  <text x="494" y="97" font-size="11.5" fill="#374151">粒度最细，迁移量最小</text>
+  <text x="494" y="114" font-size="11.5" fill="#374151">改：ceph osd pg-upmap-items</text>
+
+  <line x1="200" y1="81" x2="248" y2="81" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#a3)"/>
+  <line x1="430" y1="81" x2="478" y2="81" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#a3)"/>
+
+  <rect x="20" y="140" width="640" height="96" rx="9" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="34" y="162" font-size="12.5" font-weight="700" fill="#334155">选择建议（这是实践中最多人踩坑的地方）</text>
+  <text x="34" y="182" font-size="11.8" fill="#374151">• 磁盘容量真的变了（换更大/更小盘）→ 改 <tspan font-weight="600">crush weight</tspan>，等于容量（单位 TB）</text>
+  <text x="34" y="200" font-size="11.8" fill="#374151">• 临时救急（某盘慢、某盘快满，不想大范围迁移）→ 改 <tspan font-weight="600">reweight</tspan>（0.8/0.9），迁移量可控</text>
+  <text x="34" y="218" font-size="11.8" fill="#374151">• 长期精细均衡、且希望迁移量最小 → 交给 <tspan font-weight="600">balancer(upmap)</tspan>，别手工 upmap（手工条目多了会互相打架）</text>
+  <text x="34" y="234" font-size="11.5" fill="#b91c1c">• 三者会叠加生效！如果 reweight 还是 0.8，再怎么调 crush weight 都没用（先恢复到 1.0）</text>
+</svg>
+<figcaption>图 4：三种权重的作用层级与选择建议。</figcaption>
+</figure>
+
+<h3 id="s4-3">4.3 手动均衡（理解原理 + 应急用）</h3>
+<pre><code># ① 按容量自动重算 crush weight（适合"磁盘规格不一致"导致的长期不均）
+ceph osd crush reweight-by-utilization 105     # 105 = 目标：超过均值 105% 的才动
+# 效果：把使用率高的 OSD 权重调低，低的使用率调高；会触发迁移
+# 注意：它会把 weight 改成非整数（如 3.53），后续换盘需手动修正
+
+# ② 按 PG 数自动重算（更温和，推荐 HDD 集群首选）
+ceph osd crush reweight-by-pgs 105
+
+# ③ 单个 OSD 临时降权（止血首选，迁移量最小）
+ceph osd reweight 12 0.85
+
+# ④ 手工 upmap（把 3.4f 这个 PG 的第 0 个副本从 osd.5 挪到 osd.9）
+ceph osd pg-upmap-items 3.4f 5 9
+ceph osd rm-pg-upmap-items 3.4f               # 撤销
+
+# ⑤ 测试模式：先看会迁移多少，不真做（★ 变更前必做）
+ceph osd crush reweight-by-utilization 105 --no-increasing   # 只降不升
+ceph balancer eval                            # 看当前均衡评分
+ceph balancer eval-verbose                    # 看每个 pool 的评分</code></pre>
+<div class="note"><b><code>balancer eval</code> 的评分怎么看：</b>输出类似 <code>current cluster score 0.031245 (lower is better)</code>。<b>数值越小越均衡</b>。一般 &lt; 0.05 已经很好；&gt; 0.15 说明有明显热点。执行优化计划后再 eval 一次对比。</div>
+
+<h3 id="s4-4">4.4 balancer 自动均衡（生产推荐做法）</h3>
+<pre><code># ── 启用与模式选择 ─────────────────────────────────
+ceph balancer on                      # 开启（默认 upmap 模式）
+ceph balancer off
+ceph balancer mode upmap              # ★ 推荐：Luminous+，迁移量最小，兼容所有客户端
+ceph balancer mode crush-compat       # 兼容旧客户端（如老的 librbd/kernel rbd）
+ceph balancer mode read               # 只读模式：只出计划，不执行（演练用）
+ceph balancer status                  # 查看当前状态与最近执行记录
+
+# ── 手动触发一次（不必等自动周期）───────────────────
+ceph balancer optimize plan1          # 生成名为 plan1 的优化计划
+ceph balancer eval plan1              # 评估这个计划执行后的评分
+ceph balancer show plan1              # 看计划内容（要迁移哪些 PG）
+ceph balancer execute plan1           # 执行
+ceph balancer rm plan1                # 删除计划
+
+# ── 参数调整 ───────────────────────────────────────
+ceph config set mgr mgr/balancer/active true
+ceph config set mgr mgr/balancer/mode upmap
+ceph config set mgr mgr/balancer/sleep_interval 300      # 每 5 分钟评估一次
+ceph config set mgr mgr/balancer/begin_time 0100         # 只在凌晨 1 点后运行
+ceph config set mgr mgr/balancer/end_time 0600
+ceph config set mgr mgr/balancer/max_misplaced 0.05      # ★ 同时最多 5% 的 PG 处于错位，控制影响
+ceph config set mgr mgr/balancer/target_max_misplaced_ratio 0.07</code></pre>
+
+<table>
+<thead><tr><th style="width:16%">模式</th><th style="width:30%">原理</th><th style="width:27%">优点</th><th>限制</th></tr></thead>
+<tbody>
+<tr><td><b>upmap</b><br>（推荐）</td><td>直接改写 PG→OSD 映射表</td><td>迁移量最小、粒度最细、不改 crush map</td><td>需要客户端 ≥ Luminous；映射表条目过多（&gt;10万）时有性能开销</td></tr>
+<tr><td><b>crush-compat</b></td><td>通过调 crush weight 的"兼容权重"实现</td><td>兼容所有版本客户端</td><td>粒度粗（只能按 OSD 整体调），迁移量比 upmap 大</td></tr>
+<tr><td><b>read</b></td><td>只生成计划不执行</td><td>演练/审计用</td><td>不会真的均衡</td></tr>
+<tr><td><b>none</b></td><td>关闭</td><td>—</td><td>—</td></tr>
+</tbody>
+</table>
+<div class="tip"><b>生产建议：</b>① 集群稳定后开启 <code>balancer on</code> + <code>mode upmap</code> + 时间窗（业务低峰）；② <code>max_misplaced</code> 设 0.05，避免一次迁移太多；③ 扩容后先让 backfill 跑完再开 balancer，否则两套迁移逻辑叠加会把带宽吃光；④ 每周看一次 <code>balancer status</code> 确认它在正常工作。</div>
+
+<h3 id="s4-5">4.5 pg_num 规划与调整</h3>
+<div class="kv"><b>经验公式：</b>
+<code>总 PG 数 ≈ (OSD 总数 × 100) / 副本数（replicated）</code>，然后<b>向上取到最近的 2 的幂</b>。<br>
+例：30 个 OSD、3 副本 → 30×100/3 = 1000 → 取 <b>1024</b>。<br>
+但要注意：这是"整个集群"的 PG 预算，需要按各 pool 的数据量占比<b>分摊</b>到每个 pool。
+</div>
+<table>
+<thead><tr><th style="width:20%">场景</th><th style="width:20%">每 OSD 目标 PG</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>小集群（&lt; 10 OSD）</td><td>~100</td><td>PG 太少会导致数据分布粒度粗、迁移单位过大</td></tr>
+<tr><td>中等（10~100 OSD）</td><td>~100</td><td>标准值</td></tr>
+<tr><td>大集群（&gt; 100 OSD）</td><td>100~200</td><td>PG 过多会增加 CPU/内存开销与 peering 风暴风险</td></tr>
+<tr><td>EC 池</td><td>可按数据量折算</td><td>EC 池的 PG 数可单独设，不必与副本池一致</td></tr>
+</tbody>
+</table>
+<pre><code># 自动扩缩容（Pacific+ 推荐，默认开启）
+ceph osd pool set &lt;pool&gt; pg_autoscale_mode on        # on / off / warn
+ceph osd pool autoscale-status                       # 看建议值与实际值
+ceph config set global mon_target_pg_per_osd 100     # 全局目标值
+
+# 手动调整（★ 金科玉律：一次只翻倍的一半，分批加）
+ceph osd pool set &lt;pool&gt; pg_num 1024     # 先改 pg_num（拆分 PG）
+ceph osd pool set &lt;pool&gt; pgp_num 1024    # 再改 pgp_num（才真正开始迁移）
+# 观察：ceph -s 直到 active+clean 后再进行下一批
+
+# 缩减 PG（Nautilus+ 支持，但风险较高）
+ceph osd pool set &lt;pool&gt; pg_num 512 --yes-i-really-mean-it</code></pre>
+<div class="warn"><b>PG 调整的三大坑：</b><br>
+① <b>只改 pg_num 不改 pgp_num</b> → PG 拆了但不迁移，等于没做；<br>
+② <b>一次加太多</b>（如 256 → 4096）→ 瞬间触发海量 backfill + peering，集群直接不可用。正确做法：256→384→512→768→1024，每步等 clean；<br>
+③ <b>在集群已经不健康时调</b> → 叠加风险。必须等 <code>HEALTH_OK</code> 再动。</div>
+
+<h3 id="s4-6">4.6 PG 状态机与卡死处理</h3>
+<table>
+<thead><tr><th style="width:26%">状态</th><th style="width:34%">含义</th><th>处理动作</th></tr></thead>
+<tbody>
+<tr><td><span class="ok">active+clean</span></td><td>正常：副本齐全且分布正确</td><td>—</td></tr>
+<tr><td><b>degraded</b></td><td>副本数不足（有 OSD down/out）</td><td>等自愈；若 OSD 长时间不回，检查其状态；<code>min_size</code> 决定能否继续写</td></tr>
+<tr><td><b>undersized</b></td><td>acting 集合小于 pool size（如找不到第三个 OSD）</td><td>常见于 crush 规则问题（如要求 3 个 rack 但只有 2 个）→ 改 rule 或加故障域</td></tr>
+<tr><td><b>remapped</b></td><td>up 与 acting 不一致，正在往目标位置迁移</td><td>正常迁移态；若长期不动，<code>ceph pg &lt;pgid&gt; query</code> 看 blocked 原因</td></tr>
+<tr><td><b>peering</b></td><td>副本间在协商谁的数据最新</td><td>短暂正常；<b>长期 peering</b> → 有 OSD 反复 up/down，或 PGLog 过大</td></tr>
+<tr><td><b>activating</b></td><td>peering 完成，等待被激活</td><td>短暂；长期则检查 <code>osd_peering</code> 相关参数与 slow OSD</td></tr>
+<tr><td><b>recovering</b></td><td>补齐缺失的对象（增量）</td><td>正常；限速见 5.4</td></tr>
+<tr><td><b>backfilling</b></td><td>整份数据拷贝（新 OSD 加入）</td><td>正常；用 <code>osd_max_backfills</code> 控速</td></tr>
+<tr><td><b>backfill_wait / recovery_wait</b></td><td>排队等待</td><td>并发达到上限，调 <code>osd_max_backfills</code> 或等</td></tr>
+<tr><td><span class="bad">backfill_toofull</span></td><td>目标 OSD 太满，拒绝接收</td><td>见案例 5：清理数据/扩容，<b>不要简单调阈值</b></td></tr>
+<tr><td><span class="bad">incomplete</span></td><td>peering 失败，找不到权威副本</td><td>见下方专项处理</td></tr>
+<tr><td><span class="bad">stale</span></td><td>PG 的主 OSD 长时间没向 MON 上报</td><td>MON 或主 OSD 问题；检查 mon 与该 OSD 状态</td></tr>
+<tr><td><span class="bad">down</span></td><td>没有可用的主 OSD</td><td>检查 OSD 进程、网络；<code>ceph osd lost</code> 是最后手段（会丢数据）</td></tr>
+<tr><td><b>inconsistent</b></td><td>scrub 发现副本内容不一致</td><td><code>ceph pg repair &lt;pgid&gt;</code>；<b>修复前先确认权威副本</b>（<code>ceph pg &lt;pgid&gt; query</code> 的 <code>authoritative</code>）</td></tr>
+<tr><td><b>scrubbing / deep-scrubbing</b></td><td>正在一致性检查</td><td>正常；影响性能时调 scrub 参数</td></tr>
+</tbody>
+</table>
+
+<h4>PG 卡死（incomplete / 长期 peering）专项处理</h4>
+<pre><code># 1. 看 PG 详情，确认哪些 OSD 参与
+ceph pg 3.4f query | jq '{state, up: .up, acting: .acting, blocked: .blocked}'
+
+# 2. 找出该 PG 所有副本所在的 OSD，逐个检查是否 up
+ceph pg 3.4f query | jq '.acting[]' | xargs -I{} ceph osd find {}
+
+# 3. 列出各副本上有哪些对象（确认权威副本：对象最全的那个）
+for osd in 5 12 31; do
+  echo "--- osd.$osd ---"
+  ceph-objectstore-tool --data-path /var/lib/ceph/osd/ceph-$osd --type bluestore \
+     --pgid 3.4f --op list | wc -l
+done
+
+# 4. 若确认某副本是权威的，用它覆盖其他副本（★ 高危，先备份）
+ceph-objectstore-tool --data-path /var/lib/ceph/osd/ceph-5 --type bluestore \
+   --pgid 3.4f --op export --file /tmp/pg3.4f.export
+ceph-objectstore-tool --data-path /var/lib/ceph/osd/ceph-12 --type bluestore \
+   --pgid 3.4f --op import --file /tmp/pg3.4f.export
+
+# 5. 全部丢失时的最后手段（会丢数据！必须业务方签字）
+ceph pg 3.4f mark_unfound_lost delete     # 或 revert（回滚到旧版本）</code></pre>
+<div class="warn"><b>incomplete 处理铁律：</b>操作前<b>必须备份</b>相关 OSD 的 PG 数据；<code>mark_unfound_lost</code> 是<b>不可逆的数据删除</b>，执行前必须确认没有别的副本能恢复（把所有 down 的 OSD 都尝试拉起来再看一遍）。</div>
+</section>
+
+<section id="s5">
+<h2><span class="num">5</span>扩容（加 OSD / 加节点）</h2>
+
+<h3 id="s5-1">5.1 三种扩容场景与决策</h3>
+<div class="grid3">
+<div class="card"><h5>场景 A：加 OSD</h5><p>现有节点还有空盘位/空槽位。<br><b>影响：</b>触发 backfill，数据向新盘迁移。<br><b>关键：</b>控制迁移速率。</p></div>
+<div class="card"><h5>场景 B：加节点</h5><p>整台机器加入（含若干 OSD）。<br><b>影响：</b>迁移量最大，等于给每个 PG 重新洗牌。<br><b>关键：</b>确认 crush bucket 位置正确。</p></div>
+<div class="card"><h5>场景 C：换大盘（原地扩）</h5><p>把 4T 换成 8T。<br><b>影响：</b>需先 out 旧盘再 in 新盘，迁移量大。<br><b>关键：</b>容量必须够放得下。</p></div>
+</div>
+
+<h4>扩容前必做的三项检查</h4>
+<pre><code># 1. 当前是否健康 —— 不健康绝对不要扩
+ceph health detail      # 必须 HEALTH_OK 或至少没有 ERR
+ceph osd df             # 确认没有 OSD 超过 80%
+
+# 2. 剩余容量是否够（★ 最重要）
+# 规则：扩容期间任一 OSD 使用率都不能超过 nearfull(85%)，
+#       且集群需保留 ≥ 10% 的空闲空间作为迁移缓冲
+ceph df | head
+
+# 3. 当前有无进行中的迁移
+ceph -s | grep -i recovery
+ceph pg stat</code></pre>
+<div class="warn"><b>血泪教训：</b>在集群已用 85%+ 时扩容，backfill 会把剩余空间吃光导致 <b>full → 整个集群只读</b>。正确顺序是：<b>先确保有足够空闲空间，再扩容</b>。如果已经很满，应该先缩容（删数据）或临时降低副本数（<code>ceph osd pool set &lt;pool&gt; size 2</code>，仅应急且要评估风险）。</div>
+
+<h3 id="s5-2">5.2 加 OSD 全流程（手动部署）</h3>
+<figure>
+<svg viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
+  <defs><marker id="a4" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#94a3b8"/></marker></defs>
+  <rect x="0" y="0" width="680" height="210" fill="#fff"/>
+  <g>
+    <rect x="10" y="20" width="118" height="52" rx="8" fill="#e0f2f7" stroke="#0e7490"/>
+    <text x="69" y="40" font-size="12" font-weight="700" fill="#0e7490" text-anchor="middle">① 准备</text>
+    <text x="20" y="58" font-size="10" fill="#374151">盘就位/HBA 模式</text>
+    <line x1="128" y1="46" x2="150" y2="46" stroke="#94a3b8" marker-end="url(#a4)"/>
+    <rect x="152" y="20" width="118" height="52" rx="8" fill="#e0f2f7" stroke="#0e7490"/>
+    <text x="211" y="40" font-size="12" font-weight="700" fill="#0e7490" text-anchor="middle">② 限流</text>
+    <text x="162" y="58" font-size="10" fill="#374151">设 backfill 参数</text>
+    <line x1="270" y1="46" x2="292" y2="46" stroke="#94a3b8" marker-end="url(#a4)"/>
+    <rect x="294" y="20" width="118" height="52" rx="8" fill="#fef3c7" stroke="#b45309"/>
+    <text x="353" y="40" font-size="12" font-weight="700" fill="#b45309" text-anchor="middle">③ 创建</text>
+    <text x="304" y="58" font-size="10" fill="#374151">ceph-volume create</text>
+    <line x1="412" y1="46" x2="434" y2="46" stroke="#94a3b8" marker-end="url(#a4)"/>
+    <rect x="436" y="20" width="118" height="52" rx="8" fill="#ede9fe" stroke="#6d28d9"/>
+    <text x="495" y="40" font-size="12" font-weight="700" fill="#6d28d9" text-anchor="middle">④ 归位</text>
+    <text x="446" y="58" font-size="10" fill="#374151">crush move 到 host</text>
+    <line x1="554" y1="46" x2="576" y2="46" stroke="#94a3b8" marker-end="url(#a4)"/>
+    <rect x="578" y="20" width="92" height="52" rx="8" fill="#dcfce7" stroke="#15803d"/>
+    <text x="624" y="40" font-size="12" font-weight="700" fill="#15803d" text-anchor="middle">⑤ 观察</text>
+    <text x="588" y="58" font-size="10" fill="#374151">等 clean</text>
+  </g>
+  <rect x="10" y="92" width="660" height="106" rx="9" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="24" y="114" font-size="12.5" font-weight="700" fill="#334155">每一步的要点</text>
+  <text x="24" y="134" font-size="11.8" fill="#374151">① <tspan font-weight="600">准备</tspan>：lsblk 确认盘符（用 /dev/disk/by-id 更稳）、确认 RAID 卡为 JBOD、确认 OSD 内存够（每 OSD 约 4~8G）</text>
+  <text x="24" y="152" font-size="11.8" fill="#374151">② <tspan font-weight="600">限流</tspan>：<tspan fill="#b91c1c">这一步 90% 的人会跳过</tspan>，结果业务 IO 被 backfill 挤爆。必须先设 osd_max_backfills=1、osd_recovery_sleep</text>
+  <text x="24" y="170" font-size="11.8" fill="#374151">③ <tspan font-weight="600">创建</tspan>：ceph-volume lvm create --data /dev/sdX [--block.db /dev/nvme0n1p1]；会自动加进 crush 树（在 host 下）</text>
+  <text x="24" y="188" font-size="11.8" fill="#374151">④ <tspan font-weight="600">归位</tspan>：<tspan fill="#b91c1c">最容易出错</tspan> —— 新 OSD 默认被放在 root 根节点下，若不 move 到对应 host，故障域就失效了（3 副本可能全落一台机器）</text>
+</svg>
+<figcaption>图 5：加 OSD 五步法。第 ② 步和第 ④ 步是两个最容易出事的地方。</figcaption>
+</figure>
+
+<pre><code># ── ① 准备（在目标节点执行）─────────────────────────
+lsblk -o NAME,SIZE,MODEL,SERIAL,WWN
+ls -l /dev/disk/by-id/                      # ★ 用 by-id 路径，重启后不会变
+# 确认是 SSD 还是 HDD（影响 crush device class）
+cat /sys/block/sdX/queue/rotational         # 1=HDD  0=SSD
+
+# ── ② 限流（★ 在扩容窗口内设置）────────────────────
+ceph tell osd.* injectargs '--osd_max_backfills=1'
+ceph tell osd.* injectargs '--osd_recovery_max_active=1'      # HDD 建议 1，SSD 可 3
+ceph tell osd.* injectargs '--osd_recovery_sleep=0.1'         # HDD 0.1~0.5；SSD 0~0.05
+ceph tell osd.* injectargs '--osd_recovery_op_priority=1'     # 低于业务(63)
+ceph tell osd.* injectargs '--osd_recovery_max_single_start=1'
+
+# ── ③ 创建 OSD ─────────────────────────────────────
+# 方式一：单盘（HDD/SSD）
+ceph-volume lvm create --data /dev/disk/by-id/wwn-0x50014ee...
+
+# 方式二：db/wal 分离（推荐 HDD+NVMe 混闪）
+ceph-volume lvm create --data /dev/sdd --block.db /dev/nvme0n1
+
+# 方式三：批量（一次加多块盘）
+ceph-volume lvm batch --yes /dev/sdd /dev/sde /dev/sdf \
+   --db-devices /dev/nvme0n1 --wal-devices /dev/nvme1n1
+
+# 方式四：精细控制 db/wal 大小
+ceph-volume lvm create --data /dev/sdd --block.db vg_nvme/lv_db2 --block.db-size 40G
+
+# ── ④ 归位到 host（★ 关键）─────────────────────────
+ceph osd tree                               # 看新 OSD 现在在哪
+ceph osd crush move osd.24 host=node-05     # 移到对应 host bucket
+# 若集群按 rack 划分，还要确认 host 已在正确的 rack 下
+ceph osd crush move node-05 rack=rack-01
+# 检查 device class 是否正确
+ceph osd crush rm-device-class osd.24       # 若需重设
+ceph osd crush set-device-class ssd osd.24
+
+# ── ⑤ 观察 ─────────────────────────────────────────
+watch -n5 'ceph -s | tail -12'
+ceph -s    # 等待 pgs 全部 active+clean，io.recovery 归零</code></pre>
+<div class="note"><b>一次加几块盘合适？</b>经验值：HDD 集群<b>一次不超过总盘数的 5%</b>（如 60 盘一次加 3 块），SSD 集群可以放宽到 10%。加完后等 <code>active+clean</code> 再继续下一批。批量加盘（一次 12 块）在容量充裕时也常见，但必须提前限速并在业务低峰做。</div>
+
+<h3 id="s5-3">5.3 加节点（整体流程）</h3>
+<pre><code># ── 1. 新节点系统准备 ───────────────────────────────
+# 同部署手册：关闭 SELinux/防火墙、NTP、内核参数、hosts 解析、免密 SSH
+
+# ── 2. 安装 ceph 包（版本必须与集群一致！）──────────
+ceph -v                                    # 现有集群版本
+yum install -y ceph-19.2.0-0.el9.x86_64    # 或 apt，版本要对齐
+
+# ── 3. 同步配置与 keyring ───────────────────────────
+scp /etc/ceph/ceph.conf node-06:/etc/ceph/
+scp /etc/ceph/ceph.client.admin.keyring node-06:/etc/ceph/
+scp /var/lib/ceph/bootstrap-osd/ceph.keyring node-06:/var/lib/ceph/bootstrap-osd/
+
+# ── 4. 创建 host bucket 并放到正确位置 ──────────────
+ceph osd crush add-bucket node-06 host
+ceph osd crush move node-06 rack=rack-02    # 或 root=default
+# 若用 rack 级故障域，务必确认 rack 分布合理（不要所有机器挤一个 rack）
+
+# ── 5. 批量创建 OSD ─────────────────────────────────
+ceph-volume lvm batch --yes /dev/sdb /dev/sdc /dev/sdd /dev/sde \
+    --db-devices /dev/nvme0n1
+# ceph-volume 会自动把 OSD 放在本机 hostname 对应的 bucket 下（前提：hostname 与 bucket 名一致）
+
+# ── 6. 校验 ─────────────────────────────────────────
+ceph osd tree | grep -A20 node-06
+ceph osd df tree                            # 看新节点是否已接收数据
+ceph -s</code></pre>
+<div class="tip"><b>hostname 一致性：</b><code>ceph-volume</code> 默认把新 OSD 挂到名为 <code>$(hostname -s)</code> 的 bucket 下。如果 hostname 是 <code>node-06</code> 但你建的 bucket 叫 <code>node06</code>，OSD 就会被放到一个自动创建的孤立 bucket 里，<b>故障域静默失效</b>。这是加节点最常见的隐蔽错误 —— 加完务必 <code>ceph osd tree</code> 看一眼。</div>
+
+<h3 id="s5-4">5.4 限速参数详解（扩容期间最重要的调参）</h3>
+<table>
+<thead><tr><th style="width:34%">参数</th><th style="width:13%">默认</th><th style="width:26%">HDD 建议</th><th>SSD/NVMe 建议</th></tr></thead>
+<tbody>
+<tr><td><code>osd_max_backfills</code></td><td>1</td><td>1</td><td>2~4</td></tr>
+<tr><td><code>osd_recovery_max_active</code></td><td>3</td><td>1</td><td>3~5</td></tr>
+<tr><td><code>osd_recovery_max_single_start</code></td><td>1</td><td>1</td><td>1~3</td></tr>
+<tr><td><code>osd_recovery_sleep</code>（秒）</td><td>0</td><td><b>0.1 ~ 0.5</b></td><td>0 ~ 0.05</td></tr>
+<tr><td><code>osd_recovery_op_priority</code></td><td>3</td><td>1~2（低于业务 63）</td><td>3</td></tr>
+<tr><td><code>osd_recovery_max_chunk</code></td><td>8M</td><td>8M</td><td>16M~64M</td></tr>
+<tr><td><code>osd_snap_trim_sleep</code></td><td>0</td><td>0.1（快照多的场景）</td><td>0</td></tr>
+<tr><td><code>osd_max_scrubs</code></td><td>1</td><td>1（扩容时设 0）</td><td>1~3</td></tr>
+</tbody>
+</table>
+<pre><code># 一键"进入维护模式"（扩容/换盘前执行）
+ceph osd set noout; ceph osd set nobackfill; ceph osd set noscrub; ceph osd set nodeep-scrub
+# 一键"退出维护模式"
+ceph osd unset noout; ceph osd unset nobackfill; ceph osd unset noscrub; ceph osd unset nodeep-scrub
+# 看当前 flag
+ceph osd dump | grep -o 'flags [^,]*'</code></pre>
+<div class="good"><b>持久化：</b><code>injectargs</code> 只在运行时生效，重启后丢失。要持久化必须写进 <code>/etc/ceph/ceph.conf</code> 的 <code>[osd]</code> 段，或用 <code>ceph config set osd &lt;key&gt; &lt;val&gt;</code>（存进 config database，优先级高于 conf 文件，推荐）。</div>
+
+<h3 id="s5-5">5.5 容量告警与 full 急救</h3>
+<div class="kv">
+<b>三道水位线（可调）：</b><br>
+<code>mon_osd_nearfull_ratio = 0.85</code>　→ 告警 <code>nearfull</code><br>
+<code>mon_osd_backfillfull_ratio = 0.90</code>　→ OSD 拒绝接收 backfill（PG 卡在 backfill_wait）<br>
+<code>mon_osd_full_ratio = 0.95</code>　→ <span class="bad">集群只读</span>，所有写入挂起
+</div>
+<pre><code># 紧急处理顺序（按风险从低到高）
+# 1. 立刻确认到底谁满了
+ceph osd df | sort -k14 -nr | head
+
+# 2. 快速释放空间（安全）
+rbd snap purge &lt;pool&gt;/&lt;image&gt;            # 删快照（先确认业务不需要！）
+radosgw-admin gc process                 # RGW 触发垃圾回收
+ceph osd pool set &lt;pool&gt; compression_mode aggressive   # 应急压缩（会消耗 CPU）
+
+# 3. 降低副本数（★ 有风险，但救命最快）
+ceph osd pool set &lt;pool&gt; size 2          # 3副本→2副本，立即省 1/3 空间
+# 风险：此后再坏一块盘就有丢数据风险，必须尽快补容量并改回 3
+
+# 4. 临时抬高水位线（★ 拆报警器，不到万不得已别做，且必须同步扩容）
+ceph tell mon.* injectargs '--mon_osd_full_ratio=0.97'
+# 做完后务必改回，并优先安排扩容
+
+# 5. 真正的解决：加盘 / 删数据 / 迁移到外部存储</code></pre>
+<div class="warn"><b>预防优于急救：</b>把告警阈值设在<b>业务侧</b>而非 Ceph 侧 —— 当 pool 使用率达到 <b>70%</b> 就触发工单扩容。因为 Ceph 从 85% 到 95%（只读）在写入密集场景下可能只有几小时。</div>
+</section>
+
+<section id="s6">
+<h2><span class="num">6</span>缩容、摘盘与换盘</h2>
+
+<h3 id="s6-1">6.1 安全摘除单个 OSD（标准七步）</h3>
+<figure>
+<svg viewBox="0 0 680 190" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
+  <defs><marker id="a5" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#94a3b8"/></marker></defs>
+  <rect x="0" y="0" width="680" height="190" fill="#fff"/>
+  <g font-size="11.5" text-anchor="middle">
+    <rect x="8" y="26" width="90" height="46" rx="8" fill="#e0f2f7" stroke="#0e7490"/><text x="53" y="46" font-weight="700" fill="#0e7490">1. out</text><text x="53" y="62" fill="#374151">开始迁移</text>
+    <line x1="98" y1="49" x2="112" y2="49" stroke="#94a3b8" marker-end="url(#a5)"/>
+    <rect x="114" y="26" width="90" height="46" rx="8" fill="#e0f2f7" stroke="#0e7490"/><text x="159" y="46" font-weight="700" fill="#0e7490">2. 等 clean</text><text x="159" y="62" fill="#374151">★ 不可跳过</text>
+    <line x1="204" y1="49" x2="218" y2="49" stroke="#94a3b8" marker-end="url(#a5)"/>
+    <rect x="220" y="26" width="90" height="46" rx="8" fill="#fef3c7" stroke="#b45309"/><text x="265" y="46" font-weight="700" fill="#b45309">3. stop</text><text x="265" y="62" fill="#374151">停进程</text>
+    <line x1="310" y1="49" x2="324" y2="49" stroke="#94a3b8" marker-end="url(#a5)"/>
+    <rect x="326" y="26" width="90" height="46" rx="8" fill="#fef3c7" stroke="#b45309"/><text x="371" y="46" font-weight="700" fill="#b45309">4. safe-check</text><text x="371" y="62" fill="#374151">确认可删</text>
+    <line x1="416" y1="49" x2="430" y2="49" stroke="#94a3b8" marker-end="url(#a5)"/>
+    <rect x="432" y="26" width="90" height="46" rx="8" fill="#ede9fe" stroke="#6d28d9"/><text x="477" y="46" font-weight="700" fill="#6d28d9">5. purge</text><text x="477" y="62" fill="#374151">清 crush+auth</text>
+    <line x1="522" y1="49" x2="536" y2="49" stroke="#94a3b8" marker-end="url(#a5)"/>
+    <rect x="538" y="26" width="90" height="46" rx="8" fill="#ede9fe" stroke="#6d28d9"/><text x="583" y="46" font-weight="700" fill="#6d28d9">6. 清 LV</text><text x="583" y="62" fill="#374151">释放磁盘</text>
+  </g>
+  <text x="640" y="52" font-size="14" fill="#94a3b8">→7. 拔盘</text>
+  <rect x="8" y="92" width="664" height="86" rx="9" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.3"/>
+  <text x="22" y="114" font-size="12.5" font-weight="700" fill="#b91c1c">最容易翻车的两步</text>
+  <text x="22" y="134" font-size="11.8" fill="#374151">• 第 2 步「等 clean」：如果不等数据迁完就 stop，该 OSD 上的 PG 会变成 degraded/undersized，</text>
+  <text x="36" y="150" font-size="11.8" fill="#374151">此时再坏一块盘 → <tspan fill="#b91c1c" font-weight="600">数据永久丢失</tspan>。必须 <tspan font-weight="600">ceph -s 全部 active+clean</tspan> 才能往下走。</text>
+  <text x="22" y="168" font-size="11.8" fill="#374151">• 第 4 步「safe-to-destroy」：这条命令会检查该 OSD 上是否还有唯一副本。返回 <tspan fill="#15803d">are no longer needed</tspan> 才可继续；</text>
+  <text x="36" y="182" font-size="11.8" fill="#374151">返回 <tspan fill="#b91c1c" font-weight="600">are still needed</tspan> 说明还有数据依赖它，<tspan font-weight="600">绝对不能删</tspan>。</text>
+</svg>
+<figcaption>图 6：安全摘除 OSD 七步法。第 2 步和第 4 步是数据安全的生命线。</figcaption>
+</figure>
+
+<pre><code># ── 完整命令序列（以 osd.12 为例）──────────────────
+# 0. 前置：确认剩余容量够（★ 这一步省略过的人后来都后悔了）
+ceph osd df | sort -k14 -nr | head        # 最高使用率不能超过 80%
+
+# 1. 标记 out（数据开始迁走）
+ceph osd out 12
+watch -n10 'ceph -s | tail -8'            # 观察 recovery 进度
+
+# 2. ★ 等待完全 clean（可能几小时到几天）
+while ! ceph -s | grep -q 'HEALTH_OK'; do sleep 60; done
+ceph osd safe-to-destroy 12               # 4 的检查可以提前做
+
+# 3. 停进程
+systemctl stop ceph-osd@12
+systemctl disable ceph-osd@12
+
+# 4. ★ 安全检查（必须先 stop 才能查）
+ceph osd safe-to-destroy 12
+# 期望输出：OSD(s) 12 are safe to destroy without reducing data durability.
+# 若输出 "... are still needed"，STOP！回去查原因
+
+# 5. 清除（一条命令搞定 out + crush remove + auth del）
+ceph osd purge 12 --yes-i-really-mean-it
+# 或分步（老版本）：
+#   ceph osd crush remove osd.12
+#   ceph auth del osd.12
+#   ceph osd rm 12
+
+# 6. 清理 LVM 与磁盘（在 OSD 所在节点执行）
+ceph-volume lvm list | grep -A5 'osd.12'      # 确认 LV 名称
+lvremove -f vg_xxx/lv_xxx
+vgremove vg_xxx
+pvremove /dev/sdX
+wipefs -a /dev/sdX                        # ★ 清掉签名，否则下次用这块盘会报已存在
+
+# 7. 验证
+ceph osd tree
+ceph -s
+ceph osd df tree</code></pre>
+
+<h3 id="s6-2">6.2 摘除整个节点</h3>
+<pre><code># 1. 先把该节点上所有 OSD 一起 out（比逐个 out 快，且只触发一轮迁移）
+ceph osd out $(ceph osd ls-tree node-06 | tr '\n' ' ')
+# 或者（更稳妥，逐盘）
+for i in $(ceph osd ls-tree node-06); do ceph osd out $i; done
+
+# 2. 等待 active+clean
+watch -n30 'ceph -s'
+
+# 3. 逐个 stop + safe-to-destroy + purge
+for i in $(ceph osd ls-tree node-06); do
+  ssh node-06 "systemctl stop ceph-osd@$i"
+  ceph osd safe-to-destroy $i || { echo "osd.$i NOT safe, abort"; break; }
+  ceph osd purge $i --yes-i-really-mean-it
+done
+
+# 4. 移除 host bucket
+ceph osd crush rm node-06
+# 5. 若该节点还跑了 mon/mgr/mds/rgw，先迁走/删除对应服务
+ceph mon remove node-06
+# 6. 清理服务与包（可选）
+ssh node-06 "yum remove -y ceph*; rm -rf /var/lib/ceph/*"</code></pre>
+
+<h3 id="s6-3">6.3 换盘（故障盘替换）</h3>
+<div class="grid2">
+<div class="card"><h5>方案 A：保留 OSD ID（推荐）</h5><p>新盘用同一个 OSD 编号，<b>迁移量 = 一块盘的数据量</b>，影响最小。<br>适用：盘坏了但能识别、或已安全 out。</p></div>
+<div class="card"><h5>方案 B：不保留 ID（新建 OSD）</h5><p>老 ID purge，新盘拿新 ID。会触发更大规模的 rebalance（因为 CRUSH 树变了）。<br>适用：老 ID 已无法恢复、或顺带调整容量。</p></div>
+</div>
+<pre><code># ── 方案 A：保留 OSD ID 换盘 ───────────────────────
+# 1. 确认盘确实坏了
+ceph osd perf | grep -w 12 ; dmesg | grep -i 'sdX' ; smartctl -a /dev/sdX
+
+# 2. 标记 out 并等数据迁走（坏盘可能迁不动，见下方"打不动"处理）
+ceph osd out 12 ; watch -n10 'ceph -s'
+
+# 3. 停进程（注意：如果盘已经完全不可读，这步可能卡住）
+systemctl stop ceph-osd@12
+# 若 stop 卡死：systemctl kill -s KILL ceph-osd@12
+
+# 4. 安全确认
+ceph osd safe-to-destroy 12
+
+# 5. 清除元数据但保留 ID
+ceph osd destroy 12 --yes-i-really-mean-it      # 注意：是 destroy 不是 purge（purge 会连 ID 一起删）
+ceph auth del osd.12
+
+# 6. 物理换盘后，用同一个 ID 重建（在目标节点执行）
+ceph-volume lvm create --osd-id 12 --data /dev/disk/by-id/wwn-0x...
+# 若还有独立的 db/wal，需要重新指定：
+ceph-volume lvm create --osd-id 12 --data /dev/sdd --block.db vg_nvme/lv_db12
+
+# 7. 开机自启
+systemctl enable --now ceph-osd@12
+
+# 8. 若 OSD 启动时报 "osd.12 already exists" 或 crush 里还有残留
+ceph osd crush rm osd.12
+ceph osd crush move osd.12 host=node-05</code></pre>
+
+<pre><code># ── 方案 B：全新 OSD ───────────────────────────────
+ceph osd out 12
+# 等 clean
+ceph osd safe-to-destroy 12
+ceph osd purge 12 --yes-i-really-mean-it
+# 清 LV / wipefs（见 6.1 第 6 步）
+# 换盘后
+ceph-volume lvm create --data /dev/disk/by-id/wwn-0x...
+ceph osd crush move osd.NEW host=node-05</code></pre>
+
+<div class="note"><b>"数据迁不动"怎么办：</b>坏盘可能让 PG 卡住导致 backfill 无法完成。此时 <code>ceph -s</code> 会有 PG 长期 <code>degraded</code>。<br>
+处理：① 确认 <code>min_size</code> 是否满足（<code>ceph osd pool ls detail</code>）；② 若该 OSD 已完全不可用且其他副本齐全，用 <code>ceph osd destroy</code> + <code>ceph osd crush remove</code> 强制剔除，数据由剩余副本重建；③ 若 <b>该 OSD 上有唯一副本</b>（比如 2 副本且另一块也坏了），只能从备份恢复 —— <b>这就是为什么副本数不能低于 3</b>。</div>
+
+<h3 id="s6-4">6.4 缩容容量红线（动手前必算）</h3>
+<pre><code>#!/bin/bash
+# check_shrink.sh —— 缩容前容量检查（强烈建议纳入变更流程）
+# 用法: ./check_shrink.sh "12 13 14"
+
+TARGET_OSDS="$1"
+TOTAL_RAW=$(ceph df --format=json | jq '.stats.total_bytes')
+USED_RAW=$(ceph df --format=json | jq '.stats.total_used_bytes')
+echo "集群: 总 $((TOTAL_RAW/1024**4)) TiB / 已用 $((USED_RAW/1024**4)) TiB \
+( $((USED_RAW*100/TOTAL_RAW))% )"
+
+REMOVE_BYTES=0
+for o in $TARGET_OSDS; do
+  B=$(ceph osd df --format=json | jq ".nodes[]|select(.id==$o)|.kb" )
+  REMOVE_BYTES=$((REMOVE_BYTES + B*1024))
+done
+echo "拟摘除 OSD: $TARGET_OSDS"
+echo "将释放容量: $((REMOVE_BYTES/1024**4)) TiB"
+
+NEW_TOTAL=$((TOTAL_RAW - REMOVE_BYTES))
+NEW_PCT=$((USED_RAW*100/NEW_TOTAL))
+echo "摘除后: 总 $((NEW_TOTAL/1024**4)) TiB, 使用率将变为 ${NEW_PCT}%"
+
+if [ $NEW_PCT -gt 85 ]; then
+  echo "❌ 危险！使用率将超过 85%（nearfull），禁止执行缩容"
+  exit 1
+elif [ $NEW_PCT -gt 75 ]; then
+  echo "⚠️  警告：使用率将超过 75%，建议先清理数据或分批缩容"
+else
+  echo "✅ 容量安全，可以执行"
+fi</code></pre>
+<div class="warn"><b>缩容三原则：</b>① 摘除后集群使用率 <b>必须 &lt; 75%</b>（留出缓冲）；② 一次只摘一个节点或一批 OSD，等 clean 再进行下一批；③ 缩容过程中<b>不要同时做其他变更</b>（扩容、升级、调 PG）。</div>
+</section>
+
+<section id="s7">
+<h2><span class="num">7</span>日常巡检清单与一键巡检脚本</h2>
+
+<h3>7.1 日 / 周 / 月巡检表</h3>
+<table>
+<thead><tr><th style="width:10%">周期</th><th style="width:38%">检查项</th><th style="width:26%">命令</th><th>合格标准</th></tr></thead>
+<tbody>
+<tr><td rowspan="5"><b>每日</b></td><td>集群健康状态</td><td><code>ceph health detail</code></td><td>HEALTH_OK</td></tr>
+<tr><td>PG 全部 clean</td><td><code>ceph pg stat</code></td><td>无 degraded/inconsistent/stuck</td></tr>
+<tr><td>容量水位</td><td><code>ceph df / ceph osd df</code></td><td>最高 OSD &lt; 80%</td></tr>
+<tr><td>慢请求</td><td><code>ceph osd perf | sort -k3 -nr|head</code></td><td>HDD &lt; 50ms，SSD &lt; 15ms</td></tr>
+<tr><td>OSD up/in 一致性</td><td><code>ceph osd stat</code></td><td>up 数 == in 数</td></tr>
+<tr><td rowspan="5"><b>每周</b></td><td>均衡度</td><td><code>ceph osd df</code> 的 VAR 列</td><td>VAR 在 0.85~1.15</td></tr>
+<tr><td>scrub 是否正常完成</td><td><code>ceph pg dump | grep -c scrub</code></td><td>无长期 scrubbing</td></tr>
+<tr><td>硬件健康（SMART）</td><td><code>smartctl -a /dev/sdX</code></td><td>无 Pending/Offline 扇区</td></tr>
+<tr><td>MON quorum 稳定性</td><td><code>ceph quorum_status</code></td><td>age 长期稳定，leader 未频繁切</td></tr>
+<tr><td>网络错误计数</td><td><code>ethtool -S | grep err</code></td><td>无增长</td></tr>
+<tr><td rowspan="5"><b>每月</b></td><td>版本与补丁</td><td><code>ceph versions</code></td><td>所有组件版本一致</td></tr>
+<tr><td>PG 数规划复核</td><td><code>ceph osd pool autoscale-status</code></td><td>每 OSD ~100 PG</td></tr>
+<tr><td>容量趋势预测</td><td>Prometheus 环比</td><td>能支撑 &gt; 3 个月</td></tr>
+<tr><td>备份与恢复演练</td><td>rbd export / radosgw sync</td><td>能成功恢复</td></tr>
+<tr><td>日志审计</td><td><code>/var/log/ceph/*</code></td><td>无持续增长的错误</td></tr>
+</tbody>
+</table>
+
+<h3>7.2 一键巡检脚本（可直接落地到 crontab）</h3>
+<pre><code>#!/bin/bash
+# ceph_healthcheck.sh —— Ceph 日常巡检（Squid/Tentacle）
+# 用法: bash ceph_healthcheck.sh  |  crontab: 0 9 * * * /opt/ceph_healthcheck.sh | mail -s "Ceph日报" ops@xx.com
+
+RED='\033[0;31m'; YEL='\033[0;33m'; GRN='\033[0;32m'; NC='\033[0m'
+WARN=0
+say()  { echo -e "$1"; }
+bad()  { echo -e "${RED}[FAIL]${NC} $1"; WARN=1; }
+warn() { echo -e "${YEL}[WARN]${NC} $1"; }
+ok()   { echo -e "${GRN}[ OK ]${NC} $1"; }
+
+echo "════════ Ceph 巡检报告 $(date '+%F %T') ════════"
+
+# 1. 健康状态
+H=$(ceph health 2>/dev/null)
+echo "── 1. 集群健康 ──"
+if [ "$H" == "HEALTH_OK" ]; then ok "$H"; else
+  bad "$H"; ceph health detail | head -20; fi
+
+# 2. OSD up/in
+echo "── 2. OSD 状态 ──"
+STAT=$(ceph osd stat 2>/dev/null)
+echo "$STAT"
+UP=$(echo "$STAT" | grep -oP '\d+(?= up)'); IN=$(echo "$STAT" | grep -oP '\d+(?= in)')
+[ "$UP" == "$IN" ] && ok "up=$UP in=$IN 一致" || bad "up=$UP in=$IN 不一致，有 OSD 被 out"
+
+# 3. PG
+echo "── 3. PG 状态 ──"
+ceph pg stat | sed 's/^/   /'
+NOTCLEAN=$(ceph pg stat --format=json 2>/dev/null | jq -r '.num_pgs - .pgs_by_state[]? | select(.state_name=="active+clean") | .count' 2>/dev/null)
+ceph pg stat | grep -qE 'degraded|inconsistent|stale|incomplete|down' && bad "存在异常 PG" || ok "PG 全部 active+clean"
+
+# 4. 容量
+echo "── 4. 容量水位 ──"
+ceph df | head -8
+ceph osd df --format=json | jq -r '.nodes[]|select(.type=="osd")|"\(.name) \(.utilization) \(.var)"' | \
+  sort -k3 -nr | head -5 | while read n u v; do
+    p=${u%.*}
+    if   [ "$p" -ge 85 ]; then bad "$n 使用率 ${u}% VAR=$v"
+    elif [ "$p" -ge 75 ]; then warn "$n 使用率 ${u}% VAR=$v"
+    fi
+  done
+
+# 5. 慢盘
+echo "── 5. 慢 OSD TOP5（commit/apply 延迟 ms）──"
+ceph osd perf | sort -k3 -nr | head -6
+
+# 6. MON
+echo "── 6. MON ──"
+ceph mon stat
+ceph quorum_status --format=json | jq -r '"   leader=\(.quorum_leader_name) quorum=\(.quorum_names|join(","))"'
+
+# 7. MGR
+echo "── 7. MGR ──"
+ceph mgr stat | sed 's/^/   /'
+
+# 8. 版本一致性
+echo "── 8. 版本一致性 ──"
+ceph versions | sed 's/^/   /'
+
+# 9. 网络错误（本机）
+echo "── 9. 网卡错误计数 ──"
+for i in $(ls /sys/class/net | grep -Ev '^(lo|docker|veth|virbr)'); do
+  e=$(ethtool -S $i 2>/dev/null | grep -E 'rx_errors|tx_errors|rx_dropped' | awk '{s+=$2} END{print s}')
+  [ "${e:-0}" -gt 0 ] && warn "$i 存在错误包: $e" || ok "$i 无错误"
+done
+
+echo "════════ 巡检结束 ════════"
+exit $WARN</code></pre>
+
+<h3>7.3 集群"健康打分"简易模型</h3>
+<div class="kv">
+给集群打分的快速方法（满分 100，用于向上汇报或变更前后对比）：<br>
+<b>健康状态 30 分</b>：OK=30，WARN=15，ERR=0<br>
+<b>容量水位 20 分</b>：最高 OSD &lt;60% = 20，60~75% = 12，75~85% = 5，&gt;85% = 0<br>
+<b>均衡度 20 分</b>：VAR 标准差 &lt;0.08 = 20，&lt;0.15 = 12，&lt;0.25 = 5，更大 = 0<br>
+<b>性能 20 分</b>：P99 延迟达标 = 20，超 2 倍 = 10，超 5 倍 = 0<br>
+<b>运维规范 10 分</b>：有监控告警/有巡检/有备份/有文档各 2.5 分<br>
+<b>≥85 分</b> 健康；<b>70~85</b> 需整改；<b>&lt;70</b> 高危，应立项治理。
+</div>
+</section>
+
+<section id="s8">
+<h2><span class="num">8</span>故障速查表：24 个高频场景</h2>
+<table>
+<thead><tr><th style="width:6%">#</th><th style="width:30%">现象 / 告警</th><th style="width:30%">最可能原因</th><th>处理动作</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>HEALTH_WARN: too many PGs per OSD</code></td><td>pg_num 设置过大</td><td>调 <code>mon_max_pg_per_osd</code> 或降低 pg_num / 加 OSD</td></tr>
+<tr><td>2</td><td><code>pool(s) do not have an application enabled</code></td><td>pool 未声明用途</td><td><code>ceph osd pool application enable &lt;pool&gt; rbd</code></td></tr>
+<tr><td>3</td><td><code>1 full osd(s)</code> / 集群只读</td><td>磁盘使用率超 95%</td><td>见 5.5 节急救流程</td></tr>
+<tr><td>4</td><td><code>mon election / mon is down</code></td><td>MON 数不足、网络、时钟</td><td>保证 ≥3 奇数 mon；查 chrony；查 mon 盘空间</td></tr>
+<tr><td>5</td><td><code>clock skew detected</code></td><td>NTP 未同步</td><td><code>systemctl restart chronyd</code>；<code>chronyc sources</code> 确认源可达</td></tr>
+<tr><td>6</td><td><code>slow request 30 sec old</code></td><td>见第 3 章</td><td>五层定位法 + dump_ops_in_flight</td></tr>
+<tr><td>7</td><td><code>osd.N is down</code> 反复 up/down</td><td>磁盘/RAID 卡/内存/网络</td><td>查 dmesg、smartctl；整机隔离排查</td></tr>
+<tr><td>8</td><td><code>PG incomplete</code></td><td>peering 找不到权威副本</td><td>见 4.6 专项处理，先备份</td></tr>
+<tr><td>9</td><td><code>PG inconsistent</code></td><td>副本数据不一致</td><td>确认权威副本后 <code>ceph pg repair &lt;pgid&gt;</code></td></tr>
+<tr><td>10</td><td><code>backfill_toofull</code></td><td>目标 OSD 超 90%</td><td>清理数据 / 扩容 / 调低源端权重，别只调阈值</td></tr>
+<tr><td>11</td><td><code>undersized+degraded</code> 长期存在</td><td>crush rule 故障域不满足</td><td>检查 rule 的 <code>step chooseleaf</code> 类型与 bucket 数量</td></tr>
+<tr><td>12</td><td>新加 OSD 却没接收数据</td><td>不在正确 host bucket / weight=0</td><td><code>ceph osd tree</code> 检查；<code>crush move</code> 归位</td></tr>
+<tr><td>13</td><td>dashboard 打不开</td><td>mgr 无 active / 模块未启</td><td><code>ceph mgr stat</code>；<code>ceph mgr module enable dashboard</code></td></tr>
+<tr><td>14</td><td><code>no active mgr</code></td><td>mgr 全部挂或未部署</td><td><code>ceph-deploy/cephadm mgr create</code>；至少部署 2 个</td></tr>
+<tr><td>15</td><td>rbd map 报 <code>unknown feature</code></td><td>客户端内核不支持新特性</td><td>升级内核，或 <code>rbd feature disable &lt;img&gt; &lt;feature&gt;</code>（会降低能力）</td></tr>
+<tr><td>16</td><td>rbd image 无法删除</td><td>有 watcher（还被挂载）</td><td><code>rbd status &lt;img&gt;</code> 找 watcher；或 <code>rbd snap purge</code> 后删</td></tr>
+<tr><td>17</td><td>RGW 写入慢</td><td>bucket index 分片不足</td><td>见案例 6，增加 shards</td></tr>
+<tr><td>18</td><td>RGW <code>gc</code> 队列积压</td><td>删除多写少，GC 未触发</td><td><code>radosgw-admin gc process --include-all</code>；调 GC 参数</td></tr>
+<tr><td>19</td><td>CephFS <code>MDS slow request</code></td><td>MDS 缓存/锁竞争</td><td><code>ceph tell mds.* session ls</code>；<code>cache drop</code>；考虑多 active MDS</td></tr>
+<tr><td>20</td><td>CephFS 容量显示异常</td><td>配额/回收站</td><td><code>ceph fs status</code>；<code>getfattr</code> 查 quota；清理 <code>.trash</code></td></tr>
+<tr><td>21</td><td>OSD 启动失败 <code>bluefs ... no space</code></td><td>db 分区写满</td><td>扩 db LV；<code>ceph-bluestore-tool bluefs-bdev-expand</code></td></tr>
+<tr><td>22</td><td>OSD 启动失败 <code>filestore/bluestore mount</code></td><td>磁盘未挂载 / 权限 / LV 未激活</td><td><code>vgchange -ay</code>；检查 /var/lib/ceph 权限</td></tr>
+<tr><td>23</td><td><code>auth: unable to find a keyring</code></td><td>keyring 路径/权限错</td><td><code>ls -l /var/lib/ceph/osd/ceph-*/keyring</code>；确认属主为 ceph</td></tr>
+<tr><td>24</td><td>升级后 OSD 报 <code>feature mismatch</code></td><td>组件版本不一致</td><td><code>ceph versions</code>；把落后的组件补齐；确认 <code>require-osd-release</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="s9">
+<h2><span class="num">9</span>变更红线：这些事绝对不能做</h2>
+<div class="grid2">
+<div class="card"><h5>🚫 高危操作（必须有方案 + 审批 + 备份）</h5>
+<p>① <code>ceph osd lost</code> —— 强制宣告数据丢失<br>
+② <code>mark_unfound_lost</code> —— 不可逆删除<br>
+③ 批量重启多个 OSD（未 set noout）<br>
+④ 上调 <code>full_ratio</code> 而不扩容<br>
+⑤ <code>rbd feature disable</code> 后未验证<br>
+⑥ 直接删除 <code>/var/lib/ceph/osd/*</code> 目录<br>
+⑦ 在生产集群上跑 <code>fio</code> 打满压测</p></div>
+<div class="card"><h5>✅ 变更标准动作（Checklist）</h5>
+<p>① 变更前：<code>ceph health detail</code> 确认健康 + 记录基线（<code>ceph -s &gt; /tmp/before.txt</code>）<br>
+② <code>ceph osd set noout</code>（涉及 OSD 停机时）<br>
+③ 一次只改一个变量，改完观察 10 分钟<br>
+④ 参数用 <code>injectargs</code> 先验证，再 <code>ceph config set</code> 持久化<br>
+⑤ 变更后：对比基线 + 更新运维文档<br>
+⑥ 全程保留回滚方案</p></div>
+</div>
+<div class="warn"><b>三个被反复验证的"反直觉"经验：</b><br>
+<b>1. 集群规模越大，越要控制单次变更范围。</b>100 个 OSD 时重启 3 个没事，重启 30 个就是灾难。<br>
+<b>2. 告警静音不等于问题解决。</b>把 <code>mon_osd_nearfull_ratio</code> 从 0.85 调到 0.95 只需要一条命令，但代价是失去扩容窗口。<br>
+<b>3. Ceph 很少"自己坏"，绝大多数故障是硬件（盘/网/内存）或人的行为。</b>排查时先怀疑这两者。</div>
+</section>
+
+<section id="s10">
+<h2><span class="num">10</span>附录：速查卡</h2>
+
+<h3>10.1 一分钟速查卡（打印贴在工位）</h3>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│ 出事了先看:  ceph health detail                              │
+│ 谁慢:        ceph osd perf | sort -k3 -nr | head             │
+│ 谁满:        ceph osd df | sort -k14 -nr | head              │
+│ 卡在哪:      ceph tell osd.N dump_ops_in_flight              │
+│ PG 怎么了:   ceph pg <pgid> query                            │
+│ 数据在哪:    ceph osd map <pool> <object>                    │
+│ 停机维护前:  ceph osd set noout                              │
+│ 维护结束后:  ceph osd unset noout                            │
+│ 摘盘前必问:  ceph osd safe-to-destroy N                      │
+│ 限流:        ceph tell osd.* injectargs '--osd_max_backfills=1'│
+│ 看恢复进度:  ceph -s | tail -8                               │
+│ 报错不明:    ceph health detail + /var/log/ceph/ceph.log      │
+└──────────────────────────────────────────────────────────────┘</code></pre>
+
+<h3>10.2 常用路径与端口</h3>
+<table>
+<thead><tr><th style="width:34%">项目</th><th>值</th></tr></thead>
+<tbody>
+<tr><td>配置文件</td><td><code>/etc/ceph/ceph.conf</code></td></tr>
+<tr><td>日志</td><td><code>/var/log/ceph/ceph-*.log</code>（<code>ceph -w</code> / <code>journalctl -u ceph-osd@N</code>）</td></tr>
+<tr><td>OSD 数据</td><td><code>/var/lib/ceph/osd/ceph-N/</code>（含 <code>block</code>、<code>block.db</code> 软链）</td></tr>
+<tr><td>MON 数据</td><td><code>/var/lib/ceph/mon/ceph-id/</code></td></tr>
+<tr><td>admin socket</td><td><code>/var/run/ceph/ceph-osd.N.asok</code></td></tr>
+<tr><td>keyring</td><td><code>/etc/ceph/ceph.client.admin.keyring</code>、<code>/var/lib/ceph/bootstrap-osd/ceph.keyring</code></td></tr>
+<tr><td>端口</td><td>MON 6789（msgr1）/ 3300（msgr2）；OSD 6800~7300；MGR dashboard 8443；prometheus 9283；RGW 80/8080/7480</td></tr>
+</tbody>
+</table>
+
+<h3>10.3 关键阈值记忆表</h3>
+<table>
+<thead><tr><th style="width:44%">阈值</th><th style="width:18%">默认值</th><th>建议 / 说明</th></tr></thead>
+<tbody>
+<tr><td><code>mon_osd_nearfull_ratio</code></td><td>0.85</td><td>业务侧建议在 <b>0.70</b> 就告警扩容</td></tr>
+<tr><td><code>mon_osd_backfillfull_ratio</code></td><td>0.90</td><td>达到后拒绝接收回填</td></tr>
+<tr><td><code>mon_osd_full_ratio</code></td><td>0.95</td><td><b>达到后集群只读</b></td></tr>
+<tr><td><code>osd_op_complaint_time</code></td><td>30s</td><td>slow request 判定阈值</td></tr>
+<tr><td><code>mon_osd_down_out_interval</code></td><td>600s</td><td>OSD down 多久后自动 out（维护时设 noout 覆盖）</td></tr>
+<tr><td><code>osd_max_backfills</code></td><td>1</td><td>扩容期保持 1，SSD 可 2~4</td></tr>
+<tr><td><code>mon_target_pg_per_osd</code></td><td>100</td><td>autoscale 目标值</td></tr>
+<tr><td><code>osd_scrub_begin_hour / end_hour</code></td><td>0 / 24</td><td>建议改为业务低峰，如 1 / 6</td></tr>
+</tbody>
+</table>
+
+<div class="good"><b>最后一句：</b>Ceph 是个"诚实"的系统 —— 它所有的告警都对应真实的问题。与其记住一百条命令，不如养成三个习惯：<b>① 每天看一次 <code>ceph health detail</code>；② 任何变更前后各存一份 <code>ceph -s</code> 基线；③ 容量到 70% 就开始规划扩容。</b>做到这三点，能避开 90% 的重大事故。</div>
+</section>
+<nav class="doc-series">
+  <p class="lb">Ceph 四部曲</p>
+  <ol>
+<li class=""><a href="../posts/ceph-principles.html">① Ceph 原理详解：从寻址到数据均衡</a></li>
+<li class=""><a href="../posts/ceph-deployment.html">② Ceph 完整部署手册（手动 + Ansible）</a></li>
+<li class="cur"><a href="../posts/ceph-operations.html">③ Ceph 日常运维实战手册</a></li>
+<li class=""><a href="../posts/ceph-tuning.html">④ Ceph 性能瓶颈分析与调优</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../feed.xml">RSS</a>
+      <a href="../storage.html">存储专题</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js"></script>
+</body>
+</html>

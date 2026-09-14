@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>rensongqi · 个人笔记</title>
+    <link>https://rensongqi.github.io/</link>
+    <description>个人技术笔记 —— 分布式存储、后端工程与实践记录。</description>
+    <language>zh-CN</language>
+    <lastBuildDate>Sun, 13 Sep 2026 16:00:00 GMT</lastBuildDate>
+    <atom:link href="https://rensongqi.github.io/feed.xml" rel="self" type="application/rss+xml"/>
+
+    <item>
+      <title>Ceph 原理详解：从寻址到数据均衡</title>
+      <link>https://rensongqi.github.io/posts/ceph-principles.html</link>
+      <guid isPermaLink="true">https://rensongqi.github.io/posts/ceph-principles.html</guid>
+      <pubDate>Sun, 13 Sep 2026 16:00:00 GMT</pubDate>
+      <description>17 章 12 图，讲透 Ceph 的分布式原理：五张 Map、File→Object→PG→OSD 寻址三部曲、CRUSH 与 straw2、强一致写入、Recovery 与 Backfill、数据均衡原理、BlueStore、EC 与容量规划。</description>
+      <category>存储</category>
+    </item>
+
+    <item>
+      <title>Ceph 完整部署手册（手动 + Ansible）</title>
+      <link>https://rensongqi.github.io/posts/ceph-deployment.html</link>
+      <guid isPermaLink="true">https://rensongqi.github.io/posts/ceph-deployment.html</guid>
+      <pubDate>Sun, 13 Sep 2026 16:00:00 GMT</pubDate>
+      <description>21 章 4 图：硬件与网络规划、系统初始化、db/wal 磁盘布局、手动部署七步法、MDS/CephFS/RGW/Dashboard、扩容换盘缩容，以及 ceph-ansible 全量变量模板与运维 playbook。</description>
+      <category>存储</category>
+    </item>
+
+    <item>
+      <title>Ceph 日常运维实战手册</title>
+      <link>https://rensongqi.github.io/posts/ceph-operations.html</link>
+      <guid isPermaLink="true">https://rensongqi.github.io/posts/ceph-operations.html</guid>
+      <pubDate>Sun, 13 Sep 2026 16:00:00 GMT</pubDate>
+      <description>命令体系与命名规律、ceph -s 逐行解读、slow ops 五层定位法与六个真实案例、PG 均衡实战、扩容缩容换盘、日周月巡检表与一键巡检脚本、24 条故障速查。</description>
+      <category>存储</category>
+    </item>
+
+    <item>
+      <title>Ceph 性能瓶颈分析与调优</title>
+      <link>https://rensongqi.github.io/posts/ceph-tuning.html</link>
+      <guid isPermaLink="true">https://rensongqi.github.io/posts/ceph-tuning.html</guid>
+      <pubDate>Sun, 13 Sep 2026 16:00:00 GMT</pubDate>
+      <description>六大瓶颈层剖析、3 副本随机写时延分解、写放大链条、网络与 CPU 定量规划、mclock 隐性 IOPS 天花板、四段压测定位法、六层参数表与六套场景化配方。</description>
+      <category>存储</category>
+    </item>
+
+  </channel>
+</rss>

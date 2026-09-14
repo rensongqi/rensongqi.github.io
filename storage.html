@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>存储 · 专题 · rensongqi</title>
+<meta name="description" content="分布式存储专题：Ceph 原理、部署、运维与性能调优。">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="feed.xml">
+</head>
+<body>
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="index.html">首页</a>
+      <a href="archive.html">归档</a>
+      <a href="storage.html" class="is-active">存储</a>
+      <a href="about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <h1>存储 / Storage</h1>
+    <p>以 Ceph 为主线，把分布式存储从"能跑起来"写到"知道为什么慢、知道怎么调"。四篇互为前后文，建议按 ① → ④ 的顺序读。</p>
+    <div class="meta">4 篇 · 约 8.7 万字 · 30 张原理图 · 更新于 2026-09-14</div>
+  </section>
+
+  <section class="block">
+    <div class="block__head"><h2>建议路线</h2></div>
+    <div class="prose" style="padding: 12px 0 0;">
+      <p>如果你刚接触 Ceph：<strong>先用虚拟机按 ② 手动部署一遍</strong>（这一步能让你看懂 ① 里每一张图在说什么），再读 ③ 学会日常怎么养，最后用 ④ 解决"为什么这么慢"。</p>
+      <p>如果你是来救火的：直接翻 ③ 的第 3 章（slow ops 排查）和第 8 章（24 条故障速查）。</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block__head"><h2>Ceph 四部曲</h2></div>
+    <ul class="card-list">
+
+      <li>
+        <h3><a href="posts/ceph-principles.html">① Ceph 原理详解：从寻址到数据均衡</a></h3>
+        <p>17 章 12 图。五张 Map、File→Object→PG→OSD 寻址三部曲、CRUSH 与 straw2 抽签、三种权重的区别、强一致写入时序（为什么延迟取决于最慢的副本）、Recovery 与 Backfill 的区别、数据均衡原理、BlueStore 与 block.db 溢出、EC k+m、容量规划真相。</p>
+        <div class="meta">2026-09-14 · 约 3.2 万字 · #Ceph #分布式存储 #原理</div>
+      </li>
+
+      <li>
+        <h3><a href="posts/ceph-deployment.html">② Ceph 完整部署手册（手动 + Ansible）</a></h3>
+        <p>21 章 4 图。硬件与网络规划、系统初始化、db/wal 磁盘布局与配比经验值、手动部署七步法（mon → mgr → osd → mds/rgw → dashboard）、扩容换盘缩容、ceph-ansible 全量变量模板与 add-osd/shrink-osd 运维 playbook、12 条常见报错对照表、部署后验收清单。</p>
+        <div class="meta">2026-09-14 · 约 2.4 万字 · #Ceph #部署 #Ansible</div>
+      </li>
+
+      <li>
+        <h3><a href="posts/ceph-operations.html">③ Ceph 日常运维实战手册</a></h3>
+        <p>10 章 6 图。命令命名规律与速查、<code>ceph -s</code> 逐行解读、<strong>slow ops 五层定位法</strong>与六个真实案例、止血十招、PG 均衡实战（两种均衡 / 三种权重 / balancer / pg_num 调整 / PG 状态机）、扩容缩容换盘七步法、日周月巡检表与一键巡检脚本、24 条故障速查表。</p>
+        <div class="meta">2026-09-14 · 约 1.6 万字 · #Ceph #运维 #排障</div>
+      </li>
+
+      <li>
+        <h3><a href="posts/ceph-tuning.html">④ Ceph 性能瓶颈分析与调优</a></h3>
+        <p>14 章 8 图。木桶效应模型、3 副本随机写时延分解（WAL 占 48%）、六大瓶颈层、写放大链条、网络与 CPU 定量规划公式、<strong>mclock 隐性 IOPS 天花板</strong>、四段压测定位法、六层参数总表、六套场景化配方、十大误区与上线前检查清单。</p>
+        <div class="meta">2026-09-14 · 约 1.5 万字 · #Ceph #性能 #调优</div>
+      </li>
+
+    </ul>
+  </section>
+
+  <section class="block">
+    <div class="block__head"><h2>标签</h2></div>
+    <div class="tags">
+      <a href="archive.html">#Ceph</a>
+      <a href="archive.html">#分布式存储</a>
+      <a href="archive.html">#原理</a>
+      <a href="archive.html">#部署</a>
+      <a href="archive.html">#运维</a>
+      <a href="archive.html">#排障</a>
+      <a href="archive.html">#性能</a>
+      <a href="archive.html">#调优</a>
+      <a href="archive.html">#Ansible</a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>© 2026 rensongqi</span>
+    <span class="r">
+      <a href="feed.xml">RSS</a>
+      <a href="about.html">关于</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="assets/js/main.js"></script>
+</body>
+</html>
