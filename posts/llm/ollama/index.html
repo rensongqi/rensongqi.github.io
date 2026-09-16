@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>通过Ollama管理本地大模型</h1>
-  <div class="meta">2026-09-14 · 约 200 字 · 源自 notes-src/llm/ollama/README.md</div>
+  <div class="meta">2026-09-16 · 约 200 字 · 源自 notes-src/llm/ollama/README.md</div>
   <div class="doc-tags"><span>#LLM</span><span>#Ollama</span></div>
 </div>
 
@@ -67,100 +73,103 @@
 
 <main>
 <p>运行ollama</p>
-<pre><code class="language-bash">docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
-</code></pre>
+<pre class="highlight"><code class="language-bash">docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama</code></pre>
 <p>安装<code>llama3.1:8b</code>模型</p>
-<pre><code class="language-bash">docker exec -it ollama bash
-ollama run llama3.1:8b
-</code></pre>
+<pre class="highlight"><code class="language-bash">docker exec -it ollama bash
+ollama run llama3.1:8b</code></pre>
 <p>IDE安装<code>Continue</code>插件，修改模型为本地模型</p>
-<pre><code class="language-json">{
-  &quot;models&quot;: [
+<pre class="highlight"><code class="language-json">{
+  "models": [
     {
-      &quot;model&quot;: &quot;claude-3-5-sonnet-latest&quot;,
-      &quot;provider&quot;: &quot;anthropic&quot;,
-      &quot;apiKey&quot;: &quot;&quot;,
-      &quot;title&quot;: &quot;Claude 3.5 Sonnet&quot;
+      "model": "claude-3-5-sonnet-latest",
+      "provider": "anthropic",
+      "apiKey": "",
+      "title": "Claude 3.5 Sonnet"
     },
     {
-      &quot;apiBase&quot;: &quot;https://chat.rsq.cn&quot;,
-      &quot;title&quot;: &quot;Llama3.1 8B&quot;,
-      &quot;provider&quot;: &quot;ollama&quot;,
-      &quot;model&quot;: &quot;llama3.1:8b&quot;
+      "apiBase": "https://chat.rsq.cn",
+      "title": "Llama3.1 8B",
+      "provider": "ollama",
+      "model": "llama3.1:8b"
     },
     {
-      &quot;apiBase&quot;: &quot;https://chat.rsq.cn&quot;,
-      &quot;title&quot;: &quot;Deepseek-coder:6.7b&quot;,
-      &quot;provider&quot;: &quot;ollama&quot;,
-      &quot;model&quot;: &quot;deepseek-coder:6.7b&quot;
+      "apiBase": "https://chat.rsq.cn",
+      "title": "Deepseek-coder:6.7b",
+      "provider": "ollama",
+      "model": "deepseek-coder:6.7b"
     }
   ],
-  &quot;tabAutocompleteModel&quot;: {
-    &quot;apiBase&quot;: &quot;https://chat.rsq.cn&quot;,
-    &quot;title&quot;: &quot;Llama3.1 8B&quot;,
-    &quot;provider&quot;: &quot;ollama&quot;,
-    &quot;model&quot;: &quot;llama3.1:8b&quot;
+  "tabAutocompleteModel": {
+    "apiBase": "https://chat.rsq.cn",
+    "title": "Llama3.1 8B",
+    "provider": "ollama",
+    "model": "llama3.1:8b"
   },
-  &quot;contextProviders&quot;: [
+  "contextProviders": [
     {
-      &quot;name&quot;: &quot;code&quot;,
-      &quot;params&quot;: {}
+      "name": "code",
+      "params": {}
     },
     {
-      &quot;name&quot;: &quot;docs&quot;,
-      &quot;params&quot;: {}
+      "name": "docs",
+      "params": {}
     },
     {
-      &quot;name&quot;: &quot;diff&quot;,
-      &quot;params&quot;: {}
+      "name": "diff",
+      "params": {}
     },
     {
-      &quot;name&quot;: &quot;terminal&quot;,
-      &quot;params&quot;: {}
+      "name": "terminal",
+      "params": {}
     },
     {
-      &quot;name&quot;: &quot;problems&quot;,
-      &quot;params&quot;: {}
+      "name": "problems",
+      "params": {}
     },
     {
-      &quot;name&quot;: &quot;folder&quot;,
-      &quot;params&quot;: {}
+      "name": "folder",
+      "params": {}
     },
     {
-      &quot;name&quot;: &quot;codebase&quot;,
-      &quot;params&quot;: {}
+      "name": "codebase",
+      "params": {}
     }
   ],
-  &quot;slashCommands&quot;: [
+  "slashCommands": [
     {
-      &quot;name&quot;: &quot;share&quot;,
-      &quot;description&quot;: &quot;Export the current chat session to markdown&quot;
+      "name": "share",
+      "description": "Export the current chat session to markdown"
     },
     {
-      &quot;name&quot;: &quot;cmd&quot;,
-      &quot;description&quot;: &quot;Generate a shell command&quot;
+      "name": "cmd",
+      "description": "Generate a shell command"
     },
     {
-      &quot;name&quot;: &quot;commit&quot;,
-      &quot;description&quot;: &quot;Generate a git commit message&quot;
+      "name": "commit",
+      "description": "Generate a git commit message"
     }
   ],
-  &quot;embeddingsProvider&quot;: {
-    &quot;provider&quot;: &quot;ollama&quot;
+  "embeddingsProvider": {
+    "provider": "ollama"
   },
-  &quot;reranker&quot;: {
-    &quot;name&quot;: &quot;llm&quot;,
-    &quot;params&quot;: {
-      &quot;modelTitle&quot;: &quot;Llama3.1 8B&quot;
+  "reranker": {
+    "name": "llm",
+    "params": {
+      "modelTitle": "Llama3.1 8B"
     }
   }
-}
-</code></pre>
+}</code></pre>
 <p>效果示例
 <img alt="Llama3.1:8b" src="../../../assets/images/notes/Llama3.18b.jpg" /></p>
 <ul>
 <li>slashCommands: 支持快捷操作</li>
 </ul>
+<nav class="doc-attach">
+  <p class="lb">本目录附件</p>
+  <ul>
+    <li><a href="../../../notes-src/llm/ollama/docker-compose.yml">docker-compose.yml</a><span class="sz">1.2 KB</span></li>
+  </ul>
+</nav>
 <nav class="doc-series">
   <p class="lb">LLM · 同分类笔记</p>
   <ol>

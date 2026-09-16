@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>通过shell脚本实现弱密码检查</h1>
-  <div class="meta">2026-09-14 · 约 730 字 · 源自 notes-src/ops/openssl/check_weak_pass.md</div>
+  <div class="meta">2026-09-16 · 约 730 字 · 源自 notes-src/ops/openssl/check_weak_pass.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#OpenSSL</span></div>
 </div>
 
@@ -72,110 +78,110 @@
 <li>如果密码修改失败，则用户密码回退至旧密码</li>
 <li>每隔15天密码将自动重置以防止密码泄露</li>
 </ol>
-<pre><code class="language-bash">#!/bin/bash
+<pre class="highlight"><code class="language-bash">#!/bin/bash
 
 # weak password example
-dict=(&quot;!@#&quot;
-&quot;!@#$%^&quot;
-&quot;!@#$%^&amp;*&quot;
-&quot;!@#$%^&amp;*()_+&quot;
-&quot;%resu%&quot;
-&quot;%tsoh%&quot;
-&quot;%user%&quot;
-&quot;%user%!&quot;
-&quot;%user%!@#&quot;
-&quot;%user%.&quot;
-&quot;%user%00&quot;
-&quot;%user%111&quot;
-&quot;%user%12&quot;
-&quot;%user%123&quot;
-&quot;%user%1234&quot;
-&quot;%user%888&quot;
-&quot;%user%@&quot;
-&quot;%user%ab&quot;
-&quot;%user%abc&quot;
-&quot;%user%abcd&quot;
-&quot;(%user%)&quot;
-&quot;.%user%.&quot;
-&quot;000000&quot;
-&quot;00000000&quot;
-&quot;111111&quot;
-&quot;11111111&quot;
-&quot;111222&quot;
-&quot;123&quot;
-&quot;123!@#&quot;
-&quot;123123&quot;
-&quot;123321&quot;
-&quot;1234&quot;
-&quot;12345&quot;
-&quot;123456&quot;
-&quot;1234567&quot;
-&quot;12345678&quot;
-&quot;123456789&quot;
-&quot;1234567890-=&quot;
-&quot;123qwe&quot;
-&quot;222222&quot;
-&quot;333333&quot;
-&quot;444444&quot;
-&quot;555555&quot;
-&quot;654321&quot;
-&quot;6543210&quot;
-&quot;6666&quot;
-&quot;666666&quot;
-&quot;66666666&quot;
-&quot;666888&quot;
-&quot;816357&quot;
-&quot;8888&quot;
-&quot;888888&quot;
-&quot;88888888&quot;
-&quot;999999&quot;
-&quot;99999999&quot;
-&quot;Admin123&quot;
-&quot;Guest123&quot;
-&quot;^%user%^&quot;
-&quot;1234567890-=&quot;
-&quot;aaaaaa&quot;
-&quot;ab&quot;
-&quot;abc&quot;
-&quot;abc123&quot;
-&quot;abcd&quot;
-&quot;abcd1234&quot;
-&quot;abcde&quot;
-&quot;abcdef&quot;
-&quot;abcdefg&quot;
-&quot;abcdefgh&quot;
-&quot;abcdefghi&quot;
-&quot;admin&quot;
-&quot;asdfghjkl&quot;
-&quot;asdfjkl;&quot;
-&quot;exit&quot;
-&quot;guest&quot;
-&quot;iloveyou&quot;
-&quot;master&quot;
-&quot;password&quot;
-&quot;qazwsx&quot;
-&quot;qq123456&quot;
-&quot;qweasd&quot;
-&quot;root&quot;
-&quot;taobao&quot;
-&quot;test&quot;
-&quot;test123&quot;
-&quot;wang1234&quot;
-&quot;woaini&quot;
-&quot;xiaoming&quot;
-&quot;zzzzzz&quot;
-&quot;xxxxxxxx&quot;
-&quot; &quot;)
+dict=("!@#"
+"!@#$%^"
+"!@#$%^&amp;*"
+"!@#$%^&amp;*()_+"
+"%resu%"
+"%tsoh%"
+"%user%"
+"%user%!"
+"%user%!@#"
+"%user%."
+"%user%00"
+"%user%111"
+"%user%12"
+"%user%123"
+"%user%1234"
+"%user%888"
+"%user%@"
+"%user%ab"
+"%user%abc"
+"%user%abcd"
+"(%user%)"
+".%user%."
+"000000"
+"00000000"
+"111111"
+"11111111"
+"111222"
+"123"
+"123!@#"
+"123123"
+"123321"
+"1234"
+"12345"
+"123456"
+"1234567"
+"12345678"
+"123456789"
+"1234567890-="
+"123qwe"
+"222222"
+"333333"
+"444444"
+"555555"
+"654321"
+"6543210"
+"6666"
+"666666"
+"66666666"
+"666888"
+"816357"
+"8888"
+"888888"
+"88888888"
+"999999"
+"99999999"
+"Admin123"
+"Guest123"
+"^%user%^"
+"1234567890-="
+"aaaaaa"
+"ab"
+"abc"
+"abc123"
+"abcd"
+"abcd1234"
+"abcde"
+"abcdef"
+"abcdefg"
+"abcdefgh"
+"abcdefghi"
+"admin"
+"asdfghjkl"
+"asdfjkl;"
+"exit"
+"guest"
+"iloveyou"
+"master"
+"password"
+"qazwsx"
+"qq123456"
+"qweasd"
+"root"
+"taobao"
+"test"
+"test123"
+"wang1234"
+"woaini"
+"xiaoming"
+"zzzzzz"
+"xxxxxxxx"
+" ")
 
-pub_key=&quot;-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA6F+9rKUlGqEo02NOkRGK\nlsgpMVS5mQKmLCpwOvQzGjOUZM08aC1q/Ygt9iXS/FdSrcB7b3cl99sMizZCdHRz\nHEWH9mmeArjY60Nm4QL/cFD8YTm8z0SAcwJZQT1cPGG5YkoQeTnwYLoxjVx75fzt\nsv2iTscLQZ+vXu1oO1k7Bh0bK8FLEsifp9o5a5CqpvYJTJiCdX0xAHfFu8HBsVlH\nklow+Eghc0PPa16pJg0o8VNcHMZdpsHL0k134Mm0rehbuYpuAL2s8l69BiU/44+Y\nfK+hm8frYjVoEBOt2EBKeFbeeHM0YotKkogKnFQ87vTrrvBcPW7YDiKO+5FVUqQY\nQQIDAQAB\n-----END PUBLIC KEY-----&quot;
-pub_path=&quot;/tmp/client.pub&quot;
-salt_key=&quot;pAOx20AkCxCrvZqv&quot;
+pub_key="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA6F+9rKUlGqEo02NOkRGK\nlsgpMVS5mQKmLCpwOvQzGjOUZM08aC1q/Ygt9iXS/FdSrcB7b3cl99sMizZCdHRz\nHEWH9mmeArjY60Nm4QL/cFD8YTm8z0SAcwJZQT1cPGG5YkoQeTnwYLoxjVx75fzt\nsv2iTscLQZ+vXu1oO1k7Bh0bK8FLEsifp9o5a5CqpvYJTJiCdX0xAHfFu8HBsVlH\nklow+Eghc0PPa16pJg0o8VNcHMZdpsHL0k134Mm0rehbuYpuAL2s8l69BiU/44+Y\nfK+hm8frYjVoEBOt2EBKeFbeeHM0YotKkogKnFQ87vTrrvBcPW7YDiKO+5FVUqQY\nQQIDAQAB\n-----END PUBLIC KEY-----"
+pub_path="/tmp/client.pub"
+salt_key="pAOx20AkCxCrvZqv"
 pass_dir=/etc/product
-pass_file=&quot;.passwd&quot;
-pass_file_path=&quot;$pass_dir/$pass_file&quot;
+pass_file=".passwd"
+pass_file_path="$pass_dir/$pass_file"
 
 notify_iot() {
-    echo &quot;notifying iot ...&quot;
+    echo "notifying iot ..."
 }
 
 change_pass() {
@@ -187,22 +193,22 @@ change_pass() {
         mkdir -p $pass_dir
     fi
     # change passwd
-    echo &quot;$user:$new_password&quot; | chpasswd
+    echo "$user:$new_password" | chpasswd
 
     # check whether the password is successfully changed
     if [ $? -eq 0 ]; then
-        echo &quot;$new_password$salt_key&quot; &gt; &quot;$pass_file_path-temp&quot;
+        echo "$new_password$salt_key" &gt; "$pass_file_path-temp"
         encrypt_pass_file
-        echo &quot;Password for $1 has been successfully changed.&quot;
+        echo "Password for $1 has been successfully changed."
     else
         # if the change fails, roll back the old password
-        echo &quot;$user:$old_password&quot; | chpasswd
+        echo "$user:$old_password" | chpasswd
     fi
 }
 
 change_current_user_pass() {
     # get file modify time
-    modification_time=$(stat -c %Y &quot;$pass_file_path&quot;)
+    modification_time=$(stat -c %Y "$pass_file_path")
 
     # get current time
     current_time=$(date +%s)
@@ -215,7 +221,7 @@ change_current_user_pass() {
         old_pass_en=$(&lt;$pass_file_path-temp)
         old_pass=$(echo $old_pass_en | cut -c 1-12)
         generate_rand_pass
-        change_pass &quot;guest&quot; $old_pass $new_pass
+        change_pass "guest" $old_pass $new_pass
     fi
 }
 
@@ -232,45 +238,45 @@ check_pass() {
     while IFS=':' read -r username password _; do
         # sha256 sha-512 ...
         if [[ ! $password =~ [!!|*] ]] &amp;&amp; [[ ! $password =~ ^\$y\$j9T ]]; then
-            IFS='$' read -r _ const salt hash &lt;&lt;&lt; &quot;$password&quot;
-            for d in &quot;${dict[@]}&quot;; do
-                t=&quot;$d&quot;
-                resu=$(echo &quot;$username&quot; | rev)
+            IFS='$' read -r _ const salt hash &lt;&lt;&lt; "$password"
+            for d in "${dict[@]}"; do
+                t="$d"
+                resu=$(echo "$username" | rev)
 
-                t=&quot;${t//\%user\%/$username}&quot;
-                t=&quot;${t//\%resu\%/$resu}&quot;
+                t="${t//\%user\%/$username}"
+                t="${t//\%resu\%/$resu}"
 
-                t=&quot;${t//\%host\%/$host}&quot;
-                t=&quot;${t//\%tsoh\%/$tsoh}&quot;
+                t="${t//\%host\%/$host}"
+                t="${t//\%tsoh\%/$tsoh}"
 
-                hashed=$(perl -e &quot;print crypt('$t', '\$$const\$$salt\$')&quot;)
+                hashed=$(perl -e "print crypt('$t', '\$$const\$$salt\$')")
 
-                if [ &quot;$hashed&quot; == &quot;$password&quot; ] &amp;&amp; [ &quot;$username&quot; == &quot;guest&quot; ]; then
+                if [ "$hashed" == "$password" ] &amp;&amp; [ "$username" == "guest" ]; then
                     generate_rand_pass
                     change_pass $username $t $new_pass
-                    echo &quot;$username [$t]&quot;
+                    echo "$username [$t]"
                     break
                 fi
             done
         # yescrypt algorithm
         elif [[ $password =~ ^\$y\$j9T ]]; then
-            IFS='$' read -r _ const str salt hash &lt;&lt;&lt; &quot;$password&quot;
-            for d in &quot;${dict[@]}&quot;; do
-                t=&quot;$d&quot;
-                resu=$(echo &quot;$username&quot; | rev)
+            IFS='$' read -r _ const str salt hash &lt;&lt;&lt; "$password"
+            for d in "${dict[@]}"; do
+                t="$d"
+                resu=$(echo "$username" | rev)
 
-                t=&quot;${t//\%user\%/$username}&quot;
-                t=&quot;${t//\%resu\%/$resu}&quot;
+                t="${t//\%user\%/$username}"
+                t="${t//\%resu\%/$resu}"
 
-                t=&quot;${t//\%host\%/$host}&quot;
-                t=&quot;${t//\%tsoh\%/$tsoh}&quot;
+                t="${t//\%host\%/$host}"
+                t="${t//\%tsoh\%/$tsoh}"
 
-                hashed=$(perl -e &quot;print crypt('$t', '\$$const\$$str\$$salt\$')&quot;)
+                hashed=$(perl -e "print crypt('$t', '\$$const\$$str\$$salt\$')")
 
-                if [ &quot;$hashed&quot; == &quot;$password&quot; ] &amp;&amp; [ &quot;$username&quot; == &quot;guest&quot; ]; then
+                if [ "$hashed" == "$password" ] &amp;&amp; [ "$username" == "guest" ]; then
                     generate_rand_pass
                     change_pass $username $t $new_pass
-                    echo &quot;$username [$t]&quot;
+                    echo "$username [$t]"
                     break
                 fi
             done
@@ -293,10 +299,10 @@ encrypt_pass_file() {
 }
 
 func() {
-    echo &quot;Usage: check.sh [-a|-c|-h]&quot;
-    echo &quot;&quot;
-    echo &quot;    -a, automatically check for weak passwords and change them&quot;
-    echo &quot;    -c, changing the password of an existing user&quot;
+    echo "Usage: check.sh [-a|-c|-h]"
+    echo ""
+    echo "    -a, automatically check for weak passwords and change them"
+    echo "    -c, changing the password of an existing user"
     exit -1
 }
 
@@ -307,8 +313,8 @@ while getopts ':ach' OPT; do
         h) func;;
         ?) func;;
     esac
-done
-</code></pre>
+done</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

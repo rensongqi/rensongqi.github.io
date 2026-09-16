@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>遇到过比较深刻的问题记录</h1>
-  <div class="meta">2026-09-14 · 约 1410 字 · 源自 notes-src/interview/linux/README.md</div>
+  <div class="meta">2026-09-16 · 约 1410 字 · 源自 notes-src/interview/linux/README.md</div>
   <div class="doc-tags"><span>#面试</span><span>#Linux</span></div>
 </div>
 
@@ -74,11 +80,10 @@
 <p>背景: 我们的IDC机房有自己的出口防火墙和固定的公网IP，内部的服务映射至公网之后外部访问公网服务没有问题，内部访问映射出去的公网服务就出现了问题，原因在于防火墙做了地址转换后，内网ng有一项内核参数没有调整好</p>
 <p>解决办法：就是禁用反向路径过滤，反向路径过滤是一种安全机制，用于验证接收到的数据包的源地址是否可通过接收接口到达。net.ipv4.conf.default.rp_filter=0 关闭之后解决了该问题</p>
 </blockquote>
-<p><code>vim /etc/sysctl.conf</code>
-<code>bash
-net.ipv4.ip_forward=1
+<p><code>vim /etc/sysctl.conf</code></p>
+<pre class="highlight"><code class="language-bash">net.ipv4.ip_forward=1
 net.ipv4.conf.default.rp_filter=0     
-net.ipv4.conf.all.rp_filter=0</code></p>
+net.ipv4.conf.all.rp_filter=0</code></pre>
 </li>
 <li>
 <p>Elasticsearch从三节点变为六节点冷热集群架构设计</p>
@@ -122,6 +127,7 @@ net.ipv4.conf.all.rp_filter=0</code></p>
     &gt; </p>
 </li>
 </ol>
+
 <nav class="doc-series">
   <p class="lb">面试 · 同分类笔记</p>
   <ol>

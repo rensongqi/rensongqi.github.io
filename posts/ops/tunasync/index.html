@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>TUNA 镜像同步</h1>
-  <div class="meta">2026-09-14 · 约 70 字 · 源自 notes-src/ops/tunasync/README.md</div>
+  <div class="meta">2026-09-16 · 约 70 字 · 源自 notes-src/ops/tunasync/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#TUNA 镜像同步</span></div>
 </div>
 
@@ -67,7 +73,7 @@
 <nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#_1">制作镜像</a></li><li class="l2"><a href="#_2">运行容器</a></li></ul></nav>
 <main>
 <h1 id="_1">制作镜像</h1>
-<pre><code class="language-bash">wget https://github.com/tuna/tunasync/releases/download/v0.8.0/tunasync-linux-amd64-bin.tar.gz
+<pre class="highlight"><code class="language-bash">wget https://github.com/tuna/tunasync/releases/download/v0.8.0/tunasync-linux-amd64-bin.tar.gz
 tar -xf tunasync-linux-amd64-bin.tar.gz
 
 # 解压之后会生成两个可执行文件
@@ -75,11 +81,17 @@ tunasync
 tunasynctl
 
 # build
-docker build -t harbor.rsq.cn/library/tunasync:v3 --no-cache .
-</code></pre>
+docker build -t harbor.rsq.cn/library/tunasync:v3 --no-cache .</code></pre>
 <h1 id="_2">运行容器</h1>
-<pre><code>docker-compose up -d
-</code></pre>
+<pre class="highlight"><code>docker-compose up -d</code></pre>
+<nav class="doc-attach">
+  <p class="lb">本目录附件</p>
+  <ul>
+    <li><span class="dir">conf/</span><span class="sz">子目录</span></li>
+    <li><a href="../../../notes-src/ops/tunasync/docker-compose.yml">docker-compose.yml</a><span class="sz">356 B</span></li>
+    <li><span class="dir">make_image/</span><span class="sz">子目录</span></li>
+  </ul>
+</nav>
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>使用acme.sh生成公网证书</h1>
-  <div class="meta">2026-09-14 · 约 800 字 · 源自 notes-src/ops/ssl_certs/acme.sh.md</div>
+  <div class="meta">2026-09-16 · 约 800 字 · 源自 notes-src/ops/ssl_certs/acme.sh.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#SSL 证书</span></div>
 </div>
 
@@ -67,22 +73,19 @@
 <nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#acmesh">使用acme.sh生成公网证书</a></li><li class="l3"><a href="#acmesh_1">安装acme.sh工具</a></li><li class="l3"><a href="#socat">安装socat</a></li><li class="l3"><a href="#ca">配置CA</a></li><li class="l3"><a href="#dns">使用dns的方式签发证书</a></li><li class="l3"><a href="#_1">安装证书</a></li><li class="l3"><a href="#_2">查看所有证书</a></li><li class="l3"><a href="#_3">删除证书</a></li><li class="l3"><a href="#_4">参考文档：</a></li></ul></nav>
 <main>
 <h2 id="acmesh_1">安装acme.sh工具</h2>
-<pre><code class="language-bash">git clone https://gitee.com/neilpang/acme.sh.git
+<pre class="highlight"><code class="language-bash">git clone https://gitee.com/neilpang/acme.sh.git
 cd acme.sh
-./acme.sh --install -m songqi.ren@rensongqi.com
-</code></pre>
+./acme.sh --install -m songqi.ren@rensongqi.com</code></pre>
 <h2 id="socat">安装socat</h2>
-<pre><code class="language-bash"># Centos
+<pre class="highlight"><code class="language-bash"># Centos
 yum -y install socat
 
 # Ubuntu
-apt -y install socat
-</code></pre>
+apt -y install socat</code></pre>
 <h2 id="ca">配置CA</h2>
-<pre><code class="language-bash">./acme.sh --set-default-ca --server letsencrypt
-</code></pre>
+<pre class="highlight"><code class="language-bash">./acme.sh --set-default-ca --server letsencrypt</code></pre>
 <h2 id="dns">使用dns的方式签发证书</h2>
-<pre><code class="language-bash"># step1: 生成TXT
+<pre class="highlight"><code class="language-bash"># step1: 生成TXT
 # ./acme.sh --issue -d openai.rensongqi.com --dns --yes-I-know-dns-manual-mode-enough-go-ahead-please
 [Wed May 22 10:20:45 CST 2024] Using CA: https://acme-v02.api.letsencrypt.org/directory
 [Wed May 22 10:20:45 CST 2024] Creating domain key
@@ -133,23 +136,20 @@ SV25qhsmZIMw6t77KB1YtajG48bwwJHDtBg=
 [Wed May 22 11:18:36 CST 2024] Your cert is in: /root/.acme.sh/openai.rensongqi.com/openai.rensongqi.com.cer
 [Wed May 22 11:18:36 CST 2024] Your cert key is in: /root/.acme.sh/openai.rensongqi.com/openai.rensongqi.com.key
 [Wed May 22 11:18:36 CST 2024] The intermediate CA cert is in: /root/.acme.sh/openai.rensongqi.com/ca.cer
-[Wed May 22 11:18:36 CST 2024] And the full chain certs is there: /root/.acme.sh/openai.rensongqi.com/fullchain.cer
-</code></pre>
+[Wed May 22 11:18:36 CST 2024] And the full chain certs is there: /root/.acme.sh/openai.rensongqi.com/fullchain.cer</code></pre>
 <h2 id="_1">安装证书</h2>
-<pre><code class="language-bash"># ./acme.sh --install-cert -d openai.rensongqi.com --key-file /tmp/nginx/certs/openai.rensongqi.com.key --fullchain-file /tmp/nginx/certs/openai.rensongqi.com.pem --reloadcmd &quot;systemctl reload openresty&quot;
+<pre class="highlight"><code class="language-bash"># ./acme.sh --install-cert -d openai.rensongqi.com --key-file /tmp/nginx/certs/openai.rensongqi.com.key --fullchain-file /tmp/nginx/certs/openai.rensongqi.com.pem --reloadcmd "systemctl reload openresty"
 [Wed May 22 11:24:38 CST 2024] Installing key to: /tmp/nginx/certs/openai.rensongqi.com.key
-[Wed May 22 11:24:38 CST 2024] Installing full chain to: /tmp/nginx/certs/openai.rensongqi.com.pem
-</code></pre>
+[Wed May 22 11:24:38 CST 2024] Installing full chain to: /tmp/nginx/certs/openai.rensongqi.com.pem</code></pre>
 <h2 id="_2">查看所有证书</h2>
-<pre><code class="language-bash"># ./acme.sh --list
+<pre class="highlight"><code class="language-bash"># ./acme.sh --list
 Main_Domain                    KeyLength  SAN_Domains  CA               Created               Renew
-openai.rensongqi.com           &quot;2048&quot;     no           LetsEncrypt.org  2024-05-22T03:18:36Z  2024-07-21T03:18:36Z
-</code></pre>
+openai.rensongqi.com           "2048"     no           LetsEncrypt.org  2024-05-22T03:18:36Z  2024-07-21T03:18:36Z</code></pre>
 <h2 id="_3">删除证书</h2>
-<pre><code class="language-bash">./acme.sh --remove -d openai.rensongqi.com
-</code></pre>
+<pre class="highlight"><code class="language-bash">./acme.sh --remove -d openai.rensongqi.com</code></pre>
 <h2 id="_4">参考文档：</h2>
 <p>https://github.com/acmesh-official/acme.sh/wiki/dns-manual-mode</p>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

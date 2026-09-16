@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>自动化任务</h1>
-  <div class="meta">2026-09-14 · 约 120 字 · 源自 notes-src/ops/ansible/automation_jobs/README.md</div>
+  <div class="meta">2026-09-16 · 约 120 字 · 源自 notes-src/ops/ansible/automation_jobs/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Ansible</span><span>#自动化任务</span></div>
 </div>
 
@@ -72,17 +78,32 @@
 <p>Ansible playbook，所有项目都应放在一级目录内，调用时通过roles控制</p>
 <h2 id="getting-started">Getting started</h2>
 <p>注意，在综合运维管理平台上选择的hosts，最终都会统一归属到<code>select_hosts</code>组内，在编写playbook时请注意选用此hosts，如下所示：</p>
-<pre><code class="language-yml">- hosts: select_hosts
+<pre class="highlight"><code class="language-yml">- hosts: select_hosts
   vars:
-    gpfs_clients_dns: &quot;{{ hostvars['localhost']['gpfs_clients_dns'].stdout }}&quot;
+    gpfs_clients_dns: "{{ hostvars['localhost']['gpfs_clients_dns'].stdout }}"
   gather_facts: false
   remote_user: ansibleuser
   become: yes
   tasks:
     - include_role:
-        name: gpfs_modify_hosts
-</code></pre>
+        name: gpfs_modify_hosts</code></pre>
 <p>所有hosts均需要放在inventory目录的hosts文件内</p>
+<nav class="doc-attach">
+  <p class="lb">本目录附件</p>
+  <ul>
+    <li><a href="../../../../notes-src/ops/ansible/automation_jobs/ansible.cfg">ansible.cfg</a><span class="sz">4.9 KB</span></li>
+    <li><a href="../../../../notes-src/ops/ansible/automation_jobs/check_filebeat.yml">check_filebeat.yml</a><span class="sz">85 B</span></li>
+    <li><a href="../../../../notes-src/ops/ansible/automation_jobs/check_host_info.yml">check_host_info.yml</a><span class="sz">3.4 KB</span></li>
+    <li><a href="../../../../notes-src/ops/ansible/automation_jobs/check_os.yml">check_os.yml</a><span class="sz">660 B</span></li>
+    <li><span class="dir">group_vars/</span><span class="sz">子目录</span></li>
+    <li><a href="../../../../notes-src/ops/ansible/automation_jobs/install_gpfs_client.yml">install_gpfs_client.yml</a><span class="sz">1.8 KB</span></li>
+    <li><span class="dir">inventory/</span><span class="sz">子目录</span></li>
+    <li><a href="../../../../notes-src/ops/ansible/automation_jobs/os_initial.yml">os_initial.yml</a><span class="sz">755 B</span></li>
+    <li><span class="dir">roles/</span><span class="sz">子目录</span></li>
+    <li><span class="dir">scripts/</span><span class="sz">子目录</span></li>
+    <li><a href="../../../../notes-src/ops/ansible/automation_jobs/uninstall_gpfs_client.yml">uninstall_gpfs_client.yml</a><span class="sz">1.2 KB</span></li>
+  </ul>
+</nav>
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

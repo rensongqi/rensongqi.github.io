@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>RDMA</h1>
-  <div class="meta">2026-09-14 · 约 930 字 · 源自 notes-src/ops/rdma/README.md</div>
+  <div class="meta">2026-09-16 · 约 930 字 · 源自 notes-src/ops/rdma/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#RDMA</span></div>
 </div>
 
@@ -69,12 +75,11 @@
 <h1 id="test-rdma">Test rdma</h1>
 <h2 id="getting-started">Getting started</h2>
 <p>Installation dependency</p>
-<pre><code class="language-bash">sudo apt-get update
-sudo apt-get install -y libibverbs-dev librdmacm-dev perftest rdma-core
-</code></pre>
+<pre class="highlight"><code class="language-bash">sudo apt-get update
+sudo apt-get install -y libibverbs-dev librdmacm-dev perftest rdma-core</code></pre>
 <p>Test</p>
 <p><code>rdma.c</code></p>
-<pre><code class="language-bash"># 修改run_server()和run_client()方法中 local_info.lid 为正确的lid值
+<pre class="highlight"><code class="language-bash"># 修改run_server()和run_client()方法中 local_info.lid 为正确的lid值
 
 # build
 gcc -o rdma  rdma.c  -libverbs -o rdma
@@ -83,10 +88,9 @@ gcc -o rdma  rdma.c  -libverbs -o rdma
 ./rdma
 
 # client 172.17.1.246
-./rdma 172.17.1.237
-</code></pre>
+./rdma 172.17.1.237</code></pre>
 <p><code>rdma_copy_file.c</code></p>
-<pre><code class="language-bash"># 修改run_server()和run_client()方法中 local_info.lid 为正确的lid值
+<pre class="highlight"><code class="language-bash"># 修改run_server()和run_client()方法中 local_info.lid 为正确的lid值
 
 # build
 gcc -o rdma_file file.c -libverbs -o rdma_file
@@ -103,7 +107,6 @@ time rsync -avP record.video.00028 root@172.17.1.237:/tmp/
 
 # 使用rdma协议
 time ./rdma_file 172.17.1.237 record.video.00028
-
 </code></pre>
 <p>测试效果，对于一个2GB的大文件，可以发现走rdma协议比走TCP协议快了接近2s。</p>
 <p><img alt="test" src="../../../assets/images/notes/test.jpg" /></p>
@@ -112,7 +115,7 @@ time ./rdma_file 172.17.1.237 record.video.00028
 <p><img alt="strace_rsync" src="../../../assets/images/notes/strace_rsync.jpg" /></p>
 <p>注意 <code>#define MSG_SIZE    1024</code> MSG_SIZE的大小是决定文件拷贝性能的因素</p>
 <h2 id="cmd">CMD</h2>
-<pre><code class="language-bash"># 查看ib状态
+<pre class="highlight"><code class="language-bash"># 查看ib状态
 ibstat
 
 # 查看ib连接信息
@@ -128,30 +131,46 @@ ibping -S
 
 # client
 ibping &lt;server lid port&gt;
-
 </code></pre>
 <h2 id="_1">工作原理</h2>
 <p><img alt="rdma" src="../../../assets/images/notes/rdma.png" /></p>
-<p><strong>传统</strong>
-- 可以看到传统的方法需要经过用户态-&gt;内核-&gt;硬件。
-- 传统的TCP/IP模式数据需要由用户态-&gt;内核态-&gt;网卡-&gt;对端机器，数据会经过封装和解封装。需要CPU参与的次数很多，</p>
-<p><strong>RDMA</strong>
-- RDMA直接是只经过用户态，数据的存取是通过RDMA硬件（万兆/IB网卡）直接操作内存的，不需要CPU的参与，无需经过内核态和数据封装解封装的过程。</p>
-<p><strong>优势</strong>
-1. 零拷贝(Zero-copy)： 应用程序能够直接执行数据传输，在不涉及到网络软件栈的情况下。数据能够被直接发送到缓冲区或者能够直接从缓冲区里接收，而不需要被复制到网络层。
-2. 内核旁路(Kernel bypass) - 应用程序可以直接在用户态执行数据传输，不需要在内核态与用户态之间做上下文切换。
-3. 不需要CPU干预(No CPU involvement) - 应用程序可以访问远程主机内存而不消耗远程主机中的任何CPU。远程主机内存能够被读取而不需要远程主机上的进程（或CPU)参与。远程主机的CPU的缓存(cache)不会被访问的内存内容所填充。
-4. 消息基于事务(Message based transactions) - 数据被处理为离散消息而不是流，消除了应用程序将流切割为不同消息/事务的需求。
-5. 支持分散/聚合条目(Scatter/gather entries support) - RDMA原生态支持分散/聚合。也就是说，读取多个内存缓冲区然后作为一个流发出去或者接收一个流然后写入到多个内存缓冲区里去。</p>
-<p><strong>工作流程</strong>
-1. 初始化context，注册内存域
-2. 建立RDMA连接
-3. 通过SEND/RECEIVE操作，C/S交换包含RDMA memory region key的MSG_MR消息（一般是客户端先发送）
-4. 通过WRITE/READ操作，进行数据传输（单边操作）
-5. 发送MSG_DONE消息，关闭连接</p>
-<p><strong>参考文章</strong>
-- <a href="https://zhuanlan.zhihu.com/p/701779103">RDMA(远程直接内存访问)原理架构图文详解+与传统通信模式对比</a>
-- <a href="https://www.chenshaowen.com/blog/how-to-enable-gds-on-gpu-host.html">GPU 主机如何开启 GDS</a></p>
+<p><strong>传统</strong></p>
+<ul>
+<li>可以看到传统的方法需要经过用户态-&gt;内核-&gt;硬件。</li>
+<li>传统的TCP/IP模式数据需要由用户态-&gt;内核态-&gt;网卡-&gt;对端机器，数据会经过封装和解封装。需要CPU参与的次数很多，</li>
+</ul>
+<p><strong>RDMA</strong></p>
+<ul>
+<li>RDMA直接是只经过用户态，数据的存取是通过RDMA硬件（万兆/IB网卡）直接操作内存的，不需要CPU的参与，无需经过内核态和数据封装解封装的过程。</li>
+</ul>
+<p><strong>优势</strong></p>
+<ol>
+<li>零拷贝(Zero-copy)： 应用程序能够直接执行数据传输，在不涉及到网络软件栈的情况下。数据能够被直接发送到缓冲区或者能够直接从缓冲区里接收，而不需要被复制到网络层。</li>
+<li>内核旁路(Kernel bypass) - 应用程序可以直接在用户态执行数据传输，不需要在内核态与用户态之间做上下文切换。</li>
+<li>不需要CPU干预(No CPU involvement) - 应用程序可以访问远程主机内存而不消耗远程主机中的任何CPU。远程主机内存能够被读取而不需要远程主机上的进程（或CPU)参与。远程主机的CPU的缓存(cache)不会被访问的内存内容所填充。</li>
+<li>消息基于事务(Message based transactions) - 数据被处理为离散消息而不是流，消除了应用程序将流切割为不同消息/事务的需求。</li>
+<li>支持分散/聚合条目(Scatter/gather entries support) - RDMA原生态支持分散/聚合。也就是说，读取多个内存缓冲区然后作为一个流发出去或者接收一个流然后写入到多个内存缓冲区里去。</li>
+</ol>
+<p><strong>工作流程</strong></p>
+<ol>
+<li>初始化context，注册内存域</li>
+<li>建立RDMA连接</li>
+<li>通过SEND/RECEIVE操作，C/S交换包含RDMA memory region key的MSG_MR消息（一般是客户端先发送）</li>
+<li>通过WRITE/READ操作，进行数据传输（单边操作）</li>
+<li>发送MSG_DONE消息，关闭连接</li>
+</ol>
+<p><strong>参考文章</strong></p>
+<ul>
+<li><a href="https://zhuanlan.zhihu.com/p/701779103">RDMA(远程直接内存访问)原理架构图文详解+与传统通信模式对比</a></li>
+<li><a href="https://www.chenshaowen.com/blog/how-to-enable-gds-on-gpu-host.html">GPU 主机如何开启 GDS</a></li>
+</ul>
+<nav class="doc-attach">
+  <p class="lb">本目录附件</p>
+  <ul>
+    <li><a href="../../../notes-src/ops/rdma/rdma.c">rdma.c</a><span class="sz">10.1 KB</span></li>
+    <li><a href="../../../notes-src/ops/rdma/rdma_copy_file.c">rdma_copy_file.c</a><span class="sz">9.9 KB</span></li>
+  </ul>
+</nav>
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

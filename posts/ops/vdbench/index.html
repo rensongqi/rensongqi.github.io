@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Vdbench</h1>
-  <div class="meta">2026-09-14 · 约 1910 字 · 源自 notes-src/ops/vdbench/README.md</div>
+  <div class="meta">2026-09-16 · 约 1910 字 · 源自 notes-src/ops/vdbench/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Vdbench</span></div>
 </div>
 
@@ -68,14 +74,18 @@
 <main>
 <ul>
 <li><a href="#vdbench">vdbench</a></li>
-<li><a href="#1-多节点测试">1 多节点测试</a></li>
+<li><a href="#1-多节点测试">1 多节点测试</a><ul>
 <li><a href="#11-顺序测试">1.1 顺序测试</a></li>
 <li><a href="#12-随机读写">1.2 随机读写</a></li>
 <li><a href="#13-混合读写">1.3 混合读写</a></li>
-<li><a href="#2-单节点测试">2 单节点测试</a></li>
+</ul>
+</li>
+<li><a href="#2-单节点测试">2 单节点测试</a><ul>
 <li><a href="#21-顺序测试">2.1 顺序测试</a></li>
 <li><a href="#22-随机读写">2.2 随机读写</a></li>
 <li><a href="#23-混合读写">2.3 混合读写</a></li>
+</ul>
+</li>
 </ul>
 <h1 id="vdbench">vdbench</h1>
 <p>vdbench是一个I/O工作负载生成器，通常用于验证数据完整性和度量直接附加（或网络连接）存储性能。它可以运行在windows、linux环境，可用于测试文件系统或块设备基准性能。</p>
@@ -86,15 +96,17 @@
 <li><a href="https://download.oracle.com/otn/java/jdk/8u251-b08/3d5a2bb8f8d4428bbe94aed7ec7ae784/jdk-8u251-windows-x64.exe?AuthParam=1590741958_7a95bcd255b6fd15a5a1217c7317fe14">windows jdk</a></li>
 <li><a href="https://download.oracle.com/otn/java/jdk/8u251-b08/3d5a2bb8f8d4428bbe94aed7ec7ae784/jdk-8u251-linux-x64.tar.gz?AuthParam=1590742346_3243bad9a4f1a3147c170be345a4f972">linux jdk</a></li>
 </ul>
-<p>准备
-1. 部署jdk
-2. 配置免密
-3. 配置/etc/hosts</p>
+<p>准备</p>
+<ol>
+<li>部署jdk</li>
+<li>配置免密</li>
+<li>配置/etc/hosts</li>
+</ol>
 <h1 id="1">1 多节点测试</h1>
 <p>脚本只需要在一台机器上存放即可，每台机器vdbench对应的目录<code>/home/vdbench</code>下需要有vdbench的可执行程序。测试机器master1~node01四台机器之间需要做互相免密认证，否则不能同时配置多台机器同时压测</p>
 <h2 id="11">1.1 顺序测试</h2>
 <p><code>vim sequntial.file</code></p>
-<pre><code>messagescan=no
+<pre class="highlight"><code>messagescan=no
 hd=default,vdbench=/home/vdbench,user=root,shell=ssh
 hd=hd1,system=master1
 hd=hd2,system=master2
@@ -118,16 +130,14 @@ rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=5120,size=2g,warm
 rd=rd5,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=5120,size=1g,warmup=6,elapsed=666,interval=1,operation=write,threads=8
 rd=rd6,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=5120,size=1g,warmup=6,elapsed=666,interval=1,operation=read,threads=8
 rd=rd7,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=5120,size=2g,warmup=6,elapsed=666,interval=1,operation=write,threads=8
-rd=rd8,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=5120,size=2g,warmup=6,elapsed=666,interval=1,operation=read,threads=8
-</code></pre>
+rd=rd8,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=5120,size=2g,warmup=6,elapsed=666,interval=1,operation=read,threads=8</code></pre>
 <p>执行测试程序</p>
-<pre><code class="language-bash">./vdbench -f sequntial.file
+<pre class="highlight"><code class="language-bash">./vdbench -f sequntial.file
 
 # 默认执行完会在当前目录下生成output文件，查看平均信息
-grep avg_7 output/summary.html
-</code></pre>
+grep avg_7 output/summary.html</code></pre>
 <h2 id="12">1.2 随机读写</h2>
-<pre><code>messagescan=no
+<pre class="highlight"><code>messagescan=no
 hd=default,vdbench=/home/vdbench,user=root,shell=ssh
 hd=hd1,system=master1
 hd=hd2,system=master2
@@ -151,10 +161,9 @@ rd=rd2,fwd=(fwd*),fwdrate=max,format=restart,xfersize=64k,files=512000,size=64k,
 rd=rd7,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=512000,size=1m,warmup=6,elapsed=666,interval=1,operation=write,threads=32
 rd=rd3,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=512000,size=1m,warmup=6,elapsed=666,interval=1,operation=read,threads=32
 rd=rd8,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512000,size=2m,warmup=6,elapsed=666,interval=1,operation=write,threads=32
-rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512000,size=2m,warmup=6,elapsed=666,interval=1,operation=read,threads=32
-</code></pre>
+rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512000,size=2m,warmup=6,elapsed=666,interval=1,operation=read,threads=32</code></pre>
 <h2 id="13">1.3 混合读写</h2>
-<pre><code>messagescan=no
+<pre class="highlight"><code>messagescan=no
 hd=default,vdbench=/home/vdbench,user=root,shell=ssh
 hd=hd1,system=master1
 hd=hd2,system=master2
@@ -174,8 +183,7 @@ fwd=fwd4,fsd=fsd4,hd=hd4,fileio=random,fileselect=random
 rd=rd1,fwd=(fwd*),fwdrate=max,format=restart,xfersize=4k,files=512000,size=4k,warmup=6,elapsed=666,interval=1,operation=read,rdpct=70,threads=32
 rd=rd2,fwd=(fwd*),fwdrate=max,format=restart,xfersize=64k,files=512000,size=64k,warmup=6,elapsed=666,interval=1,operation=read,rdpct=70,threads=32
 rd=rd3,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=512000,size=1m,warmup=6,elapsed=666,interval=1,operation=read,rdpct=70,threads=32
-rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512000,size=2m,warmup=6,elapsed=666,interval=1,operation=read,rdpct=70,threads=32
-</code></pre>
+rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512000,size=2m,warmup=6,elapsed=666,interval=1,operation=read,rdpct=70,threads=32</code></pre>
 <h1 id="2">2 单节点测试</h1>
 <ul>
 <li>rd中files数量 * width = 生成文件总数</li>
@@ -183,7 +191,7 @@ rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512000,size=2m,wa
 <li>直通模式：openflags=o_direct</li>
 </ul>
 <h2 id="21">2.1 顺序测试</h2>
-<pre><code>messagescan=no
+<pre class="highlight"><code>messagescan=no
 hd=default,vdbench=/home/vdbench,user=root
 hd=hd1,system=train-4090x4-amd-1-246
 
@@ -198,10 +206,9 @@ rd=rd6,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512,size=1g,warmu
 rd=rd3,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=512,size=2g,warmup=6,elapsed=60,interval=1,operation=write,threads=8
 rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=512,size=2g,warmup=6,elapsed=60,interval=1,operation=read,threads=8
 rd=rd7,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512,size=2g,warmup=6,elapsed=60,interval=1,operation=write,threads=8
-rd=rd8,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512,size=2g,warmup=6,elapsed=60,interval=1,operation=read,threads=8
-</code></pre>
+rd=rd8,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=512,size=2g,warmup=6,elapsed=60,interval=1,operation=read,threads=8</code></pre>
 <h2 id="22">2.2 随机读写</h2>
-<pre><code>messagescan=no
+<pre class="highlight"><code>messagescan=no
 hd=default,vdbench=/home/vdbench,user=root
 hd=hd1,system=train-4090x4-amd-1-246
 
@@ -215,10 +222,9 @@ rd=rd2,fwd=(fwd*),fwdrate=max,format=restart,xfersize=64k,files=51200,size=64k,w
 rd=rd7,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=51200,size=1m,warmup=6,elapsed=60,interval=1,operation=write,threads=32
 rd=rd3,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=51200,size=1m,warmup=6,elapsed=60,interval=1,operation=read,threads=32
 rd=rd8,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=51200,size=2m,warmup=6,elapsed=60,interval=1,operation=write,threads=32
-rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=51200,size=2m,warmup=6,elapsed=60,interval=1,operation=read,threads=32
-</code></pre>
+rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=51200,size=2m,warmup=6,elapsed=60,interval=1,operation=read,threads=32</code></pre>
 <h2 id="23">2.3 混合读写</h2>
-<pre><code>messagescan=no
+<pre class="highlight"><code>messagescan=no
 hd=default,vdbench=/home/vdbench,user=root
 hd=hd1,system=train-4090x4-amd-1-246
 
@@ -232,8 +238,8 @@ fwd=fwd1,fsd=fsd1,hd=hd1,fileio=random,fileselect=random
 rd=rd1,fwd=(fwd*),fwdrate=max,format=restart,xfersize=4k,files=51200,size=4k,warmup=6,elapsed=60,interval=1,operation=read,rdpct=70,threads=32
 rd=rd2,fwd=(fwd*),fwdrate=max,format=restart,xfersize=64k,files=51200,size=64k,warmup=6,elapsed=60,interval=1,operation=read,rdpct=70,threads=32
 rd=rd3,fwd=(fwd*),fwdrate=max,format=restart,xfersize=1m,files=51200,size=1m,warmup=6,elapsed=60,interval=1,operation=read,rdpct=70,threads=32
-rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=51200,size=2m,warmup=6,elapsed=60,interval=1,operation=read,rdpct=70,threads=32
-</code></pre>
+rd=rd4,fwd=(fwd*),fwdrate=max,format=restart,xfersize=2m,files=51200,size=2m,warmup=6,elapsed=60,interval=1,operation=read,rdpct=70,threads=32</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

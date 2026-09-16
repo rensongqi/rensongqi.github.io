@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Linux · Ubuntu Private Repo</h1>
-  <div class="meta">2026-09-14 · 约 980 字 · 源自 notes-src/ops/linux/ubuntu_private_repo.md</div>
+  <div class="meta">2026-09-16 · 约 980 字 · 源自 notes-src/ops/linux/ubuntu_private_repo.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Linux</span></div>
 </div>
 
@@ -68,7 +74,7 @@
 <main>
 <p>搭建ubuntu私有repo，使用gpg对私有包进行自签认证，通过apt安装签名后的包</p>
 <h1 id="1-gpg">1 GPG配置</h1>
-<pre><code class="language-bash"># 1 生成gpg密钥，这里没有用密码认证
+<pre class="highlight"><code class="language-bash"># 1 生成gpg密钥，这里没有用密码认证
 root@RSQ2204:~# gpg --full-generate-key
 gpg (GnuPG) 2.2.27; Copyright (C) 2021 Free Software Foundation, Inc.
 This is free software: you are free to change and redistribute it.
@@ -100,7 +106,7 @@ Real name: rensongqi
 Email address: admin@rsq.com
 Comment: rensongqi
 You selected this USER-ID:
-    &quot;rensongqi (rensongqi) &lt;admin@rsq.com&gt;&quot;
+    "rensongqi (rensongqi) &lt;admin@rsq.com&gt;"
 
 Change (N)ame, (C)omment, (E)mail or (O)kay/(Q)uit? O
 We need to generate a lot of random bytes. It is a good idea to perform
@@ -135,10 +141,9 @@ uid                 [ultimate] rensongqi (rensongqi) &lt;admin@rsq.com&gt;
 ssb   rsa4096/DF02B8F8B21963C9 2024-03-29 [E]
 
 # 3 生成gpgkey文件（只需要生成一次就行）
-gpg --export 29BDA33B3FF40E51 &gt; gpgkey
-</code></pre>
+gpg --export 29BDA33B3FF40E51 &gt; gpgkey</code></pre>
 <p>配置内部环境</p>
-<pre><code class="language-bash"># 1 创建相对应的目录
+<pre class="highlight"><code class="language-bash"># 1 创建相对应的目录
 cd /disk/storage/mirrors/custom
 mkdir -p dists/{jammy,bionic,focal}/pool/stable/amd64/
 mkdir -p dists/{jammy,bionic,focal}/stable/binary-amd64/
@@ -151,13 +156,13 @@ apt-ftparchive packages dists/jammy &gt; dists/jammy/stable/binary-amd64/Package
 # 3 生成jammy当前目录的签名文件
 # patch.conf
 APT::FTPArchive::Release {
-  Origin &quot;custom&quot;;
-  Label &quot;custom&quot;;
-  Suite &quot;jammy&quot;;
-  Codename &quot;jammy&quot;;
-  Architectures &quot;amd64&quot;;
-  Components &quot;stable&quot;;
-  Description &quot;jammy&quot;;
+  Origin "custom";
+  Label "custom";
+  Suite "jammy";
+  Codename "jammy";
+  Architectures "amd64";
+  Components "stable";
+  Description "jammy";
 };
 
 # 指定 patch.conf 生成Release文件
@@ -165,27 +170,24 @@ apt-ftparchive release -c=./patch.conf dists/jammy &gt; dists/jammy/Release
 # 生成InRelease文件
 gpg --clearsign -o dists/jammy/InRelease dists/jammy/Release
 # 生成gpg签名文件
-gpg -abs -u 3EFC047A4FB62F5DD1324E3629BDA33B3FF40E51 -o dists/jammy/Release.gpg dists/jammy/Release
-</code></pre>
+gpg -abs -u 3EFC047A4FB62F5DD1324E3629BDA33B3FF40E51 -o dists/jammy/Release.gpg dists/jammy/Release</code></pre>
 <h1 id="2">2 客户端使用</h1>
 <p>ubuntu20.04</p>
-<pre><code class="language-bash">echo -e &quot;deb [arch=amd64] https://mirrors.rsq.cn/custom/ focal stable&quot; &gt;&gt; /etc/apt/sources.list
+<pre class="highlight"><code class="language-bash">echo -e "deb [arch=amd64] https://mirrors.rsq.cn/custom/ focal stable" &gt;&gt; /etc/apt/sources.list
 curl -fsSL https://mirrors.rsq.cn/custom/gpgkey | sudo tee /etc/apt/trusted.gpg.d/custom.gpg &gt;&gt;/dev/null 2&gt;&amp;1
 sudo chmod 644 /etc/apt/trusted.gpg.d/custom.gpg
 
 # 更新源
-apt update -y
-</code></pre>
+apt update -y</code></pre>
 <p>ubuntu22.04</p>
-<pre><code class="language-bash">echo -e &quot;deb [arch=amd64] https://mirrors.rsq.cn/custom/ jammy stable&quot; &gt;&gt; /etc/apt/sources.list
+<pre class="highlight"><code class="language-bash">echo -e "deb [arch=amd64] https://mirrors.rsq.cn/custom/ jammy stable" &gt;&gt; /etc/apt/sources.list
 curl -fsSL https://mirrors.rsq.cn/custom/gpgkey | sudo tee /etc/apt/trusted.gpg.d/custom.gpg &gt;&gt;/dev/null 2&gt;&amp;1
 sudo chmod 644 /etc/apt/trusted.gpg.d/custom.gpg
 
 # 更新源
-apt update -y
-</code></pre>
+apt update -y</code></pre>
 <h1 id="3">3 刷新索引和签名</h1>
-<pre><code class="language-bash">#!/bin/bash
+<pre class="highlight"><code class="language-bash">#!/bin/bash
 
 # 生成jammy的索引和签名
 # 1 生成Packages索引文件
@@ -218,8 +220,8 @@ gpg --clearsign -o dists/focal/InRelease dists/focal/Release
 
 # 生成gpg签名文件
 rm -f -r dists/focal/Release.gpg
-gpg -abs -u 3EFC047A4FB62F5DD1324E3629BDA33B3FF40E51 -o dists/focal/Release.gpg dists/focal/Release
-</code></pre>
+gpg -abs -u 3EFC047A4FB62F5DD1324E3629BDA33B3FF40E51 -o dists/focal/Release.gpg dists/focal/Release</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

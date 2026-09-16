@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenSSL CA SSH · rensongqi</title>
-<meta name="description" content="基于SSH CA进行ssh远程登录校验流程图：">
+<meta name="description" content="基于SSH CA进行ssh远程登录校验流程图： （原内嵌流程图为飞书文档图片，因外链失效已移除）">
 <link rel="stylesheet" href="../../../assets/css/style.css">
 <link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../../../feed.xml">
 <style>
@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>OpenSSL CA SSH</h1>
-  <div class="meta">2026-09-14 · 约 1250 字 · 源自 notes-src/ops/openssl/openssl_ca_ssh.md</div>
+  <div class="meta">2026-09-16 · 约 1250 字 · 源自 notes-src/ops/openssl/openssl_ca_ssh.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#OpenSSL</span></div>
 </div>
 
@@ -68,10 +74,10 @@
 <main>
 <h2 id="1-ssh">1 SSH 登录</h2>
 <p>基于SSH CA进行ssh远程登录校验流程图：
-<img alt="流程图" src="https://internal-api-drive-stream.feishu.cn/space/api/box/stream/download/preview/EQObbGAurohYC8xK4ercLRyHnVf/?preview_type=16" /></p>
+<em>（原内嵌流程图为飞书文档图片，因外链失效已移除）</em></p>
 <h3 id="11-ca">1.1 创建CA</h3>
 <p>生成CA的key和自签证书</p>
-<pre><code class="language-bash"># 1. 生成CA的key
+<pre class="highlight"><code class="language-bash"># 1. 生成CA的key
 mkdir ~/openssl &amp;&amp; cd ~/openssl
 (umask 077; openssl genrsa -out ca.key 2048)
 
@@ -82,11 +88,10 @@ openssl req -new -x509 -key ca.key -days 7300 -out ca.crt
 openssl pkcs8 -topk8 -inform PEM -in ca.key -nocrypt -out ca_ssh.key
 
 # 4. 从ca_ssh.key私钥文件中提取出公钥
-ssh-keygen -y -f ca_ssh.key &gt; ca_ssh.pub
-</code></pre>
+ssh-keygen -y -f ca_ssh.key &gt; ca_ssh.pub</code></pre>
 <h3 id="12-ssh">1.2 配置SSH服务端</h3>
 <p>ssh服务端需要授信CA的公钥文件，把CA的公钥文件ca_ssh.pub拷贝到服务端，然后修改sshd的配置文件</p>
-<pre><code class="language-bash"># 1. 修改sshd的配置文件
+<pre class="highlight"><code class="language-bash"># 1. 修改sshd的配置文件
 vim /etc/ssh/sshd_config
 TrustedUserCAKeys /etc/pki/CA/certs/ca_ssh.pub
 
@@ -94,10 +99,9 @@ TrustedUserCAKeys /etc/pki/CA/certs/ca_ssh.pub
 sshd -t
 
 # 3. restart sshd
-systemctl restart sshd
-</code></pre>
+systemctl restart sshd</code></pre>
 <h3 id="13">1.3 客户端生成证书请求</h3>
-<pre><code class="language-bash"># 1. 客户端生成key文件
+<pre class="highlight"><code class="language-bash"># 1. 客户端生成key文件
 mkdir ~/openssl &amp;&amp; cd mkdir ~/openssl
 (umask 077; openssl genrsa -out client.key 2048)
 
@@ -105,11 +109,10 @@ mkdir ~/openssl &amp;&amp; cd mkdir ~/openssl
 openssl req -new -key client.key -days 3650 -out client.csr
 
 # 3. 把client.csr发送给CA，进行签名
-...
-</code></pre>
+...</code></pre>
 <h3 id="14-ca">1.4 CA给客户端签发证书</h3>
 <p>CA给客户端签发证书，该证书是由CA签发生成的公钥</p>
-<pre><code class="language-bash"># 1. 将client.csr 放在~/openssl/client目录下
+<pre class="highlight"><code class="language-bash"># 1. 将client.csr 放在~/openssl/client目录下
 mkdir ~/openssl/client &amp;&amp; cd ~/openssl/client
 
 # 2. 签发客户端证书
@@ -130,20 +133,21 @@ ssh-keygen \
   -V +24h \
   client/client_ssh.pub
 # 执行完命令会输出如下信息
-# Signed user key client/client_ssh-cert.pub: id &quot;rensongqi&quot; serial 0 for root valid from 2023-12-13T14:37:00 to 2023-12-14T14:38:52
+# Signed user key client/client_ssh-cert.pub: id "rensongqi" serial 0 for root valid from 2023-12-13T14:37:00 to 2023-12-14T14:38:52
 
 # 6. 将CA签发的公钥证书client.crt及ssh的公钥文件client_ssh-cert.pub返回给客户端
-# 文件在 ~/openssl/client/client_ssh-cert.pub
-</code></pre>
-<p>ssh-keygen签发证书参数解析：
-- -s ./ca_ssh.key - 指定CA签名的私钥 。
-- -I rensongqi - 客户证书的密钥标识信息，可写写客户端的主机名。
-- -n root,guest - 客户端可用于登录主机的用户名（多个用户以逗号分隔）。
-- -V +24h - 证书有效期，从现在起24个小时（可选）。
-- client/client_ssh.pub - 客户端的公钥。</p>
+# 文件在 ~/openssl/client/client_ssh-cert.pub</code></pre>
+<p>ssh-keygen签发证书参数解析：</p>
+<ul>
+<li>-s ./ca_ssh.key - 指定CA签名的私钥 。</li>
+<li>-I rensongqi - 客户证书的密钥标识信息，可写写客户端的主机名。</li>
+<li>-n root,guest - 客户端可用于登录主机的用户名（多个用户以逗号分隔）。</li>
+<li>-V +24h - 证书有效期，从现在起24个小时（可选）。</li>
+<li>client/client_ssh.pub - 客户端的公钥。</li>
+</ul>
 <h3 id="15-ssh">1.5 客户端SSH访问服务端</h3>
 <p>从CA返回的证书需要跟客户端的私钥存放在同一级目录</p>
-<pre><code class="language-bash"># 1. 进入客户端key所在的目录
+<pre class="highlight"><code class="language-bash"># 1. 进入客户端key所在的目录
 cd ~/openssl
 
 # 2. 把从CA端接收的签发公钥文件命名前缀要跟key文件保持一致，最终的目录结构如下
@@ -164,7 +168,7 @@ client.key-cert.pub:
         Type: ssh-rsa-cert-v01@openssh.com user certificate
         Public key: RSA-CERT SHA256:MNVDGNGwAGpFrFhRZNA65SR38TS6029igd3SpaS5VNQ
         Signing CA: RSA SHA256:UyypRoY992V9UoStLAZm3cjoaSFRRuSXgVlmQGDrXoo
-        Key ID: &quot;rensongqi&quot;
+        Key ID: "rensongqi"
         Serial: 0
         Valid: from 2023-12-13T14:49:00 to 2023-12-14T14:50:24
         Principals: 
@@ -176,14 +180,13 @@ client.key-cert.pub:
                 permit-agent-forwarding
                 permit-port-forwarding
                 permit-pty
-                permit-user-rc
-</code></pre>
+                permit-user-rc</code></pre>
 <h2 id="2">2 包签名与离线验签</h2>
 <h3 id="21">2.1 包签名</h3>
 <p><img alt="openssl sign" src="../../../assets/images/notes/openssl_ca_sign.png" /></p>
 <p>PS：上图中的操作都在客户端进行模拟测试：</p>
 <p>客户端使用自己的私钥client.key对文件进行加密，然后使用签发的证书中提取出来的公钥进行解密</p>
-<pre><code class="language-bash"># 1. 提取CA签发的客户端证书中的公钥
+<pre class="highlight"><code class="language-bash"># 1. 提取CA签发的客户端证书中的公钥
 cd ~/openssl
 openssl x509 -in client.crt -pubkey -noout &gt; client.pub
 
@@ -202,17 +205,16 @@ openssl rsautl -verify -pubin -inkey client.pub -in test-A.desc -out test-B.txt
 ├── client.pub   # 使用openssl x509从crt中提取出来的公钥文件
 ├── test-A.desc  # 加密文件
 ├── test-A.txt   # 原始文件
-└── test-B.txt   # 解密文件
-</code></pre>
+└── test-B.txt   # 解密文件</code></pre>
 <h3 id="22">2.2 离线验签</h3>
 <p>ssh服务端需要实现预埋CA的根证书ca.crt</p>
-<pre><code class="language-bash"># CA - 验证客户端证书的有效性
+<pre class="highlight"><code class="language-bash"># CA - 验证客户端证书的有效性
 openssl verify -CAfile ca.crt client.crt
 client.crt: OK
 
 # 使用client.pub对文件进行解密，输出新文件 test-B.txt
-openssl rsautl -verify -pubin -inkey client.pub -in test-A.desc -out test-B.txt
-</code></pre>
+openssl rsautl -verify -pubin -inkey client.pub -in test-A.desc -out test-B.txt</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

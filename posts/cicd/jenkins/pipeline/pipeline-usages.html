@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Pipeline Usages</h1>
-  <div class="meta">2026-09-14 · 约 900 字 · 源自 notes-src/cicd/jenkins/pipeline/pipeline_usages.md</div>
+  <div class="meta">2026-09-16 · 约 900 字 · 源自 notes-src/cicd/jenkins/pipeline/pipeline_usages.md</div>
   <div class="doc-tags"><span>#CI/CD</span><span>#Jenkins</span><span>#Pipeline</span></div>
 </div>
 
@@ -67,7 +73,7 @@
 <nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1-pipeline-pull-code">1 Pipeline 批量pull code</a></li><li class="l2"><a href="#2-pipeline-for-kubernetes-pod">2 Pipeline for Kubernetes pod</a></li><li class="l2"><a href="#3-pipeline-parallel">3 Pipeline 并行parallel</a></li><li class="l2"><a href="#4-pipeline">4 Pipeline 条件控制</a></li><li class="l2"><a href="#5-pipeline-switch-case">5 Pipeline switch-case</a></li><li class="l2"><a href="#6-pipeline-for">6 Pipeline for循环</a></li><li class="l2"><a href="#_1">注意事项</a></li></ul></nav>
 <main>
 <h2 id="1-pipeline-pull-code">1 Pipeline 批量pull code</h2>
-<pre><code class="language-groovy">#!/usr/bin/env groovy
+<pre class="highlight"><code class="language-groovy">#!/usr/bin/env groovy
 def gitclone(String gitrepo, String gitbranch, String credential) {
     checkout(
         [   
@@ -88,7 +94,7 @@ def gitclone(String gitrepo, String gitbranch, String credential) {
 }
 
 node(env.BuildMachineLabel){
-    stage(&quot;Pull Code on win&quot;) {
+    stage("Pull Code on win") {
         dir(env.ws_win + 'CloudRendererAgentEdge'){
             gitclone(env.CloudRendererAgentEdge, env.cloud_branch, env.cloud_credential)
         }
@@ -115,11 +121,10 @@ node(env.BuildMachineLabel){
 
     } //  stage
 
-} // node
-</code></pre>
+} // node</code></pre>
 <h2 id="2-pipeline-for-kubernetes-pod">2 Pipeline for Kubernetes pod</h2>
-<pre><code class="language-groovy">def is_docker_pull = false
-if (env.docker_pull == &quot;yes&quot;) {is_docker_pull = true}
+<pre class="highlight"><code class="language-groovy">def is_docker_pull = false
+if (env.docker_pull == "yes") {is_docker_pull = true}
 
 podTemplate(
     inheritFrom: '51vr-jenkins-slave',
@@ -158,12 +163,12 @@ podTemplate(
                          stage('Build'){
                             dir(env.ws_win + '\\Tools\\tools'){
                                 bat '''
-                                    echo &quot;test1&quot;
+                                    echo "test1"
                                 '''
                             }
                             dir(env.ws_win + '\\Tools\\build'){
                                 bat '''
-                                    echo &quot;test2&quot;
+                                    echo "test2"
                                 '''
                             }
                         }
@@ -176,11 +181,11 @@ podTemplate(
                 &lt;!DOCTYPE html&gt;
                 &lt;html&gt;
                 &lt;head&gt;
-                &lt;meta charset=&quot;UTF-8&quot;&gt;
-                &lt;title&gt;ALPHA - Please ignore - ${ENV, var=&quot;JOB_NAME&quot;}- Build Number: ${BUILD_NUMBER}&lt;/title&gt;
+                &lt;meta charset="UTF-8"&gt;
+                &lt;title&gt;ALPHA - Please ignore - ${ENV, var="JOB_NAME"}- Build Number: ${BUILD_NUMBER}&lt;/title&gt;
                 &lt;/head&gt;
                 &lt;body&gt;
-                    &lt;div&gt;${JELLY_SCRIPT,template=&quot;html&quot;}&lt;/div&gt;
+                    &lt;div&gt;${JELLY_SCRIPT,template="html"}&lt;/div&gt;
                 &lt;/body&gt;
                 &lt;/html&gt;''', 
                 subject: 'Build - ${JOB_NAME} is failed', to: env.mail_list
@@ -196,7 +201,7 @@ podTemplate(
                             container('xenial-cis-realtoedit'){
                                 dir('../Tools/RealToEdit/tools'){
                                     sh '''
-                                        echo &quot;widnows stage&quot;
+                                        echo "widnows stage"
                                     '''
                                 }
                             }
@@ -208,52 +213,50 @@ podTemplate(
 
     ) // parallel
 
-} //end
-</code></pre>
+} //end</code></pre>
 <h2 id="3-pipeline-parallel">3 Pipeline 并行parallel</h2>
-<pre><code class="language-groovy">stage(&quot;Copy stage&quot;){
+<pre class="highlight"><code class="language-groovy">stage("Copy stage"){
     parallel{
-        stage(&quot;stage-1&quot;){
+        stage("stage-1"){
             steps{
                 script{
                     sh '''
-                        echo &quot;stage-1&quot;
+                        echo "stage-1"
                     '''
                 } //script
             } //steps
         } //stage-1
 
-        stage(&quot;stage-2&quot;){
+        stage("stage-2"){
             steps{
                 script{
                     sh '''
-                        echo &quot;stage-2&quot;
+                        echo "stage-2"
                     '''
                 } // script
             } //steps
 
         } //stage-2
 
-        stage(&quot;stage-3&quot;){
+        stage("stage-3"){
             steps{
                 script{
-                    if (! fileExists(&quot;${work_space}/dockerfiles/core/Core.tar.gz&quot;)) {
-                        echo &quot;ERROR: core tar package is missing!&quot;
+                    if (! fileExists("${work_space}/dockerfiles/core/Core.tar.gz")) {
+                        echo "ERROR: core tar package is missing!"
                     }
                     else {
-                        sh &quot;rm -f ${work_space}/dockerfiles/core/Core.tar.gz&quot;   
+                        sh "rm -f ${work_space}/dockerfiles/core/Core.tar.gz"   
                     }
                     sh '''
-                        echo &quot;stage-3&quot;
+                        echo "stage-3"
                     '''
                 } //script
             } //steps
         } //stage-3
     } //parallel
-} //copy stage
-</code></pre>
+} //copy stage</code></pre>
 <h2 id="4-pipeline">4 Pipeline 条件控制</h2>
-<pre><code class="language-groovy">//params.copy_to_dst在jenkins job中需要定义为Bool值
+<pre class="highlight"><code class="language-groovy">//params.copy_to_dst在jenkins job中需要定义为Bool值
 stage('Copy To Dst'){
     when{
         //判定条件为真时
@@ -262,7 +265,7 @@ stage('Copy To Dst'){
     steps{
         script{
             sh '''
-                echo &quot;copying....&quot;
+                echo "copying...."
             '''
         }
     }
@@ -277,40 +280,38 @@ stage('Copy To Dst'){
     steps{
         script{
             sh '''
-                echo &quot;copying....&quot;
+                echo "copying...."
             '''
         }
     }
-}
-</code></pre>
+}</code></pre>
 <p>用if也可以实现条件判断</p>
-<pre><code class="language-groovy">stage('Copy To Dst'){
+<pre class="highlight"><code class="language-groovy">stage('Copy To Dst'){
     when{
         //判定条件为假时
         expression{ ! params.copy_to_dst.toBoolean() }
     }
     steps{
         script{
-            dir(&quot;$env.ws_win&quot;){
+            dir("$env.ws_win"){
                 if (params.copy_to_nas) {
                     bat'''
-                        echo &quot;test&quot;
+                        echo "test"
                     '''
                 }
             } //dir
         }//script
     }//steps
-}
-</code></pre>
+}</code></pre>
 <h2 id="5-pipeline-switch-case">5 Pipeline switch-case</h2>
-<pre><code class="language-groovy">stage('UE Packing'){
+<pre class="highlight"><code class="language-groovy">stage('UE Packing'){
     steps{
         script{
             if (env.make_windows_ue == 'true') {
                 switch(env.ue_cook){
                     case 'cook':
                         if(cook_config == 'Shipping') {
-                            echo &quot;cook&quot;
+                            echo "cook"
                         }
                     break   
                     case 'clean_cook':
@@ -318,7 +319,7 @@ stage('Copy To Dst'){
                         bat 'if exist UnrealEngine\\Output rd /s /q UnrealEngine\\Output'
 
                         if(env.ue_pack_config.contains('Development')) {
-                            echo &quot;clean cook&quot;
+                            echo "clean cook"
                         }
                     break
                 } //switch
@@ -326,40 +327,38 @@ stage('Copy To Dst'){
         } //script 
     } // steps
 } //stage
-
 </code></pre>
 <h2 id="6-pipeline-for">6 Pipeline for循环</h2>
-<pre><code class="language-groovy">stage('UE Packing'){
+<pre class="highlight"><code class="language-groovy">stage('UE Packing'){
     steps{
         script{
             for (cook_config in env.ue_pack_config.split(',')) {
                 if(cook_config == 'Shipping') {
-                    echo &quot;Shipping&quot;
+                    echo "Shipping"
                 }
             }
         } //script 
     } // steps
-} //stage
-</code></pre>
+} //stage</code></pre>
 <h2 id="_1">注意事项</h2>
 <p>1 <code>customWorkspace</code>如果跟jenkins 配置中的<code>Pipeline SCM</code>一块混用，那么流水线后边checkout代码时候要跟上绝对路径，否则会出现代码紊乱的现象。如果用了Pipeline SCM，那么jenkins会先在workspace目录下pull SCM里边定义的git仓库，由于我们用了customWorkspace，那么SCM的仓库就会被pull到customWorkspace目录下边。</p>
-<pre><code class="language-groovy">pipeline {
+<pre class="highlight"><code class="language-groovy">pipeline {
     agent{
         node{
-            label &quot;node01&quot;
+            label "node01"
             customWorkspace env.work_space 
             }  
     } // agent
     stages{
-        stage(&quot;Checkout Codes &quot;){
+        stage("Checkout Codes "){
             steps{
                 script{
                     //这里的env.BUILD_TOOLS_DIR需要在jenkins job中传参
-                    dir(&quot;$env.BUILD_TOOLS_DIR&quot;){
+                    dir("$env.BUILD_TOOLS_DIR"){
                         checkout(
                             [   
                                 $class: 'GitSCM', 
-                                branches: [[name: &quot;${params.BUILD_TOOLS_BRANCH}&quot;]], 
+                                branches: [[name: "${params.BUILD_TOOLS_BRANCH}"]], 
                                 doGenerateSubmoduleConfigurations: false, 
                                 extensions: [
                                     [$class: 'CheckoutOption', timeout: 60],
@@ -376,7 +375,7 @@ stage('Copy To Dst'){
             } // steps
         } // stage
 
-        stage(&quot;make&quot;){
+        stage("make"){
             steps{
                 script{
                     sh '''
@@ -387,8 +386,8 @@ stage('Copy To Dst'){
         } // stage
 
     } // stages
-} // pipeline
-</code></pre>
+} // pipeline</code></pre>
+
 <nav class="doc-series">
   <p class="lb">CI/CD · 同分类笔记</p>
   <ol>

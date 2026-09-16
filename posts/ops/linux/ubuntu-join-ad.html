@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Linux · Ubuntu Join AD</h1>
-  <div class="meta">2026-09-14 · 约 1690 字 · 源自 notes-src/ops/linux/ubuntu_join_ad.md</div>
+  <div class="meta">2026-09-16 · 约 1690 字 · 源自 notes-src/ops/linux/ubuntu_join_ad.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Linux</span></div>
 </div>
 
@@ -67,38 +73,38 @@
 
 <main>
 <p>参考如下脚本</p>
-<pre><code class="language-bash">#!/bin/bash
+<pre class="highlight"><code class="language-bash">#!/bin/bash
 
 # 获取并验证质询密码
-echo -e &quot;$(date) 质询密码为16位字符串，只能使用一次，且将在 60 分钟内过期，获取地址：http://172.16.110.13/CertSrv/mscep_admin/&quot; | tee -a /var/log/init_ad.log
-challenge_password=&quot;&quot;
+echo -e "$(date) 质询密码为16位字符串，只能使用一次，且将在 60 分钟内过期，获取地址：http://172.16.110.13/CertSrv/mscep_admin/" | tee -a /var/log/init_ad.log
+challenge_password=""
 if [ $# -eq 1 ]; then
-    challenge_password=&quot;$1&quot;
+    challenge_password="$1"
 else
-    echo &quot;Please input challenge_password: &quot;
+    echo "Please input challenge_password: "
     read -s challenge_password
 fi
 
 if [ ${#challenge_password} -ne 16 ]; then
-    echo -e &quot;$(date) 格式错误，质询密码为16位字符串！exit 1&quot; | tee -a /var/log/init_ad.log
+    echo -e "$(date) 格式错误，质询密码为16位字符串！exit 1" | tee -a /var/log/init_ad.log
     exit 1
 fi
 
 # 配置质询密码
-echo &quot;${challenge_password}&quot; &gt; /tmp/challenge_password
+echo "${challenge_password}" &gt; /tmp/challenge_password
 
 #Change hostname
 sn=$(cat /sys/class/dmi/id/product_serial)
 #sn=$(dmidecode -s system-serial-number)
-hostname=&quot;SHXHU-&quot;$sn.ROBOT.CN
+hostname="SHXHU-"$sn.ROBOT.CN
 hostnamectl set-hostname ${hostname}
-echo -e $(date)&quot; new computer name is &quot;$hostname &gt;&gt;/var/log/init_ad.log
-sed -i &quot;1c $hostname&quot; /etc/hostname
-sed -i &quot;2c 127.0.0.1 $hostname&quot; /etc/hosts
+echo -e $(date)" new computer name is "$hostname &gt;&gt;/var/log/init_ad.log
+sed -i "1c $hostname" /etc/hostname
+sed -i "2c 127.0.0.1 $hostname" /etc/hosts
 #hostname -f
 
 #set user01 system account
-if [ `grep -c &quot;user01&quot; /etc/passwd` -eq '0' ];then
+if [ `grep -c "user01" /etc/passwd` -eq '0' ];then
     groupadd --gid 1001 user01
     useradd -m --uid 1001 --gid 1001 --shell /bin/bash user01
     # 兼容uid被占用的情况
@@ -106,9 +112,9 @@ if [ `grep -c &quot;user01&quot; /etc/passwd` -eq '0' ];then
         useradd -m --shell /bin/bash user01
     fi
     # openssl passwd -1
-    echo &quot;user01:\$6\$qRP2.qc.74DO30zk\$tK.e7aoGKQJBNM2EUQL/5Gln0iNv9aaYz1/pEo0omwrKkuRvL3FM5t3zy8gzyQmEcrIgingxa8rFcW.77oitO1&quot; |chpasswd -e
+    echo "user01:\$6\$qRP2.qc.74DO30zk\$tK.e7aoGKQJBNM2EUQL/5Gln0iNv9aaYz1/pEo0omwrKkuRvL3FM5t3zy8gzyQmEcrIgingxa8rFcW.77oitO1" |chpasswd -e
 fi
-#sed -i &quot;s/false/true/g&quot; /var/lib/AccountsService/users/user01
+#sed -i "s/false/true/g" /var/lib/AccountsService/users/user01
 cat &lt;&lt; EOF &gt; /var/lib/AccountsService/users/user01
 [User]
 Session=
@@ -127,7 +133,7 @@ EOF
 sed -i '$a greeter-show-manual-login=true \ngreeter-hide-users=true' /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
 
 #provide root privilege for domain users
-if [ `grep -c &quot;user01&quot; /etc/sudoers` -eq '0' ];then
+if [ `grep -c "user01" /etc/sudoers` -eq '0' ];then
     echo 'user01               ALL=(ALL:ALL) ALL'&gt;&gt;/etc/sudoers
     echo '%Domain\ Users               ALL=(ALL:ALL) NOPASSWD: ALL'&gt;&gt;/etc/sudoers
 fi
@@ -152,94 +158,94 @@ Type=oneshot
 WantedBy=multi-user.target
 EOF
 #systemctl enable wol@enp3s0
-for i in $(ip -br l | awk '$1 !~ &quot;lo|vir|wl&quot; { print $1}');
+for i in $(ip -br l | awk '$1 !~ "lo|vir|wl" { print $1}');
 do
-    s_name=&quot;wol@&quot;$i
+    s_name="wol@"$i
     systemctl enable $s_name
 done
 ##Join domain
 apt-get install openssh-server xrdp sssd-ad sssd-tools realmd adcli -y
 
-if [ `grep -c &quot;172.16.100.11&quot; /etc/systemd/timesyncd.conf` -eq '0' ];then
-    echo -e &quot;NTP=172.16.100.11\nFallbackNTP=ntp.ubuntu.com&quot; &gt;&gt; /etc/systemd/timesyncd.conf
+if [ `grep -c "172.16.100.11" /etc/systemd/timesyncd.conf` -eq '0' ];then
+    echo -e "NTP=172.16.100.11\nFallbackNTP=ntp.ubuntu.com" &gt;&gt; /etc/systemd/timesyncd.conf
 fi
 
 systemctl restart systemd-timesyncd
 cat &lt;&lt; 'EOF' &gt; /usr/bin/JoinAD.sh
 #!/bin/bash
 RETVAL=0
-prog=&quot;JoinAD&quot;
+prog="JoinAD"
 LOCKFILE=/var/lock/subsys/$prog
 OPTION=$1
 # Declare variables for script
 DOMAIN=ROBOT.CN
-AWSCONNECTORUSER=&quot;&lt;aduser&gt;&quot;
+AWSCONNECTORUSER="&lt;aduser&gt;"
 AWSCONNECTORPASS=&lt;adPass&gt;
 # Exit script if HOSTNAME is not set
-if [ &quot;$HOSTNAME&quot; = &quot;localhost&quot; ]; then
+if [ "$HOSTNAME" = "localhost" ]; then
     sn=$(dmidecode -s system-serial-number)
-    hostname=&quot;SHXHU-&quot;$sn
-    echo -e $(date)&quot; new computer name is &quot;$hostname &gt;&gt;/var/log/init_ad.log
-    sed -i &quot;1c $hostname&quot; /etc/hostname
-    sed -i &quot;2c 127.0.0.1 $hostname&quot; /etc/hosts
+    hostname="SHXHU-"$sn
+    echo -e $(date)" new computer name is "$hostname &gt;&gt;/var/log/init_ad.log
+    sed -i "1c $hostname" /etc/hostname
+    sed -i "2c 127.0.0.1 $hostname" /etc/hosts
     hostname -f
-    #echo &quot;System HOSTNAME is not set, cannot joing domain..exiting !&quot;
+    #echo "System HOSTNAME is not set, cannot joing domain..exiting !"
     #exit 1
 else
-    echo &quot;System Hostname: $HOSTNAME&quot;
+    echo "System Hostname: $HOSTNAME"
 fi
 start() {
-        echo &quot;Initiating $prog: &quot;
-        echo &quot;Checking if already joined to domain...&quot;
+        echo "Initiating $prog: "
+        echo "Checking if already joined to domain..."
         ISJOINED=`realm list | grep -i $DOMAIN`
         RETVAL=$?
         if [ $RETVAL -gt 0 ] ;then
-            echo  &quot;Joining Domain $DOMAIN&quot;
+            echo  "Joining Domain $DOMAIN"
             echo $AWSCONNECTORPASS | realm join -U $AWSCONNECTORUSER  $DOMAIN
             ISJOINED=`realm list | grep -i $DOMAIN`
             RETVAL=$?
             if [ $RETVAL -eq 0 ]; then
-                echo &quot;Joined Domain: $DOMAIN&quot;
-                echo &quot;Running Authconfig&quot;
+                echo "Joined Domain: $DOMAIN"
+                echo "Running Authconfig"
                 pam-auth-update --enable mkhomedir
                 if [ $? -ne 0 ]; then
-                  echo &quot;Authconfig failed to run sucessfully ...&quot;
+                  echo "Authconfig failed to run sucessfully ..."
                 fi
                 # Fix SSSD.conf
-                echo &quot;Fixing /etc/sssd/sssd.conf&quot;
+                echo "Fixing /etc/sssd/sssd.conf"
                 # Fix the realm Format
                 sed -i 's/#\?\(use_fully_qualified_names =\s*\).*$/\1 False/' /etc/sssd/sssd.conf
                 sed -i 's/#\?\(fallback_homedir =\s*\).*$/\1 \/home\/\%u/' /etc/sssd/sssd.conf
-                echo &quot;Restarting SSSD service&quot;
+                echo "Restarting SSSD service"
                 # Restart sssd daemon
                 service sssd restart
-                echo &quot;Sucessfully Joined domain: $DOMAIN&quot;
-                echo &quot;Use: realm list - to check status&quot;
+                echo "Sucessfully Joined domain: $DOMAIN"
+                echo "Use: realm list - to check status"
             else
-                echo &quot;Failed to Join Domain $DOMAIN&quot;
+                echo "Failed to Join Domain $DOMAIN"
             fi
         else
-            echo &quot;Already joined to domain $DOMAIN or &quot;
-            echo  &quot;Skipping ..... &quot;
+            echo "Already joined to domain $DOMAIN or "
+            echo  "Skipping ..... "
         fi
         echo
         return $RETVAL
 }
 stop() {
-        echo &quot;Doing nothing .... if you want to leave domain&quot;
-        echo &quot;Use: realm leave&quot;
+        echo "Doing nothing .... if you want to leave domain"
+        echo "Use: realm leave"
         RETVAL=$?
         echo
         return $RETVAL
 }
 status() {
-        echo -n &quot;Checking $prog status: &quot;
+        echo -n "Checking $prog status: "
         realm list
         echo
         RETVAL=$?
         return $RETVAL
 }
-case &quot;$OPTION&quot; in
+case "$OPTION" in
     start)
         start
         ;;
@@ -254,7 +260,7 @@ case &quot;$OPTION&quot; in
         start
         ;;
     *)
-        echo &quot;Usage: $prog {start|stop|status|restart}&quot;
+        echo "Usage: $prog {start|stop|status|restart}"
         exit 1
         ;;
 esac
@@ -281,11 +287,11 @@ systemctl enable JoinAD
 systemctl start JoinAD
 
 ##Disable ubuntu 20.04.1 software updates
-if [ `grep -c &quot;Hidden=true&quot; /etc/xdg/autostart/update-notifier.desktop` -eq '0' ];then
-  echo &quot;Hidden=true&quot; &gt;&gt; /etc/xdg/autostart/update-notifier.desktop
+if [ `grep -c "Hidden=true" /etc/xdg/autostart/update-notifier.desktop` -eq '0' ];then
+  echo "Hidden=true" &gt;&gt; /etc/xdg/autostart/update-notifier.desktop
 fi
 
-if [ `grep -c &quot;root        soft        nofile  655350&quot; /etc/security/limits.conf` -eq '0' ];then
+if [ `grep -c "root        soft        nofile  655350" /etc/security/limits.conf` -eq '0' ];then
     cat &gt;&gt; /etc/security/limits.conf &lt;&lt; EOF
 *       soft        nofile  655350
 *       hard        nofile  655350
@@ -321,7 +327,7 @@ apt install libnss3-tools -y
 ##
 # Ubuntu无线网络准入
 ##
-echo -e $(date)&quot; computer name is &quot;${hostname} &gt;&gt;/var/log/init_ad.log
+echo -e $(date)" computer name is "${hostname} &gt;&gt;/var/log/init_ad.log
 
 # 1. Ubuntu自动加域脚本，上面 JoinAD.sh 已实现
 # 2. Ubuntu电脑自动注册证书
@@ -329,35 +335,35 @@ echo -e $(date)&quot; computer name is &quot;${hostname} &gt;&gt;/var/log/init_a
 [ -d /etc/pki/tls/private ] || sudo mkdir -p /etc/pki/tls/private
 sudo apt install -y certmonger
 getcert add-scep-ca -c ultron_ca -u  http://172.16.110.13/certsrv/mscep/mscep.dll
-getcert request -I ultron_cn -c ultron_ca -f /etc/pki/tls/certs/server_cn.crt -k /etc/pki/tls/private/private_cn.key -N cn=&quot;${hostname}&quot; -D &quot;${hostname}&quot; -l /tmp/challenge_password
+getcert request -I ultron_cn -c ultron_ca -f /etc/pki/tls/certs/server_cn.crt -k /etc/pki/tls/private/private_cn.key -N cn="${hostname}" -D "${hostname}" -l /tmp/challenge_password
 
 # 检查签发状态
 for i in `seq 15`; do
     t=20
-    echo -e $(date)&quot; wait ${t}s for cert request ...&quot; | tee -a /var/log/init_ad.log
+    echo -e $(date)" wait ${t}s for cert request ..." | tee -a /var/log/init_ad.log
     sleep ${t}
-    getcert list | grep &quot;status: &quot; | tee -a /var/log/init_ad.log
+    getcert list | grep "status: " | tee -a /var/log/init_ad.log
     if [ -f /etc/pki/tls/certs/server_cn.crt ]; then
-        echo -e $(date)&quot; found /etc/pki/tls/certs/server_cn.crt.&quot; | tee -a /var/log/init_ad.log
+        echo -e $(date)" found /etc/pki/tls/certs/server_cn.crt." | tee -a /var/log/init_ad.log
         break
     fi
 done
 
 if [ ! -f /etc/pki/tls/certs/server_cn.crt ]; then
-    echo -e $(date)&quot; not found /etc/pki/tls/certs/server_cn.crt, exit 1&quot; | tee -a /var/log/init_ad.log
+    echo -e $(date)" not found /etc/pki/tls/certs/server_cn.crt, exit 1" | tee -a /var/log/init_ad.log
     exit 1
 fi
 
 # 输出 server_cn.crt
-echo -e $(date)&quot; new server_cn.crt text is &quot; &gt;&gt;/var/log/init_ad.log
+echo -e $(date)" new server_cn.crt text is " &gt;&gt;/var/log/init_ad.log
 openssl x509 -noout -text -in /etc/pki/tls/certs/server_cn.crt | tee -a /var/log/init_ad.log
 
-wifi_ifname=$(iwconfig 2&gt;&amp;1 | grep -v &quot;no wireless extensions.&quot; | grep &quot;ESSID:&quot; | awk '{print $1}')
-if [[ &quot;${wifi_ifname}&quot;x == &quot;&quot;x ]]; then
-    wifi_ifname=$(iwconfig 2&gt;&amp;1 | grep &quot;^wl&quot; | awk '{print $1}')
+wifi_ifname=$(iwconfig 2&gt;&amp;1 | grep -v "no wireless extensions." | grep "ESSID:" | awk '{print $1}')
+if [[ "${wifi_ifname}"x == ""x ]]; then
+    wifi_ifname=$(iwconfig 2&gt;&amp;1 | grep "^wl" | awk '{print $1}')
 fi
-if [[ &quot;${wifi_ifname}&quot;x == &quot;&quot;x ]]; then
-    echo &quot;no wifi ifname found, try run iwconfig, exit 1&quot;
+if [[ "${wifi_ifname}"x == ""x ]]; then
+    echo "no wifi ifname found, try run iwconfig, exit 1"
     exit 1
 fi
 
@@ -368,19 +374,19 @@ fi
 # country=CN
 # ap_scan=1
 # network={
-#      ssid=&quot;ultron_WLAN&quot;
+#      ssid="ultron_WLAN"
 #      scan_ssid=1
 #      key_mgmt=WPA-EAP
 #      eap=TLS
-#      identity=&quot;host/${hostname}&quot;
-#      ca_cert=&quot;/usr/local/share/ca-certificates/ROBOT_Domain_CA.crt&quot;
-#      client_cert=&quot;/etc/pki/tls/certs/server_cn.crt&quot;
-#      private_key=&quot;/etc/pki/tls/private/private_cn.key&quot;
+#      identity="host/${hostname}"
+#      ca_cert="/usr/local/share/ca-certificates/ROBOT_Domain_CA.crt"
+#      client_cert="/etc/pki/tls/certs/server_cn.crt"
+#      private_key="/etc/pki/tls/private/private_cn.key"
 # }
 # EOF
 
 # 3.2 激活对应无线网卡的服务
-# sudo systemctl disable &quot;wpa_supplicant@${wifi_ifname}.service&quot;
+# sudo systemctl disable "wpa_supplicant@${wifi_ifname}.service"
 sudo systemctl enable wpa_supplicant.service
 sudo systemctl restart wpa_supplicant.service
 
@@ -403,29 +409,29 @@ sudo systemctl restart wpa_supplicant.service
 # sudo systemctl enable dhclient.service
 
 # 3.4 添加nmcli 的证书认证配置文件
-if [ `nmcli connection show | grep -c &quot;ultron_WLAN&quot;` -eq '0' ];then
+if [ `nmcli connection show | grep -c "ultron_WLAN"` -eq '0' ];then
     sudo nmcli connection add type wifi ifname ${wifi_ifname} \
         con-name ultron_WLAN \
         802-11-wireless.ssid ultron_WLAN \
-        802-11-wireless-security.key-mgmt &quot;wpa-eap&quot; \
-        802-1x.eap &quot;tls&quot; \
-        802-1x.identity &quot;host/${hostname}&quot; \
+        802-11-wireless-security.key-mgmt "wpa-eap" \
+        802-1x.eap "tls" \
+        802-1x.identity "host/${hostname}" \
         802-1x.ca-cert '/usr/local/share/ca-certificates/ROBOT_Domain_CA.crt' \
         802-1x.client-cert /etc/pki/tls/certs/server_cn.crt \
         802-1x.private-key /etc/pki/tls/private/private_cn.key \
-        802-1x.private-key-password &quot;xxxxxxxx&quot;
+        802-1x.private-key-password "xxxxxxxx"
 else
-    echo &quot;ultron_WLAN is already created, run:&quot;
-    echo &quot;1. 'nmcli connection show ultron_WLAN' for detail&quot;
-    echo &quot;2. 'nmcli connection delete ultron_WLAN' to delete it&quot;
+    echo "ultron_WLAN is already created, run:"
+    echo "1. 'nmcli connection show ultron_WLAN' for detail"
+    echo "2. 'nmcli connection delete ultron_WLAN' to delete it"
 fi
 
 # realm list
 # systemctl status wpa_supplicant@&lt;name&gt;.service
 # wpa_cli show
 # nmcli connection show
-# nmcli connection delete uuid
-</code></pre>
+# nmcli connection delete uuid</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

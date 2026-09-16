@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>基于Prometheus的监控流程</h1>
-  <div class="meta">2026-09-14 · 约 600 字 · 源自 notes-src/ops/prometheus/README.md</div>
+  <div class="meta">2026-09-16 · 约 600 字 · 源自 notes-src/ops/prometheus/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Prometheus</span></div>
 </div>
 
@@ -78,6 +84,17 @@
 <p>以Alertmanager组件为例，其是prometheus中的一个原生组件，所有告警都会先到这个组件，配置webhook地址为prometheusAlert（这个组件不是官方提供的组件，属于民间人员开发管理的），<a href="https://github.com/feiyu563/PrometheusAlert/blob/master/doc/readme/system-prometheus.md">Alertmanager关联prometheusAlert</a>。</p>
 <p>静默告警的时候都会访问Alertmanager这个地址。这样关联起来之后就形成了告警的数据闭环，从数据采集，到数据展示，再到告警通知。</p>
 <p><img alt="alertmanager_secret" src="../../../assets/images/notes/alertmanager_secret.jpg" /></p>
+<nav class="doc-attach">
+  <p class="lb">本目录附件</p>
+  <ul>
+    <li><a href="blackbox-exporter/index.html">blackbox_exporter/</a><span class="sz">子目录</span></li>
+    <li><a href="dcgm-exporter/index.html">dcgm_exporter/</a><span class="sz">子目录</span></li>
+    <li><a href="elasticsearch-exporter/index.html">elasticsearch_exporter/</a><span class="sz">子目录</span></li>
+    <li><a href="kafka-exporter/index.html">kafka_exporter/</a><span class="sz">子目录</span></li>
+    <li><a href="node-exporter/index.html">node_exporter/</a><span class="sz">子目录</span></li>
+    <li><a href="../../../notes-src/ops/prometheus/prometheus-additional.yaml">prometheus-additional.yaml</a><span class="sz">8.9 KB</span></li>
+  </ul>
+</nav>
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

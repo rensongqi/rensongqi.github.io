@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>MongoDB</h1>
-  <div class="meta">2026-09-14 · 约 760 字 · 源自 notes-src/ops/database/mongo/README.md</div>
+  <div class="meta">2026-09-16 · 约 760 字 · 源自 notes-src/ops/database/mongo/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#数据库</span><span>#MongoDB</span></div>
 </div>
 
@@ -69,7 +75,7 @@
 <h1 id="mongo-cluster">Mongo Cluster部署</h1>
 <h1 id="k8s">K8s</h1>
 <p>mongodb-rs.yaml</p>
-<pre><code class="language-yaml">apiVersion: v1
+<p><pre class="highlight"><code class="language-yaml">apiVersion: v1
 kind: ConfigMap
 metadata:
   name: mongodb-rs-cm
@@ -127,9 +133,9 @@ spec:
         ports:
         - containerPort: 27017
           name: client
-        command: [&quot;sh&quot;]
+        command: ["sh"]
         args:
-        - &quot;-c&quot;
+        - "-c"
         - |
           set -ex
           mongod --config /data/configdb/mongod_rs.conf
@@ -155,7 +161,7 @@ spec:
   - metadata:
       name: data
     spec:
-      accessModes: [&quot;ReadWriteOnce&quot;]
+      accessModes: ["ReadWriteOnce"]
       resources:
         requests:
           storage: 100Gi
@@ -175,10 +181,9 @@ spec:
       nodePort: 30717
   selector:
     app: mongodb-rs
-  type: NodePort
-</code></pre>
-<p>mongodb-pv.yaml</p>
-<pre><code class="language-yaml">apiVersion: v1
+  type: NodePort</code></pre>
+mongodb-pv.yaml</p>
+<pre class="highlight"><code class="language-yaml">apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: pv.mongodb.cluster01
@@ -245,19 +250,17 @@ spec:
          - key: kubernetes.io/hostname
            operator: In
            values:
-           - master3
-</code></pre>
+           - master3</code></pre>
 <h1 id="docker-compose">docker-compose</h1>
 <p>创建mongo-keyfile</p>
-<pre><code class="language-bash">mkdir /data/mongodb/mongo/{data,configdb} -p
+<p><pre class="highlight"><code class="language-bash">mkdir /data/mongodb/mongo/{data,configdb} -p
 cd /data/mongodb/mongo
 
 openssl rand -base64 745 &gt; mongo-keyfile
-echo &quot;rsq&quot; | sudo -S chmod 600 mongo-keyfile
-echo &quot;rsq&quot; | sudo -S chown 999 mongo-keyfile
-</code></pre>
-<p>docker-compose.yml</p>
-<pre><code class="language-bash">version: &quot;3&quot;
+echo "rsq" | sudo -S chmod 600 mongo-keyfile
+echo "rsq" | sudo -S chown 999 mongo-keyfile</code></pre>
+docker-compose.yml</p>
+<pre class="highlight"><code class="language-bash">version: "3"
 
 services:
   #主节点
@@ -328,28 +331,26 @@ services:
       - |
         chmod 400 /mongo-keyfile
         chown 999:999 /mongo-keyfile
-        exec docker-entrypoint.sh $$@
-</code></pre>
+        exec docker-entrypoint.sh $$@</code></pre>
 <p>在不同节点执行如下命令启动容器</p>
-<pre><code class="language-bash"># node1
+<pre class="highlight"><code class="language-bash"># node1
 docker-compose up -d mongodb1
 # node2
 docker-compose up -d mongodb2
 # node3
-docker-compose up -d mongodb3
-</code></pre>
+docker-compose up -d mongodb3</code></pre>
 <p>初始化mongodb cluster</p>
-<pre><code class="language-bash"># 1.进入容器
+<pre class="highlight"><code class="language-bash"># 1.进入容器
 docker exec -it mongo1 bash
 
 # 2.进入数据库
 mongo -u root -p 123456
 
 # 3.集群init
-config={_id:&quot;rs0&quot;,members:[ 
-    {_id:0,host:&quot;172.16.100.107:27017&quot;}, 
-    {_id:1,host:&quot;172.16.100.108:27017&quot;}, 
-    {_id:2,host:&quot;172.16.100.109:27017&quot;}] 
+config={_id:"rs0",members:[ 
+    {_id:0,host:"172.16.100.107:27017"}, 
+    {_id:1,host:"172.16.100.108:27017"}, 
+    {_id:2,host:"172.16.100.109:27017"}] 
 }
 
 rs.initiate(config);
@@ -363,8 +364,8 @@ cfg = rs.conf()
 cfg.members[0].priority=5
 cfg.members[1].priority=3
 # 从新配置
-rs.reconfig(cfg)
-</code></pre>
+rs.reconfig(cfg)</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

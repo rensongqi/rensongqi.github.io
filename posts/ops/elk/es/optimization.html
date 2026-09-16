@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Elasticsearch · Optimization</h1>
-  <div class="meta">2026-09-14 · 约 2370 字 · 源自 notes-src/ops/elk/es/optimization.md</div>
+  <div class="meta">2026-09-16 · 约 2370 字 · 源自 notes-src/ops/elk/es/optimization.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#ELK</span><span>#Elasticsearch</span></div>
 </div>
 
@@ -152,8 +158,7 @@ Medcl和wood大叔都有明确说过，不必要设置32/31GB那么大，建议�
 <p>批量接口为bulk，批量的大小要结合队列的大小，而队列大小和线程池大小、机器的cpu核数。</p>
 <p>4.4 禁用swap</p>
 <p>在Linux系统上，通过运行以下命令临时禁用交换：</p>
-<pre><code class="language-bash">sudo swapoff -a
-</code></pre>
+<pre class="highlight"><code class="language-bash">sudo swapoff -a</code></pre>
 <p>5、检索聚合优化实战</p>
 <p>5.1 禁用 wildcard模糊匹配</p>
 <p>数据量级达到TB+甚至更高之后，wildcard在多字段组合的情况下很容易出现卡死，甚至导致集群节点崩溃宕机的情况。
@@ -189,6 +194,7 @@ match_phrase结合合理的分词词典、词库，会使得搜索结果精确�
 如果需要聚合后分页，需要自开发实现。包含但不限于：
 方案一：每次取聚合结果，拿到内存中分页返回。
 方案二：scroll结合scroll after集合redis实现。</p>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

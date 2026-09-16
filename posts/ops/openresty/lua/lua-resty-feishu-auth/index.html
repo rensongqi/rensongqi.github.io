@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>飞书认证 (lua-resty-feishu-auth)</h1>
-  <div class="meta">2026-09-14 · 约 660 字 · 源自 notes-src/ops/openresty/lua/lua-resty-feishu-auth/README.md</div>
+  <div class="meta">2026-09-16 · 约 660 字 · 源自 notes-src/ops/openresty/lua/lua-resty-feishu-auth/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#OpenResty</span><span>#Lua</span></div>
 </div>
 
@@ -72,19 +78,17 @@
 <h3 id="openresty">安装 OpenResty</h3>
 <p>参考: https://k8scat.com/posts/linux/install-openresty-on-ubuntu-from-source-code/</p>
 <h3 id="_2">下载</h3>
-<pre><code class="language-bash">cd /usr/local/openresty/site/lualib
+<pre class="highlight"><code class="language-bash">cd /usr/local/openresty/site/lualib
 git clone https://github.com/k8scat/lua-resty-http.git
 git clone https://github.com/k8scat/lua-resty-jwt.git
-git clone https://github.com/k8scat/lua-resty-feishu-auth.git
-</code></pre>
+git clone https://github.com/k8scat/lua-resty-feishu-auth.git</code></pre>
 <h3 id="_3">配置</h3>
 <h4 id="http">http 配置</h4>
-<pre><code class="language-conf">http {
-    lua_package_path &quot;/usr/local/openresty/site/lualib/lua-resty-feishu-auth/lib/?.lua;/usr/local/openresty/site/lualib/lua-resty-jwt/lib/?.lua;/usr/local/openresty/site/lualib/lua-resty-jwt/vendor/?.lua;/usr/local/openresty/site/lualib/lua-resty-http/lib/?.lua;;&quot;;
-}
-</code></pre>
+<pre class="highlight"><code class="language-conf">http {
+    lua_package_path "/usr/local/openresty/site/lualib/lua-resty-feishu-auth/lib/?.lua;/usr/local/openresty/site/lualib/lua-resty-jwt/lib/?.lua;/usr/local/openresty/site/lualib/lua-resty-jwt/vendor/?.lua;/usr/local/openresty/site/lualib/lua-resty-http/lib/?.lua;;";
+}</code></pre>
 <h4 id="server">server 配置</h4>
-<pre><code>server {
+<pre class="highlight"><code>server {
     listen 443 ssl;
     server_name feishu-auth.example.com;
     resolver 8.8.8.8;
@@ -98,7 +102,7 @@ git clone https://github.com/k8scat/lua-resty-feishu-auth.git
     ssl_prefer_server_ciphers  on;
     lua_ssl_verify_depth 2;
     lua_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
-    if ($time_iso8601 ~ &quot;^(\d{4})-(\d{2})-(\d{2})T(\d{2})&quot;) {
+    if ($time_iso8601 ~ "^(\d{4})-(\d{2})-(\d{2})T(\d{2})") {
         set $year $1;
         set $month $2;
         set $day $3;
@@ -107,18 +111,18 @@ git clone https://github.com/k8scat/lua-resty-feishu-auth.git
     error_log logs/feishu-auth.example.com_error_$year$month$day.log;
 
     access_by_lua_block {
-        local feishu_auth = require &quot;resty.feishu_auth&quot;
-        feishu_auth.app_id = &quot;&quot;
-        feishu_auth.app_secret = &quot;&quot;
-        feishu_auth.callback_uri = &quot;/feishu_auth_callback&quot;
-        feishu_auth.logout_uri = &quot;/feishu_auth_logout&quot;
-        feishu_auth.app_domain = &quot;feishu-auth.example.com&quot;
+        local feishu_auth = require "resty.feishu_auth"
+        feishu_auth.app_id = ""
+        feishu_auth.app_secret = ""
+        feishu_auth.callback_uri = "/feishu_auth_callback"
+        feishu_auth.logout_uri = "/feishu_auth_logout"
+        feishu_auth.app_domain = "feishu-auth.example.com"
 
-        feishu_auth.jwt_secret = &quot;thisisjwtsecret&quot;
+        feishu_auth.jwt_secret = "thisisjwtsecret"
 
-        feishu_auth.ip_blacklist = {&quot;47.1.2.3&quot;}
-        feishu_auth.uri_whitelist = {&quot;/&quot;}
-        feishu_auth.department_whitelist = {&quot;0&quot;}
+        feishu_auth.ip_blacklist = {"47.1.2.3"}
+        feishu_auth.uri_whitelist = {"/"}
+        feishu_auth.department_whitelist = {"0"}
 
         feishu_auth:auth()
     }
@@ -131,8 +135,7 @@ server {
     location / {
         rewrite ^/(.*) https://$server_name/$1 redirect;
     }
-}
-</code></pre>
+}</code></pre>
 <h3 id="_4">配置说明</h3>
 <ul>
 <li><code>app_id</code> 用于设置飞书企业自建应用的 <code>App ID</code></li>
@@ -166,6 +169,13 @@ server {
 <p>K8sCat <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#107;&#56;&#115;&#99;&#97;&#116;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#107;&#56;&#115;&#99;&#97;&#116;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a></p>
 <h2 id="_9">开源协议</h2>
 <p><a href="https://github.com/k8scat/lua-resty-feishu-auth/blob/master/LICENSE">MIT</a></p>
+<nav class="doc-attach">
+  <p class="lb">本目录附件</p>
+  <ul>
+    <li><span class="dir">lib/</span><span class="sz">子目录</span></li>
+    <li><a href="../../../../../notes-src/ops/openresty/lua/lua-resty-feishu-auth/lua-resty-feishu-auth-0.0.1-0.rockspec">lua-resty-feishu-auth-0.0.1-0.rockspec</a><span class="sz">546 B</span></li>
+  </ul>
+</nav>
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

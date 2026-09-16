@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Container List</h1>
-  <div class="meta">2026-09-14 · 约 920 字 · 源自 notes-src/go/container_list.md</div>
+  <div class="meta">2026-09-16 · 约 920 字 · 源自 notes-src/go/container_list.md</div>
   <div class="doc-tags"><span>#Go 语言</span></div>
 </div>
 
@@ -67,11 +73,10 @@
 
 <main>
 <p><code>container/list</code>是一个双向链表。该结构具有链表的所有功能。</p>
-<pre><code>type Element struct {
+<pre class="highlight"><code>type Element struct {
     Value interface{}   //在元素中存储的值
-}
-</code></pre>
-<pre><code class="language-go">func (e *Element) Next() *Element //返回该元素的下一个元素，如果没有下一个元素则返回nil
+}</code></pre>
+<pre class="highlight"><code class="language-go">func (e *Element) Next() *Element //返回该元素的下一个元素，如果没有下一个元素则返回nil
 func (e *Element) Prev() *Element//返回该元素的前一个元素，如果没有前一个元素则返回nil。
 
 type List
@@ -90,14 +95,13 @@ func (l *List) PushBack(v interface{}) *Element//在list l的末尾插入值为v
 func (l *List) PushBackList(other *List)//在list l的尾部插入另外一个list，其中l和other可以相等。
 func (l *List) PushFront(v interface{}) *Element//在list l的首部插入值为v的元素，并返回该元素。
 func (l *List) PushFrontList(other *List)//在list l的首部插入另外一个list，其中l和other可以相等。
-func (l *List) Remove(e *Element) interface{}//如果元素e属于list l，将其从list中删除，并返回元素e的值。
-</code></pre>
+func (l *List) Remove(e *Element) interface{}//如果元素e属于list l，将其从list中删除，并返回元素e的值。</code></pre>
 <p>举例说明其用法。</p>
-<pre><code class="language-go">package main
+<pre class="highlight"><code class="language-go">package main
 
 import (
-    &quot;container/list&quot;
-    &quot;fmt&quot;
+    "container/list"
+    "fmt"
 )
 
 func main() {
@@ -108,42 +112,41 @@ func main() {
     for e := l.Front(); e != nil; e = e.Next() {
         fmt.Print(e.Value) //输出list的值,01234
     }
-    fmt.Println(&quot;&quot;)
+    fmt.Println("")
     fmt.Println(l.Front().Value) //输出首部元素的值,0
     fmt.Println(l.Back().Value)  //输出尾部元素的值,4
     l.InsertAfter(6, l.Front())  //首部元素之后插入一个值为10的元素
     for e := l.Front(); e != nil; e = e.Next() {
         fmt.Print(e.Value) //输出list的值,061234
     }
-    fmt.Println(&quot;&quot;)
+    fmt.Println("")
     l.MoveBefore(l.Front().Next(), l.Front()) //首部两个元素位置互换
     for e := l.Front(); e != nil; e = e.Next() {
         fmt.Print(e.Value) //输出list的值,601234
     }
-    fmt.Println(&quot;&quot;)
+    fmt.Println("")
     l.MoveToFront(l.Back()) //将尾部元素移动到首部
     for e := l.Front(); e != nil; e = e.Next() {
         fmt.Print(e.Value) //输出list的值,460123
     }
-    fmt.Println(&quot;&quot;)
+    fmt.Println("")
     l2 := list.New()
     l2.PushBackList(l) //将l中元素放在l2的末尾
     for e := l2.Front(); e != nil; e = e.Next() {
         fmt.Print(e.Value) //输出l2的值,460123
     }
-    fmt.Println(&quot;&quot;)
-    &lt;span style=&quot;color:#FF0000;&quot;&gt;l.Init()           //清空l&lt;/span&gt;
+    fmt.Println("")
+    &lt;span style="color:#FF0000;"&gt;l.Init()           //清空l&lt;/span&gt;
     fmt.Print(l.Len()) //0
     for e := l.Front(); e != nil; e = e.Next() {
         fmt.Print(e.Value) //输出list的值,无内容
     }
 
-}
-</code></pre>
+}</code></pre>
 <p>利用list实现stack</p>
-<pre><code class="language-go">package stack
+<pre class="highlight"><code class="language-go">package stack
 
- import &quot;container/list&quot;
+ import "container/list"
 
  type Stack struct {
      list *list.List
@@ -182,8 +185,13 @@ func main() {
 
  func (stack *Stack) Empty() bool {
      return stack.list.Len() == 0
- }
-</code></pre>
+ }</code></pre>
+<nav class="doc-attach">
+  <p class="lb">本目录附件</p>
+  <ul>
+    <li><a href="grpc/index.html">grpc/</a><span class="sz">子目录</span></li>
+  </ul>
+</nav>
 <nav class="doc-series">
   <p class="lb">Go 语言 · 同分类笔记</p>
   <ol>

@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>K8s RBAC Usage</h1>
-  <div class="meta">2026-09-14 · 约 2520 字 · 源自 notes-src/ops/k8s/k8s_rbac_usage.md</div>
+  <div class="meta">2026-09-16 · 约 2520 字 · 源自 notes-src/ops/k8s/k8s_rbac_usage.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Kubernetes</span></div>
 </div>
 
@@ -83,7 +89,7 @@
 </ul>
 <h1 id="2-account">2 创建Account</h1>
 <h2 id="21-serviceaccountsa">2.1 创建ServiceAccount(sa)</h2>
-<pre><code class="language-bash">[root@master1 ~]# kubectl create serviceaccount rsq --dry-run   （干跑）
+<p><pre class="highlight"><code class="language-bash">[root@master1 ~]# kubectl create serviceaccount rsq --dry-run   （干跑）
 serviceaccount/rsq created (dry run)
 [root@master1 ~]# kubectl create serviceaccount rsq -o yaml --dry-run   （生成一个框架）
 apiVersion: v1
@@ -113,10 +119,9 @@ Tokens:              admin-token-bwrbg
 Events:              &lt;none&gt;
 [root@master1 ~]# kubectl get secret
 NAME                    TYPE                                  DATA   AGE
-admin-token-bwrbg       kubernetes.io/service-account-token   3      35s
-</code></pre>
-<p><strong>创建一个pod使用此sa</strong></p>
-<pre><code class="language-bash">[root@master1 manifests]# vim pod-sa-demo.yaml
+admin-token-bwrbg       kubernetes.io/service-account-token   3      35s</code></pre>
+<strong>创建一个pod使用此sa</strong></p>
+<pre class="highlight"><code class="language-bash">[root@master1 manifests]# vim pod-sa-demo.yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -126,7 +131,7 @@ metadata:
     app: sa-myapp
     tier: frontend
   annotations:
-    rsq.com/created-by: &quot;cluster admin&quot;
+    rsq.com/created-by: "cluster admin"
 spec:
   containers:
   - name: myapp
@@ -144,24 +149,22 @@ Volumes:
     Type:        Secret (a volume populated by a Secret)
     SecretName:  admin-token-bwrbg
     Optional:    false
-......
-</code></pre>
+......</code></pre>
 <h2 id="22-useraccount">2.2 创建UserAccount并自签证书</h2>
 <p><strong>自签CA证书</strong></p>
-<pre><code class="language-bash">[root@master1 ~]# cd /etc/kubernetes/pki/
+<p><pre class="highlight"><code class="language-bash">[root@master1 ~]# cd /etc/kubernetes/pki/
 [root@master1 pki]# (umask 077; openssl genrsa -out rsq.key 2048)
-[root@master1 pki]# openssl req -new -key rsq.key -out rsq.csr -subj &quot;/CN=rsq&quot;
+[root@master1 pki]# openssl req -new -key rsq.key -out rsq.csr -subj "/CN=rsq"
 [root@master1 pki]# openssl x509 -req -in rsq.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out rsq.crt -days 9999 
 Signature ok
 subject=/CN=rsq
 Getting CA Private Key
 
 # 输出证书信息
-[root@master1 pki]# openssl x509 -in rsq.crt -text -noout
-</code></pre>
-<p><strong>创建rsq的UserAccount，使用set-credentials写入kubeconfig中</strong></p>
-<pre><code class="language-bash">[root@master1 pki]# kubectl config set-credentials rsq --client-certificate=./rsq.crt --client-key=./rsq.key --embed-certs=true
-User &quot;rsq&quot; set.
+[root@master1 pki]# openssl x509 -in rsq.crt -text -noout</code></pre>
+<strong>创建rsq的UserAccount，使用set-credentials写入kubeconfig中</strong></p>
+<p><pre class="highlight"><code class="language-bash">[root@master1 pki]# kubectl config set-credentials rsq --client-certificate=./rsq.crt --client-key=./rsq.key --embed-certs=true
+User "rsq" set.
 [root@master1 pki]# kubectl config view
 apiVersion: v1
 clusters:
@@ -185,11 +188,10 @@ users:
 - name: rsq
   user:
     client-certificate-data: REDACTED
-    client-key-data: REDACTED
-</code></pre>
-<p><strong>为rsq配置上下文context</strong></p>
-<pre><code class="language-bash">[root@master1 pki]# kubectl config set-context rsq@kubernetes --cluster=kubernetes --user=rsq
-Context &quot;rsq@kubernetes&quot; created.
+    client-key-data: REDACTED</code></pre>
+<strong>为rsq配置上下文context</strong></p>
+<p><pre class="highlight"><code class="language-bash">[root@master1 pki]# kubectl config set-context rsq@kubernetes --cluster=kubernetes --user=rsq
+Context "rsq@kubernetes" created.
 [root@master1 pki]# kubectl config view
 apiVersion: v1
 clusters:
@@ -217,23 +219,21 @@ users:
 - name: rsq
   user:
     client-certificate-data: REDACTED
-    client-key-data: REDACTED
-</code></pre>
-<p><strong>切换集群上下文</strong></p>
-<pre><code class="language-bash">[root@master1 pki]# kubectl config use-context rsq@kubernetes
-Switched to context &quot;rsq@kubernetes&quot;.
+    client-key-data: REDACTED</code></pre>
+<strong>切换集群上下文</strong></p>
+<p><pre class="highlight"><code class="language-bash">[root@master1 pki]# kubectl config use-context rsq@kubernetes
+Switched to context "rsq@kubernetes".
 
 # 执行get命令会发现没有权限去访问，因为rsq@kubernetes没有授权
 [root@master1 pki]# kubectl get pods
-Error from server (Forbidden): pods is forbidden: User &quot;rsq&quot; cannot list resource &quot;pods&quot; in API group &quot;&quot; in the namespace &quot;default&quot;
+Error from server (Forbidden): pods is forbidden: User "rsq" cannot list resource "pods" in API group "" in the namespace "default"
 
 # 切换为默认的集群环境
 [root@master1 pki]# kubectl config use-context kubernetes-admin@kubernetes
-Switched to context &quot;kubernetes-admin@kubernetes&quot;.
-</code></pre>
-<p><strong>创建新Cluster</strong> </p>
-<pre><code class="language-bash">[root@master1 pki]# kubectl config set-cluster mycluster --kubeconfig=/tmp/test.conf  --server=&quot;https://10.0.0.100:6443&quot; --certificate-authority=/etc/kubernetes/pki/ca.crt --embed-certs=true
-Cluster &quot;mycluster&quot; set.
+Switched to context "kubernetes-admin@kubernetes".</code></pre>
+<strong>创建新Cluster</strong> </p>
+<pre class="highlight"><code class="language-bash">[root@master1 pki]# kubectl config set-cluster mycluster --kubeconfig=/tmp/test.conf  --server="https://10.0.0.100:6443" --certificate-authority=/etc/kubernetes/pki/ca.crt --embed-certs=true
+Cluster "mycluster" set.
 [root@master1 pki]# kubectl config view --kubeconfig=/tmp/test.conf
 apiVersion: v1
 clusters:
@@ -242,22 +242,27 @@ clusters:
     server: https://10.0.0.100:6443
   name: mycluster
 contexts: []
-current-context: &quot;&quot;
+current-context: ""
 kind: Config
 preferences: {}
-users: []
-</code></pre>
+users: []</code></pre>
 <h1 id="3-rbac">3 RBAC认证授权</h1>
-<p><strong>RBAC绑定流程</strong>
-1. 定义一个角色role
+<p><strong>RBAC绑定流程</strong></p>
+<ol>
+<li>
+<p>定义一个角色role
     <code>operations</code>（对哪个对象进行操作）许可授权，只能允许
-    <code>objects</code>
-2. 定义用户账号或者服务账号，绑定（<code>rolebinding</code>）
+    <code>objects</code></p>
+</li>
+<li>
+<p>定义用户账号或者服务账号，绑定（<code>rolebinding</code>）
     <code>user account</code> or <code>service account</code>（让这个用户）
     <code>role</code>（绑定到这个角色）</p>
+</li>
+</ol>
 <h2 id="31-rolerolebinding">3.1 Role/RoleBinding</h2>
 <p><strong>1、创建一个只对pod有查看的role</strong></p>
-<pre><code class="language-bash"># 1、创建Role
+<p><pre class="highlight"><code class="language-bash"># 1、创建Role
 [root@master01 ~]# kubectl create role pods-reader --verb=get,list,watch --resource=pods --dry-run
 role.rbac.authorization.k8s.io/pods-reader created (dry run)
 [root@master01 ~]# kubectl create role pods-reader --verb=get,list,watch --resource=pods --dry-run -o yaml
@@ -268,7 +273,7 @@ metadata:
   name: pods-reader
 rules:
 - apiGroups:
-  - &quot;&quot;
+  - ""
   resources:
   - pods
   verbs:
@@ -284,14 +289,13 @@ pods-reader   4s
 Name:         pods-reader
 Labels:       &lt;none&gt;
 Annotations:  kubectl.kubernetes.io/last-applied-configuration:
-                {&quot;apiVersion&quot;:&quot;rbac.authorization.k8s.io/v1&quot;,&quot;kind&quot;:&quot;Role&quot;,&quot;metadata&quot;:{&quot;annotations&quot;:{},&quot;name&quot;:&quot;pods-reader&quot;,&quot;namespace&quot;:&quot;default&quot;},&quot;rules...
+                {"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"annotations":{},"name":"pods-reader","namespace":"default"},"rules...
 PolicyRule:
   Resources  Non-Resource URLs  Resource Names  Verbs
   ---------  -----------------  --------------  -----
-  pods       []                 []              [get list watch]
-</code></pre>
-<p><strong>2、创建RoleBinding，绑定我们 2.2.2 目录中创建的rsq用户</strong></p>
-<pre><code class="language-bash">[root@master01 rbac]# kubectl create rolebinding rsq-read-pods --role=pods-reader --user=rsq
+  pods       []                 []              [get list watch]</code></pre>
+<strong>2、创建RoleBinding，绑定我们 2.2.2 目录中创建的rsq用户</strong></p>
+<p><pre class="highlight"><code class="language-bash">[root@master01 rbac]# kubectl create rolebinding rsq-read-pods --role=pods-reader --user=rsq
 rolebinding.rbac.authorization.k8s.io/rsq-read-pods created
 [root@master01 rbac]# kubectl get rolebinding
 NAME            AGE
@@ -309,14 +313,12 @@ roleRef:
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: User
-  name: rsq
-</code></pre>
-<p><strong>3、追加输出RoleBinding到文件中保存至yaml文件</strong></p>
-<pre><code class="language-bash">[root@master01 rbac]# kubectl create rolebinding rsq-read-pods --role=pods-reader --user=rsq --dry-run -o yaml &gt; rolebinding-demo.yaml
-</code></pre>
-<p><strong>4、切换rsq@kubernetes上下文来测试</strong></p>
-<pre><code class="language-bash">[root@master01 rbac]# kubectl config use-context rsq@kubernetes
-Switched to context &quot;rsq@kubernetes&quot;.
+  name: rsq</code></pre>
+<strong>3、追加输出RoleBinding到文件中保存至yaml文件</strong></p>
+<p><pre class="highlight"><code class="language-bash">[root@master01 rbac]# kubectl create rolebinding rsq-read-pods --role=pods-reader --user=rsq --dry-run -o yaml &gt; rolebinding-demo.yaml</code></pre>
+<strong>4、切换rsq@kubernetes上下文来测试</strong></p>
+<pre class="highlight"><code class="language-bash">[root@master01 rbac]# kubectl config use-context rsq@kubernetes
+Switched to context "rsq@kubernetes".
 [root@master01 rbac]# kubectl get pods
 NAME                             READY   STATUS    RESTARTS   AGE
 myapp-0                          1/1     Running   0          4h52m
@@ -333,11 +335,10 @@ web-2                            1/1     Running   0          26h
 
 # 但是只能对default名称空间生效
 [root@master01 rbac]# kubectl get pods -n kube-system
-Error from server (Forbidden): pods is forbidden: User &quot;rsq&quot; cannot list resource &quot;pods&quot; in API group &quot;&quot; in the namespace &quot;kube-system&quot;
-</code></pre>
+Error from server (Forbidden): pods is forbidden: User "rsq" cannot list resource "pods" in API group "" in the namespace "kube-system"</code></pre>
 <h2 id="32-clusterrolerolebinding">3.2 ClusterRole/RoleBinding</h2>
 <p><strong>1、创建ClusterRole</strong></p>
-<pre><code class="language-bash">[root@master01 rbac]# kubectl create clusterrole cluster-reader --verb=get,list,watch --resource=pods -o yaml --dry-run &gt; clusterrole-demo.yaml
+<p><pre class="highlight"><code class="language-bash">[root@master01 rbac]# kubectl create clusterrole cluster-reader --verb=get,list,watch --resource=pods -o yaml --dry-run &gt; clusterrole-demo.yaml
 [root@master01 rbac]# vim clusterrole-demo.yaml
 [root@master01 rbac]# cat clusterrole-demo.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -346,7 +347,7 @@ metadata:
   name: cluster-reader
 rules:
 - apiGroups:
-  - &quot;&quot;
+  - ""
   resources:
   - pods
   verbs:
@@ -357,15 +358,14 @@ rules:
 Name:         cluster-reader
 Labels:       &lt;none&gt;
 Annotations:  kubectl.kubernetes.io/last-applied-configuration:
-                {&quot;apiVersion&quot;:&quot;rbac.authorization.k8s.io/v1&quot;,&quot;kind&quot;:&quot;ClusterRole&quot;,&quot;metadata&quot;:{&quot;annotations&quot;:{},&quot;name&quot;:&quot;cluster-reader&quot;},&quot;rules&quot;:[{&quot;apiGrou...
+                {"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"annotations":{},"name":"cluster-reader"},"rules":[{"apiGrou...
 PolicyRule:
   Resources  Non-Resource URLs  Resource Names  Verbs
   ---------  -----------------  --------------  -----
   pods       []                 []              [get list watch]
-
 </code></pre>
-<p><strong>2、把之前的rolebinding去掉，把User rsq绑定到ClusterRole中看效果</strong></p>
-<pre><code class="language-bash">[root@master01 rbac]# kubectl delete rolebinding rsq-read-pods
+<strong>2、把之前的rolebinding去掉，把User rsq绑定到ClusterRole中看效果</strong></p>
+<p><pre class="highlight"><code class="language-bash">[root@master01 rbac]# kubectl delete rolebinding rsq-read-pods
 [root@master01 rbac]# kubectl create clusterrolebinding rsq-read-all-pods --clusterrole=cluster-reader --user=rsq --dry-run -o yaml &gt; clusterrolebinding-demo.yaml
 [root@master01 rbac]# cat clusterrolebinding-demo.yaml
 apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -388,7 +388,7 @@ rsq-read-all-pods   24s
 Name:         rsq-read-all-pods
 Labels:       &lt;none&gt;
 Annotations:  kubectl.kubernetes.io/last-applied-configuration:
-                {&quot;apiVersion&quot;:&quot;rbac.authorization.k8s.io/v1beta1&quot;,&quot;kind&quot;:&quot;ClusterRoleBinding&quot;,&quot;metadata&quot;:{&quot;annotations&quot;:{},&quot;creationTimestamp&quot;:null,&quot;name&quot;...
+                {"apiVersion":"rbac.authorization.k8s.io/v1beta1","kind":"ClusterRoleBinding","metadata":{"annotations":{},"creationTimestamp":null,"name"...
 Role:
   Kind:  ClusterRole
   Name:  cluster-reader
@@ -417,10 +417,9 @@ coredns-6955765f44-7nsk4           1/1     Running                6          139
 coredns-6955765f44-sr67c           1/1     Running                7          139d
 etcd-master01                      1/1     Running                11         139d
 etcd-master02                      1/1     Running                3897       139d
-# 但是只具有读权限
-</code></pre>
-<p><strong>3、把RoleBinding绑定到ClusterRole中</strong></p>
-<pre><code class="language-bash"># 先删掉之前的clusterrolebinding
+# 但是只具有读权限</code></pre>
+<strong>3、把RoleBinding绑定到ClusterRole中</strong></p>
+<p><pre class="highlight"><code class="language-bash"># 先删掉之前的clusterrolebinding
 [root@master01 rbac]# kubectl delete -f clusterrolebinding-demo.yaml
 
 # 使得rolebinding绑定clusterrole
@@ -442,7 +441,7 @@ subjects:
 
 # 切换rsq用户看效果，会发现还是只能访问default名称空间下的资源
 [root@master01 rbac]# kubectl config use-context rsq@kubernetes
-Switched to context &quot;rsq@kubernetes&quot;.
+Switched to context "rsq@kubernetes".
 [root@master01 rbac]# kubectl get pods
 NAME                             READY   STATUS    RESTARTS   AGE
 myapp-0                          1/1     Running   0          5h24m
@@ -457,11 +456,10 @@ web-0                            1/1     Running   0          26h
 web-1                            1/1     Running   0          26h
 web-2                            1/1     Running   0          26h
 [root@master01 rbac]# kubectl get pods -n kube-system
-Error from server (Forbidden): pods is forbidden: User &quot;rsq&quot; cannot list resource &quot;pods&quot; in API group &quot;&quot; in the namespace &quot;kube-system&quot;
-</code></pre>
-<p><strong>4、查看集群admin clusterrole拥有的权限</strong></p>
-<pre><code class="language-bash">[root@master01 rbac]# kubectl get clusterrole admin -o yaml
-</code></pre>
+Error from server (Forbidden): pods is forbidden: User "rsq" cannot list resource "pods" in API group "" in the namespace "kube-system"</code></pre>
+<strong>4、查看集群admin clusterrole拥有的权限</strong></p>
+<pre class="highlight"><code class="language-bash">[root@master01 rbac]# kubectl get clusterrole admin -o yaml</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Git</h1>
-  <div class="meta">2026-09-14 · 约 960 字 · 源自 notes-src/ops/git/README.md</div>
+  <div class="meta">2026-09-16 · 约 960 字 · 源自 notes-src/ops/git/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Git</span></div>
 </div>
 
@@ -79,7 +85,7 @@
 <li><a href="#10-git-忽略-idea文件">10 git 忽略 .idea文件</a></li>
 </ul>
 <h1 id="1-git">1 git分支操作</h1>
-<pre><code class="language-bash"># 1、拉取一个新项目
+<pre class="highlight"><code class="language-bash"># 1、拉取一个新项目
 git clone http://xx.xx.xx/rsq/rsq.git
 
 # 2、切换branch
@@ -89,10 +95,9 @@ git checkout rsq_test1
 git checkout -b rsq_test2
 git status
 git add .
-git push --set-upstream origin rsq_test2
-</code></pre>
+git push --set-upstream origin rsq_test2</code></pre>
 <h1 id="2-git-submodule">2 git submodule命令</h1>
-<pre><code class="language-bash"># 1、切换分支，pull最新的代码
+<pre class="highlight"><code class="language-bash"># 1、切换分支，pull最新的代码
 git checkout rsq_test1
 git branch
 git pull
@@ -104,11 +109,10 @@ git checkout f5b91959......
 cd ..
 git status 
 git add docs
-git commit -m &quot;Refresh rsq/docs commit id to docs latest commit id f5b91959......&quot;
-git push
-</code></pre>
+git commit -m "Refresh rsq/docs commit id to docs latest commit id f5b91959......"
+git push</code></pre>
 <h1 id="3-git">3 git 创建之前版本的新分支</h1>
-<pre><code class="language-bash">git checkout rsq_test1
+<pre class="highlight"><code class="language-bash">git checkout rsq_test1
 git pull
 
 # 找到 rsq_test1 之前提交的 commit id
@@ -117,12 +121,11 @@ git checkout 7eb99a12....
 # 在此分支之上创建新分支
 git checkout -b rsq_test3
 git status
-git push --set-upstream origin rsq_test3
-</code></pre>
+git push --set-upstream origin rsq_test3</code></pre>
 <h1 id="4-git-checkout">4 git checkout 报错</h1>
 <p>这种是本地有新的修改，解决办法就是提交修改或者删除文件
 若是清理可按照如下操作</p>
-<pre><code class="language-bash">1、先强制切换到一个branch
+<pre class="highlight"><code class="language-bash">1、先强制切换到一个branch
 git checkout -f master
 
 2、将工作区、暂存区和HEAD保持一致
@@ -135,28 +138,24 @@ git pull
 git chean n
 
 5、强制清除文件
-git chean -f
-</code></pre>
+git chean -f</code></pre>
 <h1 id="5-git-cherry-pick">5 git cherry-pick</h1>
 <p>用到cherry-pick的场景有很多，比如代码中写死了某个ip，由于不可抗拒因素，ip发生改变，所有branch的某一部分代码都要更改，这个时候就可以先找一个branch更改完毕，然后把这个commit cherry-pick到所有其它branch即可。</p>
-<pre><code>  a - b - c - d     Master
+<p><pre class="highlight"><code>  a - b - c - d     Master
        \
-         e - f - g  Release
-</code></pre>
-<p>如上所示，现在两个分支，要把Release分支中的f commit到Master分支，可按如下操作</p>
-<pre><code class="language-bash"># 切换到 master 分支
+         e - f - g  Release</code></pre>
+如上所示，现在两个分支，要把Release分支中的f commit到Master分支，可按如下操作</p>
+<p><pre class="highlight"><code class="language-bash"># 切换到 master 分支
 $ git checkout master
 
 # Cherry pick 操作
-$ git cherry-pick f
-</code></pre>
-<p>执行完的代码库变成如下</p>
-<pre><code>  a - b - c - d - f   Master
+$ git cherry-pick f</code></pre>
+执行完的代码库变成如下</p>
+<p><pre class="highlight"><code>  a - b - c - d - f   Master
        \
-         e - f - g    Release
-</code></pre>
-<p>git cherry-pick 后边可以跟多个commit id，形如</p>
-<pre><code class="language-bash"># 有两个branch A B
+         e - f - g    Release</code></pre>
+git cherry-pick 后边可以跟多个commit id，形如</p>
+<pre class="highlight"><code class="language-bash"># 有两个branch A B
 git cherry-pick A B
 
 # A~B之间的所有提交全部cherry-pick 至当前分支，以下不包含A这个commit
@@ -164,21 +163,19 @@ git cherry-pick A B
 git cherry-pick A..B 
 
 # 包含A这个commit 写法如下
-git cherry-pick A^..B 
-</code></pre>
+git cherry-pick A^..B </code></pre>
 <blockquote>
 <p><a href="http://www.ruanyifeng.com/blog/2020/04/git-cherry-pick.html">git cherry-pick 教程</a></p>
 </blockquote>
 <h1 id="6-git-rebase">6 git rebase</h1>
 <p><strong>查看提交历史</strong></p>
-<pre><code class="language-bash"># git log --oneline --graph
+<p><pre class="highlight"><code class="language-bash"># git log --oneline --graph
 * a8d5157 (HEAD -&gt; release, origin/release) 
 * 0194960 test1
 * 2e8b3b3 test2
-* e939b86 test3
-</code></pre>
-<p>当前分支在<code>a8d5157</code> ，此时若想回退到上一个commit：<code>0194960</code>，可用git rebase</p>
-<pre><code class="language-bash"># git rebase --onto 0194960
+* e939b86 test3</code></pre>
+当前分支在<code>a8d5157</code> ，此时若想回退到上一个commit：<code>0194960</code>，可用git rebase</p>
+<pre class="highlight"><code class="language-bash"># git rebase --onto 0194960
 Successfully rebased and updated refs/heads/release.
 
 # git log --oneline --graph
@@ -186,38 +183,34 @@ Successfully rebased and updated refs/heads/release.
 * 2e8b3b3 add realtoedit copy scripts
 * e939b86 change pip repo to douban.com
 # git add .
-# git commit -m &quot;reset&quot;
-# git push --force
-</code></pre>
+# git commit -m "reset"
+# git push --force</code></pre>
 <h1 id="7-git-pull-push">7 git 免秘钥pull push</h1>
-<pre><code class="language-bash">git config --global user.email &quot;xxx&quot;
+<pre class="highlight"><code class="language-bash">git config --global user.email "xxx"
 git config --global user.name “xxx”
-git config --global credential.helper store
-</code></pre>
+git config --global credential.helper store</code></pre>
 <h1 id="8-git-pull">8 git pull代码至指定目录下</h1>
-<pre><code class="language-bash">mkdir custom
+<pre class="highlight"><code class="language-bash">mkdir custom
 cd custom
 git init
 git remote add -f origin http://git.rsq.local/rsq/test.git
-git pull origin master
-</code></pre>
+git pull origin master</code></pre>
 <h1 id="9-git-proxy">9 git 设置 proxy</h1>
-<pre><code class="language-bash"># 设置http和https:
+<pre class="highlight"><code class="language-bash"># 设置http和https:
 git config --global http.proxy http://127.0.0.1:7890
 git config --global https.proxy https://127.0.0.1:7890
 
 # 取消设置
 git config --global --unset http.proxy
-git config --global --unset https.proxy
-</code></pre>
+git config --global --unset https.proxy</code></pre>
 <h1 id="10-git-idea">10 git 忽略 .idea文件</h1>
 <blockquote>
 <p>若.idea没有被git跟踪，则直接在.gitignore文件中添加.idea</p>
 <p>若.idea已经被git跟踪，之后再加入.gitignore后是没有作用的，需要清除.idea的git缓存</p>
 </blockquote>
-<pre><code class="language-bash">git rm -r --cached .idea
-</code></pre>
-<p>然后在.gitignore中添加.idea</p>
+<p><pre class="highlight"><code class="language-bash">git rm -r --cached .idea</code></pre>
+然后在.gitignore中添加.idea</p>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

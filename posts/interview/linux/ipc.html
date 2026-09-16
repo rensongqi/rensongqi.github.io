@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>进程间通信</h1>
-  <div class="meta">2026-09-14 · 约 2330 字 · 源自 notes-src/interview/linux/ipc.md</div>
+  <div class="meta">2026-09-16 · 约 2330 字 · 源自 notes-src/interview/linux/ipc.md</div>
   <div class="doc-tags"><span>#面试</span><span>#Linux</span></div>
 </div>
 
@@ -69,16 +75,26 @@
 <p>汇总一下关于进程间通信（IPC）的知识。</p>
 <h2 id="_2">进程通信的目的</h2>
 <ul>
-<li><strong>数据传输</strong>
-  一个进程需要将它的数据发送给另一个进程，发送的数据量在一个字节到几M字节之间</li>
-<li><strong>共享数据</strong>
-  多个进程想要操作共享数据，一个进程对共享数据</li>
-<li><strong>通知事件</strong>
-  一个进程需要向另一个或一组进程发送消息，通知它（它们）发生了某种事件（如进程终止时要通知父进程）。</li>
-<li><strong>资源共享</strong>
-  多个进程之间共享同样的资源。为了作到这一点，需要内核提供锁和同步机制。</li>
-<li><strong>进程控制</strong>
-  有些进程希望完全控制另一个进程的执行（如Debug进程），此时控制进程希望能够拦截另一个进程的所有陷入和异常，并能够及时知道它的状态改变。</li>
+<li>
+<p><strong>数据传输</strong>
+  一个进程需要将它的数据发送给另一个进程，发送的数据量在一个字节到几M字节之间</p>
+</li>
+<li>
+<p><strong>共享数据</strong>
+  多个进程想要操作共享数据，一个进程对共享数据</p>
+</li>
+<li>
+<p><strong>通知事件</strong>
+  一个进程需要向另一个或一组进程发送消息，通知它（它们）发生了某种事件（如进程终止时要通知父进程）。</p>
+</li>
+<li>
+<p><strong>资源共享</strong>
+  多个进程之间共享同样的资源。为了作到这一点，需要内核提供锁和同步机制。</p>
+</li>
+<li>
+<p><strong>进程控制</strong>
+  有些进程希望完全控制另一个进程的执行（如Debug进程），此时控制进程希望能够拦截另一个进程的所有陷入和异常，并能够及时知道它的状态改变。</p>
+</li>
 </ul>
 <h2 id="_3">进程通信的发展</h2>
 <blockquote>
@@ -223,6 +239,7 @@
 <li>信号量：不能传递复杂消息，只能用来同步</li>
 <li>共享内存区：能够很容易控制容量，速度快，但要保持同步，比如一个进程在写的时候，另一个进程要注意读写的问题，相当于线程中的线程安全，当然，共享内存区同样可以用作线程间通讯，不过没这个必要，线程间本来就已经共享了同一进程内的一块内存</li>
 </ol>
+
 <nav class="doc-series">
   <p class="lb">面试 · 同分类笔记</p>
   <ol>

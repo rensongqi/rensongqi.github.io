@@ -34,9 +34,79 @@ import markdown
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC_DIR = os.path.join(ROOT, "notes-src")
 IMG_DIR = os.path.join(ROOT, "assets", "images", "notes")
+EXT_MANIFEST = os.path.join(ROOT, "tools", "ext_assets.json")
 SITE = "https://rensongqi.github.io/"
-DATE = "2026-09-14"
-DATE_RSS = "Mon, 14 Sep 2026 00:00:00 GMT"
+DATE = "2026-09-16"
+DATE_RSS = "Wed, 16 Sep 2026 00:00:00 GMT"
+
+# 外链资源本地化清单（tools/fetch_external.py 生成）：URL -> 仓库内相对路径
+EXT_ASSETS = {}
+if os.path.isfile(EXT_MANIFEST):
+    EXT_ASSETS = json.load(open(EXT_MANIFEST, encoding="utf-8"))
+
+
+# ── Markdown 源规范化（贴近 GitHub/CommonMark 渲染习惯） ────
+LIST_RE = re.compile(r"^([-*+]|\d+[.)])\s+")
+
+
+def normalize_md(raw):
+    """让 Python-Markdown 按 GitHub 的习惯渲染中文笔记：
+    - 列表可以打断段落（前面补空行），否则 "- 项目" 会留在段落里变成纯文本；
+    - 1~3 空格缩进的子列表统一为 4 空格（Python-Markdown 需要缩进到父级内容宽度），
+      否则嵌套层级被拍平；
+    - 不动代码围栏内的内容。
+    """
+    def ltype(s):
+        """返回列表标记类型（'o' 有序 / '-' '*' '+'），非列表项返回 None。"""
+        mm = LIST_RE.match(s.lstrip())
+        return ("o" if re.match(r"^\d", mm.group(1)) else mm.group(1)) if mm else None
+
+    out = []
+    fence = False
+    prev = ""
+    for line in raw.splitlines():
+        s = line.strip()
+        fm = re.match(r"^(```+|~~~+)(\S.*)$", s)
+        # 开围栏上的多词正文（如 ```ansible all -m ping）：合法 info 只能是
+        # 单词/属性串（bear="\S+word"$、含 =、{ 起始、引号起始）；否则作者把内容
+        # 挤在了开围栏行上，python-markdown 会不识别，导致后续围栏整体错位 ——
+        # 拆成「空开围栏 + 内容行」（不影响配对与状态机）
+        if fm and not fence:
+            rest = fm.group(2)
+            if (re.search(r"[ \t]", fm.group(2)) and "=" not in rest
+                    and not rest.lstrip().startswith(("{", '"', "'"))):
+                line = fm.group(1)
+                inline_content = rest
+            else:
+                inline_content = None
+        else:
+            inline_content = None
+        if re.match(r"^(```|~~~)", s):
+            # 围栏打断段落：开围栏前一行非空且不是围栏 → 补空行（GitHub 行为）
+            if not fence and prev.strip() and not re.match(r"^(```|~~~)", prev.strip()):
+                out.append("")
+            fence = not fence
+            out.append(line)
+            if inline_content is not None:
+                out.append(inline_content)
+            prev = line
+            continue
+        if fence:
+            out.append(line)
+            continue
+        # 1~3 空格缩进的列表项 → 4 空格（更深缩进保持不动，视为代码块）
+        m4 = re.match(r"^ {1,3}(\S.*)$", line)
+        if m4 and LIST_RE.match(m4.group(1)):
+            line = "    " + m4.group(1)
+        # 列表打断段落：前行非空、前行不是同类列表、前行不是标题/表行
+        # （前行允许带 1~3 空格缩进；引用块后的顶格列表同样补空行）
+        if (line[0:1] != " " and ltype(line) and prev and prev.strip()
+                and ltype(prev) != ltype(line)
+                and not prev.lstrip().startswith(("#", "|"))):
+            out.append("")
+        out.append(line)
+        prev = line
+    return "\n".join(out) + ("\n" if raw.endswith("\n") else "")
 
 # 分类：slug -> (显示名, 简介)
 CATS = {
@@ -303,6 +373,10 @@ def make_rewriter(post, by_src):
     def repl(m):
         attr, url = m.group(1), m.group(2)
         if re.match(r"^[a-z][a-z0-9+.-]*:", url, re.I) or url.startswith("#"):
+            # 外链资源本地化（防盗链 / 外链已失效的静态资源）
+            loc = EXT_ASSETS.get(url) or EXT_ASSETS.get(url.split("#")[0])
+            if loc:
+                return '%s="%s"' % (attr, relposix(os.path.join(ROOT, loc), out_dir))
             return m.group(0)
         path, _, frag = url.partition("#")
         if not path:
@@ -358,6 +432,12 @@ CSS = """
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -448,11 +528,49 @@ def build_toc(md):
     return ('<nav class="toc"><p class="toc-lb">目录</p><ul>%s</ul></nav>' % lis), len(items)
 
 
-def build_post(post, rewrite, related):
+def human_size(n):
+    if n >= 1024 * 1024:
+        return "%.1f MB" % (n / 1024.0 / 1024.0)
+    return "%.1f KB" % (n / 1024.0) if n >= 1024 else "%d B" % n
+
+
+def attachments_html(post, out_dir, by_src):
+    """文章同目录的附件（yaml/conf/go/sh 等）与含 README 的子目录，
+    以便文章中提到的配置文件可以直接点击查看。"""
+    sib_dir = os.path.dirname(post["src"])
+    try:
+        names = sorted(os.listdir(sib_dir))
+    except OSError:
+        return ""
+    lis = []
+    for name in names:
+        p = os.path.join(sib_dir, name)
+        if os.path.isfile(p):
+            if name.lower().endswith(".md"):
+                continue  # md 本身就是文章页
+            href = relposix(p, out_dir)
+            lis.append('<li><a href="%s">%s</a><span class="sz">%s</span></li>'
+                       % (html.escape(href), html.escape(name), human_size(os.path.getsize(p))))
+        elif os.path.isdir(p) and name != ".git":
+            # 子目录：有 README 且已生成文章页 → 链到该文章页
+            rd = by_src.get(os.path.join(p, "README.md")) or by_src.get(os.path.join(p, "readme.md"))
+            if rd:
+                lis.append('<li><a href="%s">%s/</a><span class="sz">子目录</span></li>'
+                           % (relposix(rd["out"], out_dir), html.escape(name)))
+            else:
+                lis.append('<li><span class="dir">%s/</span><span class="sz">子目录</span></li>'
+                           % html.escape(name))
+    if not lis:
+        return ""
+    return ('<nav class="doc-attach">\n  <p class="lb">本目录附件</p>\n  <ul>\n%s\n  </ul>\n</nav>'
+            % "\n".join("    " + li for li in lis))
+
+
+def build_post(post, rewrite, related, by_src):
     src = post["src"]
     raw = read(src)
-    md = markdown.Markdown(extensions=["fenced_code", "tables", "toc", "sane_lists"])
-    body = md.convert(raw)
+    md = markdown.Markdown(extensions=["pymdownx.superfences", "tables", "toc", "sane_lists"])
+    body = md.convert(normalize_md(raw))
 
     # 去掉与标题重复的第一个 H1
     m = re.search(r"<h1[^>]*>(.*?)</h1>", body, re.S)
@@ -460,6 +578,11 @@ def build_post(post, rewrite, related):
         body = body[:m.start()] + body[m.end():]
 
     body = rewrite(body)
+    # 飞书外链图片需要登录态无法公开访问，替换为说明文字（保留上下文段落）
+    body = re.sub(
+        r"<img [^>]*feishu\.cn[^>]*/?>",
+        '<em>（原内嵌流程图为飞书文档图片，因外链失效已移除）</em>',
+        body)
     toc, n_head = build_toc(md)
 
     # 摘要：第一个自然段
@@ -471,6 +594,7 @@ def build_post(post, rewrite, related):
 
     out_dir = os.path.dirname(post["out"])
     prefix = relposix(ROOT, out_dir) + "/"
+    attach = attachments_html(post, out_dir, by_src)
     tags_html = "".join("<span>#%s</span>" % html.escape(t) for t in dict.fromkeys(post["tags"]))
     rel_html = "\n".join(
         '<li class="%s"><a href="%s">%s</a></li>'
@@ -505,6 +629,7 @@ $nav
 $toc
 <main>
 $body
+$attach
 <nav class="doc-series">
   <p class="lb">$label · 同分类笔记</p>
   <ol>
@@ -528,7 +653,7 @@ $foot
         date=DATE, words=post["words"], rel=post["rel"],
         tags=tags_html,
         toc_cls="" if toc else " no-toc", toc=toc,
-        body=body.strip(),
+        body=body.strip(), attach=attach,
         related=rel_html,
         foot=render_foot(prefix),
     )
@@ -731,7 +856,7 @@ def main():
             rel.append(p)
             rel = [r for r in cat_posts if r in rel]  # 保持全局顺序
             rewrite = make_rewriter(p, by_src)
-            build_post(p, rewrite, rel)
+            build_post(p, rewrite, rel, by_src)
         cat_page(cat_posts[0]["cat"], cat_posts)
 
     hub_page(by_cat)

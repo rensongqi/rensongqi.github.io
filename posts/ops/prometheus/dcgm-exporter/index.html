@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>DCGM Exporter</h1>
-  <div class="meta">2026-09-14 · 约 300 字 · 源自 notes-src/ops/prometheus/dcgm_exporter/README.md</div>
+  <div class="meta">2026-09-16 · 约 300 字 · 源自 notes-src/ops/prometheus/dcgm_exporter/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Prometheus</span><span>#DCGM Exporter</span></div>
 </div>
 
@@ -67,14 +73,16 @@
 <nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#install-nvidia-docker">Install nvidia-docker</a></li><li class="l3"><a href="#centos">Centos</a></li><li class="l3"><a href="#ubuntu">Ubuntu</a></li><li class="l2"><a href="#run-dcgm_exporter">Run dcgm_exporter</a></li></ul></nav>
 <main>
 <ul>
-<li><a href="#install-nvidia-docker">Install nvidia-docker</a></li>
+<li><a href="#install-nvidia-docker">Install nvidia-docker</a><ul>
 <li><a href="#centos">Centos</a></li>
 <li><a href="#ubuntu">Ubuntu</a></li>
+</ul>
+</li>
 <li><a href="#run-dcgm_exporter">Run dcgm_exporter</a></li>
 </ul>
 <h1 id="install-nvidia-docker">Install nvidia-docker</h1>
 <h2 id="centos">Centos</h2>
-<pre><code class="language-bash"># 配置repo
+<pre class="highlight"><code class="language-bash"># 配置repo
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.repo | \
   sudo tee /etc/yum.repos.d/nvidia-docker.repo
@@ -95,10 +103,9 @@ systemctl daemon-reload
 systemctl restart docker
 
 # 进行测试
-sudo docker run --rm --gpus all nvidia/cuda:11.0.3-base-ubuntu18.04 nvidia-smi
-</code></pre>
+sudo docker run --rm --gpus all nvidia/cuda:11.0.3-base-ubuntu18.04 nvidia-smi</code></pre>
 <h2 id="ubuntu">Ubuntu</h2>
-<pre><code class="language-bash"># Ubuntu 配置repo(没有key会报)
+<pre class="highlight"><code class="language-bash"># Ubuntu 配置repo(没有key会报)
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | \sudo tee /etc/apt/sources.list.d/nvidia-docker.list
 
@@ -118,11 +125,10 @@ systemctl restart docker
 
 # 进行测试
 sudo docker run --rm --gpus all nvidia/cuda:11.0.3-base-ubuntu18.04 nvidia-smi
-
 </code></pre>
 <h1 id="run-dcgm_exporter">Run dcgm_exporter</h1>
-<pre><code class="language-bash">nvidia-docker run --cap-add SYS_ADMIN --name 249dcgm-exporter --restart=unless-stopped -d -p 9400:9400 nvidia/dcgm-exporter:2.2.9-2.4.0-ubuntu18.04
-</code></pre>
+<pre class="highlight"><code class="language-bash">nvidia-docker run --cap-add SYS_ADMIN --name 249dcgm-exporter --restart=unless-stopped -d -p 9400:9400 nvidia/dcgm-exporter:2.2.9-2.4.0-ubuntu18.04</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

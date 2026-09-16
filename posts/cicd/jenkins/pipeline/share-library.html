@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Pipeline · Share Library</h1>
-  <div class="meta">2026-09-14 · 约 470 字 · 源自 notes-src/cicd/jenkins/pipeline/share_library.md</div>
+  <div class="meta">2026-09-16 · 约 470 字 · 源自 notes-src/cicd/jenkins/pipeline/share_library.md</div>
   <div class="doc-tags"><span>#CI/CD</span><span>#Jenkins</span><span>#Pipeline</span></div>
 </div>
 
@@ -88,7 +94,7 @@
 </tbody>
 </table>
 <p><strong>devops_pipeline 目录结构：</strong></p>
-<pre><code class="language-bash">$ ls -l
+<p><pre class="highlight"><code class="language-bash">$ ls -l
 total 5
 -rw-r--r-- 1 rsq rsq  21 Oct 24 13:48 README.md
 -rwxr-xr-x 1 rsq rsq 595 Oct 24 14:20 test.groovy*
@@ -96,22 +102,20 @@ drwxr-xr-x 1 rsq rsq   0 Oct 24 13:56 vars/
 $ ls -l vars
 total 2
 -rwxr-xr-x 1 rsq rsq 178 Oct 24 14:17 build.groovy*
--rwxr-xr-x 1 rsq rsq 819 Oct 24 14:07 gitCheckout.groovy*
-</code></pre>
-<p><strong>devops目录结构：</strong></p>
-<pre><code class="language-bash">$ ls -l
+-rwxr-xr-x 1 rsq rsq 819 Oct 24 14:07 gitCheckout.groovy*</code></pre>
+<strong>devops目录结构：</strong></p>
+<pre class="highlight"><code class="language-bash">$ ls -l
 total 2
 -rw-r--r-- 1 rsq rsq Oct 24 13:41 README.md
 -rw-r--r-- 1 rsq rsq 29 Oct 24 13:52 build.sh
 $ cat build.sh
-echo &quot;This is a test scripts&quot;
-</code></pre>
+echo "This is a test scripts"</code></pre>
 <h2 id="12-jenkins-share-library">1.2 Jenkins 配置Share Library</h2>
 <p>Manager Jnekins --&gt; Configure System --&gt; Global Pipeline Libraries ---&gt; Add Libary(选择devops_pipeline)
-<img alt="在这里插入图片描述" src="https://img-blog.csdnimg.cn/cc3baa40e34644238c514793a145fb9b.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBAUlNR5Y2a5a6i,size_20,color_FFFFFF,t_70,g_se,x_16" /></p>
+<img alt="在这里插入图片描述" src="../../../../assets/attachments/cc3baa40e34644238c514793a145fb9b-img-blog-csdnimg-cn-fde5f0.png" /></p>
 <h2 id="13-groovy">1.3 相关groovy</h2>
 <p><strong>gitCheckout.groovy</strong></p>
-<pre><code class="language-groovy">#!/usr/bin/env groovy
+<pre class="highlight"><code class="language-groovy">#!/usr/bin/env groovy
 def call(String gitRepo, String gitBranch, String gitCredential) {
     checkout(
         [   
@@ -129,52 +133,50 @@ def call(String gitRepo, String gitBranch, String gitCredential) {
             url: gitRepo]]
         ]
     )
-}
-</code></pre>
+}</code></pre>
 <p><strong>build.groovy</strong></p>
-<pre><code class="language-groovy">#!/usr/bin/env groovy
+<pre class="highlight"><code class="language-groovy">#!/usr/bin/env groovy
 def call() {
-    dir(&quot;${WORKSPACE}&quot;) {
+    dir("${WORKSPACE}") {
         sh '''
-            echo &quot;This is a test scripts.&quot;
-            echo &quot;${WROKSPACE}&quot;
+            echo "This is a test scripts."
+            echo "${WROKSPACE}"
         '''
     }
-}
-</code></pre>
+}</code></pre>
 <p>test.groovy 主要实现跟share library联动
 <strong>test.groovy</strong></p>
-<pre><code class="language-groovy">#!/usr/bin/env groovy
+<pre class="highlight"><code class="language-groovy">#!/usr/bin/env groovy
 // share library entrypoint.
-@Library(&quot;devops&quot;) _
-node(&quot;devops_linux&quot;) {
+@Library("devops") _
+node("devops_linux") {
     // define const
-    def gitRepo = &quot;${env.gitRepo}&quot;
-    def gitBranch = &quot;${env.gitBranch}&quot;
-    def gitCredential = &quot;${env.gitCredential}&quot;
+    def gitRepo = "${env.gitRepo}"
+    def gitBranch = "${env.gitBranch}"
+    def gitCredential = "${env.gitCredential}"
     // custom workspace
-    env.WORKSPACE = &quot;/home/devops/test&quot;
+    env.WORKSPACE = "/home/devops/test"
 
-    stage(&quot;Clean Env&quot;) {
+    stage("Clean Env") {
         sh '''
-            echo &quot;---------------------&quot;
+            echo "---------------------"
             echo ${WORKSPACE}
         '''
     }
 
-    stage(&quot;Git Clone&quot;) {
+    stage("Git Clone") {
         gitCheckout(gitRepo, gitBranch, gitCredential)
     }
 
-    stage(&quot;Build&quot;) {
+    stage("Build") {
         build()
     }
-}
-</code></pre>
+}</code></pre>
 <h1 id="2-jenkins-item">2 Jenkins 新建流水线 item 测试</h1>
-<p><img alt="在这里插入图片描述" src="https://img-blog.csdnimg.cn/4a8e9b82cf704850b3317fc41c89d7c0.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBAUlNR5Y2a5a6i,size_20,color_FFFFFF,t_70,g_se,x_16" /></p>
+<p><img alt="在这里插入图片描述" src="../../../../assets/attachments/4a8e9b82cf704850b3317fc41c89d7c0-img-blog-csdnimg-cn-267c7e.png" /></p>
 <p>Configure item，pipeline SCM选择<code>devops_pipeline</code>这个仓库，Script Path选择 <code>test.groovy</code>
-<img alt="在这里插入图片描述" src="https://img-blog.csdnimg.cn/ebf596db24994a2da17aa578572e6f72.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBAUlNR5Y2a5a6i,size_20,color_FFFFFF,t_70,g_se,x_16" /></p>
+<img alt="在这里插入图片描述" src="../../../../assets/attachments/ebf596db24994a2da17aa578572e6f72-img-blog-csdnimg-cn-f8a787.png" /></p>
+
 <nav class="doc-series">
   <p class="lb">CI/CD · 同分类笔记</p>
   <ol>

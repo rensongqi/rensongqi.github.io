@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Canal</h1>
-  <div class="meta">2026-09-14 · 约 640 字 · 源自 notes-src/ops/canal/README.md</div>
+  <div class="meta">2026-09-16 · 约 640 字 · 源自 notes-src/ops/canal/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Canal</span></div>
 </div>
 
@@ -73,37 +79,32 @@
 </ul>
 <p>基于Canal实现mysql到mysql之间的数据实时备份</p>
 <p>源数据库账号需要如下权限</p>
-<pre><code class="language-bash">SELECT,REPLICATION CLIENT,SUPER, REPLICATION SLAVE,PROCESS
-</code></pre>
+<pre class="highlight"><code class="language-bash">SELECT,REPLICATION CLIENT,SUPER, REPLICATION SLAVE,PROCESS</code></pre>
 <h1 id="1-canaldeployer">1 部署canal.deployer</h1>
 <p><a href="https://github.com/alibaba/canal/releases/download/canal-1.1.8/canal.deployer-1.1.8.tar.gz">canal.deployer下载地址</a></p>
 <p>解压后进入<code>canal.deployer</code>目录中</p>
-<pre><code class="language-bash"># vim conf/example/instance.properties
+<p><pre class="highlight"><code class="language-bash"># vim conf/example/instance.properties
 canal.instance.master.address=172.16.100.100:13306 # 源数据库地址
 canal.instance.dbUsername=canal                  # 源数据库账号
 canal.instance.dbPassword=canal                  # 源数据库密码
-canal.instance.filter.regex=backup_db\\..*         # 要同步的库，若要同步所有，可以默认*.\\..*
-</code></pre>
-<p>启动 canal.deployer</p>
-<pre><code class="language-bash">./bin/startup.sh
-</code></pre>
-<p>查看日志</p>
-<pre><code class="language-bash">tail logs/example/example.log
-</code></pre>
+canal.instance.filter.regex=backup_db\\..*         # 要同步的库，若要同步所有，可以默认*.\\..*</code></pre>
+启动 canal.deployer</p>
+<p><pre class="highlight"><code class="language-bash">./bin/startup.sh</code></pre>
+查看日志</p>
+<pre class="highlight"><code class="language-bash">tail logs/example/example.log</code></pre>
 <h1 id="2-canaladapter">2 部署canal.adapter</h1>
 <p><a href="https://github.com/alibaba/canal/releases/download/canal-1.1.8/canal.adapter-1.1.8.tar.gz">canal.adapter下载地址</a></p>
 <p>解压后进入<code>canal.adapter</code>目录中</p>
 <p>注释 <code>conf/bootstrap.yml</code> 暂时用不到</p>
-<pre><code class="language-bash"># vim conf/bootstrap.yml
+<p><pre class="highlight"><code class="language-bash"># vim conf/bootstrap.yml
 #canal:
 #  manager:
 #    jdbc:
 #      url: jdbc:mysql://127.0.0.1:3306/canal_manager?useUnicode=true&amp;characterEncoding=UTF-8
 #      username: canal
-#      password: canal
-</code></pre>
-<p>编辑 <code>conf/application.yml</code> ，修改需要同步到的目的数据库信息</p>
-<pre><code class="language-bash">server:
+#      password: canal</code></pre>
+编辑 <code>conf/application.yml</code> ，修改需要同步到的目的数据库信息</p>
+<pre class="highlight"><code class="language-bash">server:
   port: 8081
 spring:
   jackson:
@@ -148,10 +149,9 @@ canal.conf:
           jdbc.username: canal  # 目的库账号
           jdbc.password: canal  # 目的库密码
           druid.stat.enable: false
-          druid.stat.slowSqlMillis: 1000
-</code></pre>
+          druid.stat.slowSqlMillis: 1000</code></pre>
 <p>编辑自定义的rdb配置清单 <code>conf/rdb/mytest_user.yml</code></p>
-<pre><code class="language-bash"># vim conf/rdb/mytest_user.yml
+<p><pre class="highlight"><code class="language-bash"># vim conf/rdb/mytest_user.yml
 ############ 如下配置用于同步单个表和指定的字段 ##########
 #dataSourceKey: defaultDS
 #destination: example
@@ -171,7 +171,7 @@ canal.conf:
 #    role_id:
 #    c_time:
 #    test1:
-#  etlCondition: &quot;where c_time&gt;={}&quot;
+#  etlCondition: "where c_time&gt;={}"
 #  commitBatch: 3000 # 批量提交的大小
 ############ 如下配置用于同步指定数据库中所有表 ##########
 ## Mirror schema synchronize config
@@ -182,19 +182,17 @@ outerAdapterKey: mysql1
 concurrent: true
 dbMapping:
   mirrorDb: true
-  database: backup_db
-</code></pre>
-<p>启动 canal.adapter</p>
-<pre><code class="language-bash">./bin/startup.sh
-</code></pre>
-<p>查看日志</p>
-<pre><code class="language-bash">tail logs/adapter/adapter.log
-</code></pre>
+  database: backup_db</code></pre>
+启动 canal.adapter</p>
+<p><pre class="highlight"><code class="language-bash">./bin/startup.sh</code></pre>
+查看日志</p>
+<pre class="highlight"><code class="language-bash">tail logs/adapter/adapter.log</code></pre>
 <h1 id="_1">参考文章</h1>
 <ul>
 <li><a href="https://blog.csdn.net/sszdzq/article/details/137463288">Canal同步两个mysql库</a></li>
 <li><a href="https://www.stonewu.com/archives/canal-synchronization-problem">Canal同步mysql至mysql</a></li>
 </ul>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

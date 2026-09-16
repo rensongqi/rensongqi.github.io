@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Kafka Exporter</h1>
-  <div class="meta">2026-09-14 · 约 50 字 · 源自 notes-src/ops/prometheus/kafka_exporter/README.md</div>
+  <div class="meta">2026-09-16 · 约 50 字 · 源自 notes-src/ops/prometheus/kafka_exporter/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Prometheus</span><span>#Kafka Exporter</span></div>
 </div>
 
@@ -67,7 +73,7 @@
 
 <main>
 <p>docker-compose.yml</p>
-<pre><code class="language-yml">version: &quot;3&quot;
+<pre class="highlight"><code class="language-yml">version: "3"
 
 services:
   kafka_exporter:
@@ -78,13 +84,12 @@ services:
      - '--kafka.server=172.16.100.109:9092'
     restart: always
     ports:
-    - &quot;9308:9308&quot;
-</code></pre>
+    - "9308:9308"</code></pre>
 <p>prometheus config</p>
-<pre><code>- job_name: &quot;elk-kafka&quot;
+<pre class="highlight"><code>- job_name: "elk-kafka"
   static_configs:
-  - targets: [&quot;172.16.100.107:9308&quot;]
-</code></pre>
+  - targets: ["172.16.100.107:9308"]</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

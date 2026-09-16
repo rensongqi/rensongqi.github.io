@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Go · GC</h1>
-  <div class="meta">2026-09-14 · 约 2600 字 · 源自 notes-src/interview/go/gc.md</div>
+  <div class="meta">2026-09-16 · 约 2600 字 · 源自 notes-src/interview/go/gc.md</div>
   <div class="doc-tags"><span>#面试</span><span>#Go</span></div>
 </div>
 
@@ -81,10 +87,9 @@
 <p>垃圾回收的算法很多，比如最常见的引用计数，节点复制等等。Go 采用的是标记清除方式。当 GC 开始时，从 root 开始一层层扫描，这里的 root 区值当前所有 goroutine 的栈和全局数据区的变量(主要是这 2 个地方)。扫描过程中把能被触达的 object 标记出来，那么堆空间未被标记的 object 就是垃圾了；最后遍历堆空间所有 object 对垃圾（未标记）的 object 进行清除，清除完成则表示 GC 完成。清除的 object 会被放回到 mcache 中以备后续分配使用。</p>
 <p>我在 <a href="https://www.jianshu.com/p/7405b4e11ee2">Go 语言内存管理（二）：Go 内存管理</a> 提到过，Go 的内存区域中有一个 <code>bitmap</code> 区域，就是用来存储 object 标记的。</p>
 <p>最开始 Go 的整个 GC 过程需要 STW，因为用户进程如果在 GC 过程中修改了变量的引用关系，可能会导致清理错误。举个例子，我们假设下面的变量使用堆空间：</p>
-<pre><code class="language-go">A := new(struct {
+<pre class="highlight"><code class="language-go">A := new(struct {
     B *int
-})
-</code></pre>
+})</code></pre>
 <p>如果 GC 已经扫描完了变量 <code>A</code>，并对 <code>A</code> 和 <code>B</code> 进行了标记，如果没有 STW，在执行清除之前，用户线程有可能会执行 <code>A.B = new(int)</code>，那么这个新对象 <code>new(int)</code> 会因为没有标记而被清除。</p>
 <p>Go GC 的 STW 曾经是大家吐槽的焦点，因为它经常使你的系统卡住，造成几百毫秒延迟。</p>
 <h2 id="_3">并行清除</h2>
@@ -101,12 +106,12 @@
 <li>标记过程中，<code>mallocgc</code> 新分配的 object，会先被标记成黑色再返回。</li>
 </ol>
 <p>示意图：</p>
-<p><img alt="img" src="https://upload-images.jianshu.io/upload_images/11662994-94548e98fe245de6.png?imageMogr2/auto-orient/strip|imageView2/2/w/741/format/webp" /></p>
+<p><img alt="img" src="../../../assets/attachments/11662994-94548e98fe245de6-upload-images-jianshu-io-1d78bf.webp" /></p>
 <p>还有一种情况，标记过程中，堆上的 object 被赋值给了一个<strong>栈上指针</strong>，导致这个 object 没有被标记到。<strong>因为对栈上指针进行写入，写屏障是检测不到的</strong>。下图展示了整个流程(其中 L 是栈上指针)：</p>
-<p><img alt="img" src="https://upload-images.jianshu.io/upload_images/11662994-b2d93298df056f97.png?imageMogr2/auto-orient/strip|imageView2/2/w/758/format/webp" /></p>
+<p><img alt="img" src="../../../assets/attachments/11662994-b2d93298df056f97-upload-images-jianshu-io-93bcd6.webp" /></p>
 <p>为了解决这个问题，标记的最后阶段，还会回头重新扫描一下所有的栈空间，确保没有遗漏。而这个过程就需要启动 STW 了，否则并发场景会使上述场景反复重现。</p>
 <p>整个 GC 流程如下图所示：</p>
-<p><img alt="img" src="https://upload-images.jianshu.io/upload_images/11662994-d448ce59cb2965aa.png?imageMogr2/auto-orient/strip|imageView2/2/w/1200/format/webp" /></p>
+<p><img alt="img" src="../../../assets/attachments/11662994-d448ce59cb2965aa-upload-images-jianshu-io-d9a1b5.webp" /></p>
 <p>解释下：</p>
 <ol>
 <li>正常情况下，写操作就是正常的赋值。</li>
@@ -120,10 +125,10 @@
 <p>三色标记方式，需要在最后重新扫描一下所有全局变量和 goroutine 栈空间，如果系统的 goroutine 很多，这个阶段耗时也会比较长，甚至会长达 100ms。毕竟 Goroutine 很轻量，大型系统中，上百万的 Goroutine 也是常有的事儿。</p>
 <p>上面说<em>对栈上指针进行写入，写屏障是检测不到</em>，实际上并不是做不到，而是代价非常高，Go 的写屏障故意没去管它，而是采取了再次扫描的方案。</p>
 <p>Go 在 1.8 版本引入了<strong>混合写屏障</strong>，其会在赋值前，对旧数据置灰，再视情况对新值进行置灰。大致如下图所示：</p>
-<p><img alt="img" src="https://upload-images.jianshu.io/upload_images/11662994-8994c6b1dc536940.png?imageMogr2/auto-orient/strip|imageView2/2/w/713/format/webp" /></p>
+<p><img alt="img" src="../../../assets/attachments/11662994-8994c6b1dc536940-upload-images-jianshu-io-343834.webp" /></p>
 <p>这样就不需要在最后回头重新扫描所有 Goroutine 的栈空间了，这使得整个 GC 过程 STW 几乎可以忽略不计了。</p>
 <p>写屏障的伪代码如下（看不懂可忽略）：</p>
-<pre><code class="language-go">writePointer(slot, ptr):  // 1.8 之前
+<pre class="highlight"><code class="language-go">writePointer(slot, ptr):  // 1.8 之前
     shade(ptr)
     *slot = ptr
 
@@ -131,8 +136,7 @@ writePointer(slot, ptr): // 1.8 之后
     shade(*slot)
     if current stack is grey:
         shade(ptr)
-    *slot = ptr
-</code></pre>
+    *slot = ptr</code></pre>
 <p>混合写屏障会有一点小小的代价，就是上例中如果 <code>C</code> 没有赋值给 <code>L</code>，用户执行 <code>B.next = nil</code> 后，<code>C</code> 的的确确变成了垃圾，而我们却把置灰了，使得 <code>C</code> 只能等到下一轮 GC 才能被回收了。</p>
 <p>GC 过程创建的新对象直接标记成黑色也会带来这个问题，即使新 object 在扫描结束前变成了垃圾，这次 GC 也不会回收它，只能等下轮。</p>
 <h2 id="gc">何时触发 GC</h2>
@@ -158,6 +162,7 @@ writePointer(slot, ptr): // 1.8 之后
 <p>作者：达菲格
 链接：https://www.jianshu.com/p/0083a90a8f7e
 来源：简书</p>
+
 <nav class="doc-series">
   <p class="lb">面试 · 同分类笔记</p>
   <ol>

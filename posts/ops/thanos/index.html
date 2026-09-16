@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Thanos</h1>
-  <div class="meta">2026-09-14 · 约 2980 字 · 源自 notes-src/ops/thanos/README.md</div>
+  <div class="meta">2026-09-16 · 约 2980 字 · 源自 notes-src/ops/thanos/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Thanos</span></div>
 </div>
 
@@ -68,28 +74,32 @@
 <main>
 <ul>
 <li><a href="#架构说明">架构说明</a></li>
-<li><a href="#部署方式">部署方式</a></li>
+<li><a href="#部署方式">部署方式</a><ul>
 <li><a href="#docker部署">Docker部署</a></li>
 <li><a href="#kubernetes部署">Kubernetes部署</a></li>
+</ul>
+</li>
 <li><a href="#接入prometheus">接入Prometheus</a></li>
 <li><a href="#thanos增加配置">Thanos增加配置</a></li>
 </ul>
 <h1 id="_1">架构说明</h1>
 <p>Thanos架构图：
 <img alt="图片" src="../../../assets/images/notes/thanos.png" /></p>
-<p>组件的功能分别是：
-- Sidecar： Thanos 的数据上传组件，用来和 Prometheus 通信，并且将 Prometheus 的监控数据上传到对象存储
-- Query：Thanos 的查询组件，用来查询监控数据
-- Store：Thanos 的数据存储组件，用来和对象存储通信，为对象存储提供数据代理服务。
-- Receive：Thanos 的数据收取组件，支持 Prometheus 的远程写功能，对于同一个 Prometheus 实例，只能在 Sidecar 和 Receiver 中间二选一。
-- Rule：Thanos 的集中的告警管理组件
-- Compactor：Thanos 的数据处理组件，用来将监控数据降准和压缩
-- Query Frontend：Thanos 的查询前端
-- tools：Thanos 的运维工具，用途很多。</p>
+<p>组件的功能分别是：</p>
+<ul>
+<li>Sidecar： Thanos 的数据上传组件，用来和 Prometheus 通信，并且将 Prometheus 的监控数据上传到对象存储</li>
+<li>Query：Thanos 的查询组件，用来查询监控数据</li>
+<li>Store：Thanos 的数据存储组件，用来和对象存储通信，为对象存储提供数据代理服务。</li>
+<li>Receive：Thanos 的数据收取组件，支持 Prometheus 的远程写功能，对于同一个 Prometheus 实例，只能在 Sidecar 和 Receiver 中间二选一。</li>
+<li>Rule：Thanos 的集中的告警管理组件</li>
+<li>Compactor：Thanos 的数据处理组件，用来将监控数据降准和压缩</li>
+<li>Query Frontend：Thanos 的查询前端</li>
+<li>tools：Thanos 的运维工具，用途很多。</li>
+</ul>
 <h1 id="_2">部署方式</h1>
 <h2 id="docker">Docker部署</h2>
 <p>docker-compose.yml</p>
-<pre><code class="language-yaml">version: '2.1'
+<pre class="highlight"><code class="language-yaml">version: '2.1'
 services:
   # Node Exporter
   node-exporter:
@@ -152,7 +162,7 @@ services:
       - '9000:9000'
       - '9001:9001'
     healthcheck:
-      test: [&quot;CMD&quot;, &quot;curl&quot;, &quot;-f&quot;, &quot;http://localhost:9000/minio/health/live&quot;]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -188,7 +198,7 @@ services:
       - --objstore.config-file=/conf/bucket.yml
       - --data-dir=/data
       - --grpc-address=0.0.0.0:10901
-    user: &quot;0&quot;
+    user: "0"
     volumes:
       - 'ojb_store_conf:/conf'
       - 'store_data:/data'
@@ -201,7 +211,7 @@ services:
       - compact
       - --objstore.config-file=/conf/bucket.yml
       - --data-dir=/data
-    user: &quot;0&quot;
+    user: "0"
     volumes:
       - 'ojb_store_conf:/conf'
     depends_on:
@@ -234,29 +244,28 @@ volumes:
   ojb_store_conf:
     driver: local
   store_data:
-    driver: local
-</code></pre>
+    driver: local</code></pre>
 <h2 id="kubernetes">Kubernetes部署</h2>
-<p>参考：https://github.com/forbearing/thanos/tree/main/thanos-v0.23
-1. thanos-storage-minio.yaml</p>
-<pre><code class="language-yaml"># vi thanos-storage-minio.yaml
+<p>参考：https://github.com/forbearing/thanos/tree/main/thanos-v0.23</p>
+<ol>
+<li>thanos-storage-minio.yaml</li>
+</ol>
+<pre class="highlight"><code class="language-yaml"># vi thanos-storage-minio.yaml
 type: s3
 config:
   bucket: thanos
   endpoint: ossapi.rsq.cn:9000
   access_key: MdcjsPMUVUVZpE7k
   secret_key: oTVL9W3nIgp7H7oHF7kTSJI8ckfSylVj
-  insecure: true
-</code></pre>
+  insecure: true</code></pre>
 <ol start="2">
 <li>创建secret关联thanos-storage-minio.yaml</li>
 </ol>
-<pre><code class="language-bash">kubectl create secret generic thanos-objectstorage --from-file=bucket.yaml=thanos-storage-minio.yaml -n monitoring
-</code></pre>
+<pre class="highlight"><code class="language-bash">kubectl create secret generic thanos-objectstorage --from-file=bucket.yaml=thanos-storage-minio.yaml -n monitoring</code></pre>
 <ol start="3">
 <li>kube-store.yaml</li>
 </ol>
-<pre><code class="language-yaml">---
+<pre class="highlight"><code class="language-yaml">---
 apiVersion: v1
 kind: Service
 metadata:
@@ -335,7 +344,7 @@ spec:
         runAsUser: 65534
       nodeSelector:
               #kubernetes.io/hostname: node1
-        thanos: &quot;on&quot;
+        thanos: "on"
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -423,12 +432,11 @@ spec:
       - ReadWriteOnce
       resources:
         requests:
-          storage: 10Gi
-</code></pre>
+          storage: 10Gi</code></pre>
 <ol start="4">
 <li>thanos-receiver.yaml</li>
 </ol>
-<pre><code class="language-yaml">---
+<pre class="highlight"><code class="language-yaml">---
 apiVersion: v1
 kind: Service
 metadata:
@@ -498,11 +506,11 @@ data:
   hashrings.json: |
     [
       {
-        &quot;endpoints&quot;:
+        "endpoints":
         [
-          &quot;thanos-receive-0.thanos-receive.monitoring.svc.cluster.local:10907&quot;,
-          &quot;thanos-receive-1.thanos-receive.monitoring.svc.cluster.local:10907&quot;,
-          &quot;thanos-receive-2.thanos-receive.monitoring.svc.cluster.local:10907&quot;
+          "thanos-receive-0.thanos-receive.monitoring.svc.cluster.local:10907",
+          "thanos-receive-1.thanos-receive.monitoring.svc.cluster.local:10907",
+          "thanos-receive-2.thanos-receive.monitoring.svc.cluster.local:10907"
         ]
       }
     ]
@@ -539,7 +547,7 @@ spec:
         runAsUser: 65534
       nodeSelector:
               #kubernetes.io/os: linux
-        thanos: &quot;on&quot;
+        thanos: "on"
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -580,8 +588,8 @@ spec:
         - --remote-write.address=0.0.0.0:10908
         - --http-address=0.0.0.0:10909
         - --receive.replication-factor=1
-        - --label=replica=&quot;$(NAME)&quot;
-        - --label=receive=&quot;true&quot;
+        - --label=replica="$(NAME)"
+        - --label=receive="true"
         - --receive.local-endpoint=$(NAME).thanos-receive.$(NAMESPACE).svc.cluster.local:10907
         - --receive.hashrings-file=/var/lib/thanos-receive/hashrings.json
         - --objstore.config-file=/config/bucket.yaml
@@ -654,12 +662,11 @@ spec:
       - ReadWriteOnce
       resources:
         requests:
-          storage: 10Gi
-</code></pre>
+          storage: 10Gi</code></pre>
 <ol start="5">
 <li>thanos-query.yaml</li>
 </ol>
-<pre><code class="language-yaml">---
+<pre class="highlight"><code class="language-yaml">---
 apiVersion: v1
 kind: Service
 metadata:
@@ -773,7 +780,7 @@ spec:
         - --log.format=logfmt
         - --grpc-address=0.0.0.0:10903
         - --http-address=0.0.0.0:10904
-        - --query.replica-label=replica           # 以哪个标签做去重(deduplication), receive 的参数一定要加上 --label=replica=&quot;$(NAME)&quot;
+        - --query.replica-label=replica           # 以哪个标签做去重(deduplication), receive 的参数一定要加上 --label=replica="$(NAME)"
         - --store=dnssrv+_grpc._tcp.thanos-receive.monitoring.svc.cluster.local     # 从 thanos-receive 查询数据
         - --store=dnssrv+_grpc._tcp.thanos-store.monitoring.svc.cluster.local       # 从 thanos-store 查询数据
         - --store=dnssrv+_grpc._tcp.thanos-ruler.monitoring.svc.cluster.local       # 从 thanos-ruler 查询数据
@@ -804,12 +811,11 @@ spec:
           periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 3
-        terminationMessagePolicy: FallbackToLogsOnError
-</code></pre>
+        terminationMessagePolicy: FallbackToLogsOnError</code></pre>
 <ol start="6">
 <li>thanos-compactor.yaml</li>
 </ol>
-<pre><code class="language-yaml">---
+<pre class="highlight"><code class="language-yaml">---
 apiVersion: v1
 kind: Service
 metadata:
@@ -884,7 +890,7 @@ spec:
         fsGroup: 65534
         runAsUser: 65534
       nodeSelector:
-        thanos: &quot;on&quot;
+        thanos: "on"
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -976,8 +982,7 @@ spec:
       - ReadWriteOnce
       resources:
         requests:
-          storage: 10Gi
-</code></pre>
+          storage: 10Gi</code></pre>
 <ol start="7">
 <li>验证
 打开queryer页面http://172.16.112.101:30904/</li>
@@ -986,29 +991,26 @@ spec:
 <p>Kubernetes接入：
 先安装kube-prometheus
 创建thanos-storage-minio.yaml</p>
-<pre><code class="language-yaml"># vi thanos-storage-minio.yaml
+<p><pre class="highlight"><code class="language-yaml"># vi thanos-storage-minio.yaml
 type: s3
 config:
   bucket: thanos
   endpoint: ossapi.rsq.cn:9000
   access_key: MdcjsPMUVUVZpE7k
   secret_key: oTVL9W3nIgp7H7oHF7kTSJI8ckfSylVj
-  insecure: true
-</code></pre>
-<p>使用上面的配置文件创建一个对应的 Secret 资源对象：</p>
-<pre><code class="language-bash">kubectl -n monitoring create secret generic thanos-objectstorage --from-file=thanos.yaml=thanos-storage-minio.yaml
-</code></pre>
-<p>在 prometheus 的 CRD 对象中添加如下配置：(prometheus-prometheus.yaml )</p>
-<pre><code class="language-yaml">#kubectl edit prometheus -n monitoring
+  insecure: true</code></pre>
+使用上面的配置文件创建一个对应的 Secret 资源对象：</p>
+<p><pre class="highlight"><code class="language-bash">kubectl -n monitoring create secret generic thanos-objectstorage --from-file=thanos.yaml=thanos-storage-minio.yaml</code></pre>
+在 prometheus 的 CRD 对象中添加如下配置：(prometheus-prometheus.yaml )</p>
+<pre class="highlight"><code class="language-yaml">#kubectl edit prometheus -n monitoring
 
 thanos:
     image: harbor.rsq.cn/public/quay.io/thanos/thanos:v0.26.0
     objectStorageConfig:
       key: thanos.yaml
-      name: thanos-objectstorage
-</code></pre>
+      name: thanos-objectstorage</code></pre>
 <p>添加thanos sidecar nodeport 端口(prometheus-service.yaml)</p>
-<pre><code class="language-yaml">#kubectl edit service/prometheus-k8s -n monitoring
+<p><pre class="highlight"><code class="language-yaml">#kubectl edit service/prometheus-k8s -n monitoring
 
 apiVersion: v1
 kind: Service
@@ -1038,17 +1040,16 @@ spec:
     app.kubernetes.io/instance: k8s
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/part-of: kube-prometheus
-  sessionAffinity: ClientIP
-</code></pre>
-<p>参考文档：
+  sessionAffinity: ClientIP</code></pre>
+参考文档：
 https://www.cnblogs.com/hahaha111122222/p/16351312.html</p>
 <h1 id="thanos">Thanos增加配置</h1>
 <p>Thanos query 添加store</p>
-<pre><code class="language-bash">#bash
+<pre class="highlight"><code class="language-bash">#bash
 thanos query \
-    --http-address        &quot;0.0.0.0:9090&quot; \
-    --store               &quot;&lt;store-api&gt;:&lt;grpc-port&gt;&quot; \
-    --store               &quot;&lt;store-api2&gt;:&lt;grpc-port&gt;&quot; \
+    --http-address        "0.0.0.0:9090" \
+    --store               "&lt;store-api&gt;:&lt;grpc-port&gt;" \
+    --store               "&lt;store-api2&gt;:&lt;grpc-port&gt;" \
 
 #docker
 image: docker.io/bitnami/thanos:0
@@ -1059,10 +1060,10 @@ image: docker.io/bitnami/thanos:0
       - --store=sidecar:10901
       - --store=172.16.104.101:30991
       - --store=store-gateway:10901
-
 </code></pre>
 <p>参考文档：
 https://thanos.io/tip/components/query.md/</p>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

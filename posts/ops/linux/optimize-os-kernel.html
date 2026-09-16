@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Linux · Optimize OS Kernel</h1>
-  <div class="meta">2026-09-14 · 约 400 字 · 源自 notes-src/ops/linux/optimize_os_kernel.md</div>
+  <div class="meta">2026-09-16 · 约 400 字 · 源自 notes-src/ops/linux/optimize_os_kernel.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Linux</span></div>
 </div>
 
@@ -67,7 +73,7 @@
 <nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#ubuntu">Ubuntu</a></li><li class="l2"><a href="#centos7">Centos7</a></li></ul></nav>
 <main>
 <h1 id="ubuntu">Ubuntu</h1>
-<pre><code class="language-bash">cat &gt;&gt;/etc/security/limits.conf&lt;&lt;EOF
+<pre class="highlight"><code class="language-bash">cat &gt;&gt;/etc/security/limits.conf&lt;&lt;EOF
 * soft nofile 1055350
 * hard nofile 1055350
 * soft nproc 1055350
@@ -78,8 +84,8 @@ EOF
 # 修改文件最大打开数量，root &amp; other users
 echo 'DefaultLimitNOFILE=1055350' &gt;&gt; /etc/systemd/system.conf
 echo 'DefaultLimitNOFILE=1055350' &gt;&gt; /etc/systemd/user.conf
-echo &quot;* - nofile 1055350&quot; &gt; /etc/security/limits.d/nofile.conf
-echo &quot;root - nofile 1055350&quot; &gt;&gt; /etc/security/limits.d/nofile.conf
+echo "* - nofile 1055350" &gt; /etc/security/limits.d/nofile.conf
+echo "root - nofile 1055350" &gt;&gt; /etc/security/limits.d/nofile.conf
 
 cat &gt;/etc/sysctl.conf&lt;&lt;EOF
 fs.file-max = 4194303
@@ -107,12 +113,11 @@ net.ipv4.conf.all.accept_source_route = 0
 net.ipv4.tcp_mtu_probing = 1
 fs.inotify.max_user_watches=524288
 EOF
-sysctl -p
-</code></pre>
+sysctl -p</code></pre>
 <h1 id="centos7">Centos7</h1>
 <p>如果出现节点仅收到syn的请求，但是并没有对这些请求做ack响应，则修改如下配置</p>
 <p><code>/etc/sysctl.conf</code></p>
-<pre><code class="language-bash">net.ipv4.tcp_fin_timeout = 2
+<pre class="highlight"><code class="language-bash">net.ipv4.tcp_fin_timeout = 2
 net.ipv4.tcp_tw_reuse = 1
 #net.ipv4.tcp_tw_recycle = 1
 net.ipv4.tcp_tw_recycle = 0
@@ -131,8 +136,8 @@ vm.max_map_count=262144
 fs.file-max=104857600
 net.ipv4.ip_forward=1                      # 1表示开启 0表示关闭
 net.ipv4.conf.default.rp_filter=0     
-net.ipv4.conf.all.rp_filter=0              #控制系统是否开启对数据包源地址的校验
-</code></pre>
+net.ipv4.conf.all.rp_filter=0              #控制系统是否开启对数据包源地址的校验</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

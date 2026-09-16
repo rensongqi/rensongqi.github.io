@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Go 语言</h1>
-  <div class="meta">2026-09-14 · 约 40 字 · 源自 notes-src/go/README.md</div>
+  <div class="meta">2026-09-16 · 约 40 字 · 源自 notes-src/go/README.md</div>
   <div class="doc-tags"><span>#Go 语言</span></div>
 </div>
 
@@ -67,6 +73,12 @@
 
 <main>
 <p>主要记录了go语言中底层的一些知识，包括内存管理、逃逸分析、垃圾回收和一些常见包的使用及分析</p>
+<nav class="doc-attach">
+  <p class="lb">本目录附件</p>
+  <ul>
+    <li><a href="grpc/index.html">grpc/</a><span class="sz">子目录</span></li>
+  </ul>
+</nav>
 <nav class="doc-series">
   <p class="lb">Go 语言 · 同分类笔记</p>
   <ol>

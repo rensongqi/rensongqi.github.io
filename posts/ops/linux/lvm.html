@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>使用lvm根分区扩容</h1>
-  <div class="meta">2026-09-14 · 约 2680 字 · 源自 notes-src/ops/linux/lvm.md</div>
+  <div class="meta">2026-09-16 · 约 2680 字 · 源自 notes-src/ops/linux/lvm.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Linux</span></div>
 </div>
 
@@ -71,15 +77,17 @@
 <li><a href="#lvm合并两块物理磁盘">lvm合并两块物理磁盘</a></li>
 <li><a href="#b盘合并至有数据的a盘parted">B盘合并至有数据的A盘(parted)</a></li>
 <li><a href="#还原lvm合并的磁盘">还原lvm合并的磁盘</a></li>
-<li><a href="#问题记录">问题记录</a></li>
+<li><a href="#问题记录">问题记录</a><ul>
 <li><a href="#gpt-pmbr-size-mismatch-will-be-corrected-by-write错误">GPT PMBR size mismatch will be corrected by write错误</a></li>
 <li><a href="#lvextend之后发现扩容的文件系统不对需要还原">lvextend之后发现扩容的文件系统不对，需要还原</a></li>
+</ul>
+</li>
 </ul>
 
 <blockquote>
 <p>需要把根分区从200G扩容至500G</p>
 </blockquote>
-<pre><code class="language-bash">root@SHJDSMAPGROUP:~# df -h​
+<pre class="highlight"><code class="language-bash">root@SHJDSMAPGROUP:~# df -h​
 Filesystem                         Size  Used Avail Use% Mounted on​
 udev                                32G     0   32G   0% /dev​
 tmpfs                              6.3G  1.3M  6.3G   1% /run​
@@ -89,10 +97,9 @@ tmpfs                              5.0M     0  5.0M   0% /run/lock​
 tmpfs                               32G     0   32G   0% /sys/fs/cgroup​
 /dev/sda2                          976M   80M  829M   9% /boot​
 tmpfs                              6.3G     0  6.3G   0% /run/user/1002​
-tmpfs                              6.3G     0  6.3G   0% /run/user/1001
-</code></pre>
+tmpfs                              6.3G     0  6.3G   0% /run/user/1001</code></pre>
 <p>创建新分区</p>
-<pre><code class="language-bash"># fdisk 创建一个lvm格式分区
+<pre class="highlight"><code class="language-bash"># fdisk 创建一个lvm格式分区
 root@SHJDSMAPGROUP:~# fdisk /dev/sda
  Command (m for help): n
 Partition number (4-128, default 4):  
@@ -134,10 +141,9 @@ root@SHJDSMAPGROUP:~# partprobe
 root@SHJDSMAPGROUP:~# mkfs.ext4 /dev/sda4
 
 # 格式化新分区 Centos7(具体还是看文件系统类型，默认centos是xfs)
-root@SHJDSMAPGROUP:~# mkfs.xfs /dev/sda4
-</code></pre>
+root@SHJDSMAPGROUP:~# mkfs.xfs /dev/sda4</code></pre>
 <p>磁盘扩容</p>
-<pre><code class="language-bash"># 1 查看vgdisplay
+<pre class="highlight"><code class="language-bash"># 1 查看vgdisplay
 root@SHJDSMAPGROUP:~# vgdisplay 
   --- Volume group ---
   VG Name               ubuntu-vg
@@ -162,11 +168,11 @@ root@SHJDSMAPGROUP:~# vgdisplay
 
 # 2 创建pv，把刚才创建的新分区创建为pv
 root@SHJDSMAPGROUP:~# pvcreate /dev/sda4
-  Physical volume &quot;/dev/sda4&quot; successfully created.
+  Physical volume "/dev/sda4" successfully created.
 
 # 3 将新的pv加入到此vg中
 root@SHJDSMAPGROUP:~# vgextend ubuntu-vg /dev/sda4
-  Volume group &quot;ubuntu-vg&quot; successfully extended
+  Volume group "ubuntu-vg" successfully extended
 
 # 4 扩展逻辑虚拟卷lv的容量
 root@SHJDSMAPGROUP:~# lvextend -l +100%FREE /dev/mapper/ubuntu--vg-ubuntu--lv
@@ -191,19 +197,17 @@ tmpfs                              5.0M     0  5.0M   0% /run/lock
 tmpfs                               32G     0   32G   0% /sys/fs/cgroup
 /dev/sda2                          976M   80M  829M   9% /boot
 tmpfs                              6.3G     0  6.3G   0% /run/user/1002
-tmpfs                              6.3G     0  6.3G   0% /run/user/1001
-</code></pre>
+tmpfs                              6.3G     0  6.3G   0% /run/user/1001</code></pre>
 <h1 id="lvm_1">lvm合并两块物理磁盘</h1>
 <blockquote>
 <p>合并<code>/dev/sda</code>和<code>/dev/sdb</code></p>
 </blockquote>
 <p>安装lvm2工具包(如果尚未安装)</p>
-<pre><code class="language-bash">sudo apt install lvm2   # Debian/Ubuntu系统
+<pre class="highlight"><code class="language-bash">sudo apt install lvm2   # Debian/Ubuntu系统
 # 或
-sudo yum install lvm2   # RHEL/CentOS系统
-</code></pre>
+sudo yum install lvm2   # RHEL/CentOS系统</code></pre>
 <p>将硬盘格式化为LVM格式：</p>
-<pre><code class="language-bash"># 使用fdisk创建LVM分区
+<pre class="highlight"><code class="language-bash"># 使用fdisk创建LVM分区
 sudo fdisk /dev/sda
 # 输入n新建分区
 # 输入p创建主分区
@@ -215,60 +219,53 @@ sudo fdisk /dev/sda
 
 # 对sdb重复相同操作
 sudo fdisk /dev/sdb
-
 </code></pre>
 <p>创建物理卷(PV):</p>
-<pre><code class="language-bash">sudo pvcreate /dev/sda1
+<pre class="highlight"><code class="language-bash">sudo pvcreate /dev/sda1
 sudo pvcreate /dev/sdb1
 
 # 检查物理卷
-sudo pvs
-</code></pre>
+sudo pvs</code></pre>
 <p>创建卷组(VG):</p>
-<pre><code class="language-bash"># 创建名为vg_data的卷组，并将第一个物理卷添加进去
+<p><pre class="highlight"><code class="language-bash"># 创建名为vg_data的卷组，并将第一个物理卷添加进去
 sudo vgcreate vg_data /dev/sda1
 
 # 将第二个物理卷扩展到卷组中
 sudo vgextend vg_data /dev/sdb1
 
 # 检查卷组
-sudo vgs
-</code></pre>
-<p>创建逻辑卷(LV):</p>
-<pre><code class="language-bash"># 创建使用全部空间的逻辑卷
+sudo vgs</code></pre>
+创建逻辑卷(LV):</p>
+<p><pre class="highlight"><code class="language-bash"># 创建使用全部空间的逻辑卷
 sudo lvcreate -l 100%VG -n lv_data vg_data
 
 # 检查逻辑卷
-sudo lvs
-</code></pre>
-<p>格式化逻辑卷：</p>
-<pre><code class="language-bash"># 使用ext4文件系统格式化
-sudo mkfs.ext4 /dev/vg_data/lv_data
-</code></pre>
+sudo lvs</code></pre>
+格式化逻辑卷：</p>
+<pre class="highlight"><code class="language-bash"># 使用ext4文件系统格式化
+sudo mkfs.ext4 /dev/vg_data/lv_data</code></pre>
 <p>创建挂载点并挂载：</p>
-<pre><code class="language-bash"># 创建挂载点
+<p><pre class="highlight"><code class="language-bash"># 创建挂载点
 sudo mkdir /data
 
 # 挂载逻辑卷
 sudo mount /dev/vg_data/lv_data /data
 
 # 检查挂载情况
-df -h
-</code></pre>
-<p>设置开机自动挂载：</p>
-<pre><code class="language-bash"># 编辑/etc/fstab文件
+df -h</code></pre>
+设置开机自动挂载：</p>
+<pre class="highlight"><code class="language-bash"># 编辑/etc/fstab文件
 sudo nano /etc/fstab
 
 # 添加以下行
 /dev/vg_data/lv_data /data ext4 defaults 0 0
-
 </code></pre>
 <h1 id="baparted">B盘合并至有数据的A盘(parted)</h1>
 <blockquote>
 <p>/dev/sdc 合并至 /dev/sdb</p>
 </blockquote>
 <p>模拟数据，对/dev/sdb格式化并写入测试数据</p>
-<pre><code class="language-bash"># 分区
+<pre class="highlight"><code class="language-bash"># 分区
 parted /dev/sdb 
 (parted) mklabel gpt            # GPT（即GUID分区表） ， 突破MBR 4个主分区限制
 (parted) mkpart p 0% 100%       # 主分区
@@ -289,10 +286,9 @@ mkfs.xfs /dev/vg_data/lv_data
 
 # 挂载
 mkdir /data
-mount /dev/vg_data/lv_data /data/
-</code></pre>
+mount /dev/vg_data/lv_data /data/</code></pre>
 <p>格式化 /dev/sdc</p>
-<pre><code class="language-bash"># 分区
+<pre class="highlight"><code class="language-bash"># 分区
 parted /dev/sdc
 (parted) mklabel gpt            # GPT（即GUID分区表） ， 突破MBR 4个主分区限制
 (parted) mkpart p 0% 100%       # 主分区
@@ -305,52 +301,46 @@ partprobe    # 重读分区表
 pvcreate /dev/sdc1                # 创建pv
 vgextend vg_data /dev/sdc1        # 把sdc添加上此前创建的vg中
 lvextend -l +100%FREE /dev/mapper/vg_data-lv_data    # 扩展lv
-resize2fs /dev/mapper/vg_data-lv_data   # 在线对逻辑卷进行调整
-</code></pre>
+resize2fs /dev/mapper/vg_data-lv_data   # 在线对逻辑卷进行调整</code></pre>
 <h1 id="lvm_2">还原lvm合并的磁盘</h1>
 <ol>
 <li>卸载逻辑卷</li>
 </ol>
-<pre><code class="language-bash"># 确保没有进程在使用该挂载点
+<pre class="highlight"><code class="language-bash"># 确保没有进程在使用该挂载点
 sudo fuser -km /data
 # 卸载逻辑卷
-sudo umount /data
-</code></pre>
+sudo umount /data</code></pre>
 <ol start="2">
 <li>/etc/fstab中删除自动挂载项</li>
 </ol>
-<pre><code class="language-bash"># 删除包含目标逻辑卷的数据行
-</code></pre>
+<pre class="highlight"><code class="language-bash"># 删除包含目标逻辑卷的数据行</code></pre>
 <ol start="3">
 <li>删除逻辑卷(LV)</li>
 </ol>
-<pre><code class="language-bash"># 查看逻辑卷
+<pre class="highlight"><code class="language-bash"># 查看逻辑卷
 sudo lvs
 # 删除逻辑卷
 sudo lvremove /dev/vg_data/lv_data
-# 确认删除时输入y
-</code></pre>
+# 确认删除时输入y</code></pre>
 <ol start="4">
 <li>删除卷组(VG)</li>
 </ol>
-<pre><code class="language-bash"># 查看卷组
+<pre class="highlight"><code class="language-bash"># 查看卷组
 sudo vgs
 # 删除卷组
-sudo vgremove vg_data
-</code></pre>
+sudo vgremove vg_data</code></pre>
 <ol start="5">
 <li>删除物理卷(PV)</li>
 </ol>
-<pre><code class="language-bash"># 查看物理卷
+<pre class="highlight"><code class="language-bash"># 查看物理卷
 sudo pvs
 # 删除物理卷
 sudo pvremove /dev/sda1
-sudo pvremove /dev/sdb1
-</code></pre>
+sudo pvremove /dev/sdb1</code></pre>
 <ol start="6">
 <li>清除硬盘分区表</li>
 </ol>
-<pre><code class="language-bash"># 对sda进行操作
+<pre class="highlight"><code class="language-bash"># 对sda进行操作
 sudo fdisk /dev/sda
 # 输入d删除分区
 # 输入w保存并退出
@@ -358,30 +348,30 @@ sudo fdisk /dev/sda
 # 对sdb进行操作
 sudo fdisk /dev/sdb
 # 输入d删除分区
-# 输入w保存并退出
-</code></pre>
+# 输入w保存并退出</code></pre>
 <h1 id="_1">问题记录</h1>
 <h2 id="gpt-pmbr-size-mismatch-will-be-corrected-by-write">GPT PMBR size mismatch will be corrected by write错误</h2>
 <blockquote>
 <p>原因：在对虚拟机扩容时候，由于linux系统没有对其磁盘信息进行更新，导致了磁盘实际容量和linux系统容量不一致
 修复</p>
 </blockquote>
-<pre><code class="language-bash"># 执行命令：
+<pre class="highlight"><code class="language-bash"># 执行命令：
 sudo parted -l
 
 # 然后输入：
-Fix
-</code></pre>
+Fix</code></pre>
 <h2 id="lvextend">lvextend之后发现扩容的文件系统不对，需要还原</h2>
 <blockquote>
 <p>根分区有1.75TB实际可用空间，需要把多余的两块8T的盘加入根分区，在lvextend之后发现原来8T的盘被格式化为ext4，然后根分区是xfs文件系统，这会导致xfs_growfs resizefs的时候报错，所以需要把加入的两个pv，分别是/dev/sda1和/dev/sdb1给删掉。</p>
 </blockquote>
 <p>修复</p>
 <blockquote>
-<p>需要按照以下步骤严格执行，否则会造成文件系统错误
-1. 查看现有vg状态，使用命令：vgdisplay</p>
+<p>需要按照以下步骤严格执行，否则会造成文件系统错误</p>
 </blockquote>
-<pre><code class="language-bash">[root@hadoop111 ~]# vgdisplay                                             
+<ol>
+<li>查看现有vg状态，使用命令：vgdisplay</li>
+</ol>
+<pre class="highlight"><code class="language-bash">[root@hadoop111 ~]# vgdisplay                                             
   --- Volume group ---
   VG Name               centos
   System ID             
@@ -401,12 +391,11 @@ Fix
   Total PE              4120269
   Alloc PE / Size       4120269 / &lt;15.72 TiB
   Free  PE / Size       0 / 0   
-  VG UUID               3Z4pzJ-iXuk-RuhH-UU2w-JCZR-1Khy-ir35yb
-</code></pre>
+  VG UUID               3Z4pzJ-iXuk-RuhH-UU2w-JCZR-1Khy-ir35yb</code></pre>
 <ol start="2">
 <li>需要找出之前的状态，查看之前的数据盘大小，翻历史记录发现之前的大小是1.75TB，这时候需要缩小lv的大小为1.7TB，保证有充足的扇区可以还原给/dev/sda1和/dev/sdb1</li>
 </ol>
-<pre><code class="language-bash">  [root@hadoop112 ~]# vgdisplay 
+<pre class="highlight"><code class="language-bash">  [root@hadoop112 ~]# vgdisplay 
   --- Volume group ---
   VG Name               centos
   System ID             
@@ -426,13 +415,12 @@ Fix
   Total PE              457445
   Alloc PE / Size       457445 / &lt;1.75 TiB
   Free  PE / Size       0 / 0   
-  VG UUID               xDwaya-VH9C-wqLh-m2I3-j0SB-7Obe-cH53fK
-</code></pre>
+  VG UUID               xDwaya-VH9C-wqLh-m2I3-j0SB-7Obe-cH53fK</code></pre>
 <ol start="3">
 <li>缩小根分区lv大小，使用命令：lvreduce -L 1.7T /dev/mapper/centos-root
 执行完命令之后再查看下vg，需要保证Alloc PE / Size的值小于等于原来的457445</li>
 </ol>
-<pre><code class="language-bash">[root@hadoop111 ~]# lvreduce -L 1.7T /dev/mapper/centos-root
+<pre class="highlight"><code class="language-bash">[root@hadoop111 ~]# lvreduce -L 1.7T /dev/mapper/centos-root
   Rounding size to boundary between physical extents: 1.70 TiB.
   WARNING: Reducing active and open logical volume to 1.70 TiB.
   THIS MAY DESTROY YOUR DATA (filesystem etc.)
@@ -461,38 +449,34 @@ Do you really want to reduce centos/root? [y/n]: y
   Total PE              2288857
   Alloc PE / Size       446669 / 1.70 TiB
   Free  PE / Size       1842188 / &lt;7.03 TiB
-  VG UUID               3Z4pzJ-iXuk-RuhH-UU2w-JCZR-1Khy-ir35yb
-</code></pre>
+  VG UUID               3Z4pzJ-iXuk-RuhH-UU2w-JCZR-1Khy-ir35yb</code></pre>
 <ol start="4">
 <li>还原/dev/sda1和/dev/sdb1的pv大小为默认的</li>
 </ol>
-<pre><code class="language-bash">[root@hadoop111 ~]# pvresize /dev/sda1
-  Physical volume &quot;/dev/sda1&quot; changed
+<pre class="highlight"><code class="language-bash">[root@hadoop111 ~]# pvresize /dev/sda1
+  Physical volume "/dev/sda1" changed
   1 physical volume(s) resized or updated / 0 physical volume(s) not resized
 [root@hadoop111 ~]# pvresize /dev/sdb1
-  Physical volume &quot;/dev/sdb1&quot; changed
-  1 physical volume(s) resized or updated / 0 physical volume(s) not resized
-</code></pre>
+  Physical volume "/dev/sdb1" changed
+  1 physical volume(s) resized or updated / 0 physical volume(s) not resized</code></pre>
 <ol start="5">
 <li>把原来vgextend的两块盘去掉</li>
 </ol>
-<pre><code class="language-bash">[root@hadoop111 ~]# vgreduce centos /dev/sda1
-  Removed &quot;/dev/sda1&quot; from volume group &quot;centos&quot;
+<pre class="highlight"><code class="language-bash">[root@hadoop111 ~]# vgreduce centos /dev/sda1
+  Removed "/dev/sda1" from volume group "centos"
 [root@hadoop111 ~]# vgreduce centos /dev/sdb1
-  Removed &quot;/dev/sdb1&quot; from volume group &quot;centos&quot;
-</code></pre>
+  Removed "/dev/sdb1" from volume group "centos"</code></pre>
 <ol start="6">
 <li>删除pv</li>
 </ol>
-<pre><code class="language-bash">[root@hadoop111 ~]# pvremove /dev/sda1
-  Labels on physical volume &quot;/dev/sda1&quot; successfully wiped.
+<pre class="highlight"><code class="language-bash">[root@hadoop111 ~]# pvremove /dev/sda1
+  Labels on physical volume "/dev/sda1" successfully wiped.
 [root@hadoop111 ~]# pvremove /dev/sdb1
-  Labels on physical volume &quot;/dev/sdb1&quot; successfully wiped.
-</code></pre>
+  Labels on physical volume "/dev/sdb1" successfully wiped.</code></pre>
 <ol start="7">
 <li>扩容根分区为它原本的最大空间</li>
 </ol>
-<pre><code class="language-bash">[root@hadoop111 ~]# lvextend -l +100%FREE /dev/mapper/centos-root
+<pre class="highlight"><code class="language-bash">[root@hadoop111 ~]# lvextend -l +100%FREE /dev/mapper/centos-root
   Size of logical volume centos/root changed from 1.70 TiB (445645 extents) to 1.74 TiB (456421 extents).
   Logical volume centos/root successfully resized.
 [root@hadoop111 ~]# vgdisplay 
@@ -526,8 +510,8 @@ data     =                       bsize=4096   blocks=467375104, imaxpct=5
 naming   =version 2              bsize=4096   ascii-ci=0 ftype=1
 log      =internal               bsize=4096   blocks=228224, version=2
          =                       sectsz=512   sunit=64 blks, lazy-count=1
-realtime =none                   extsz=4096   blocks=0, rtextents=0
-</code></pre>
+realtime =none                   extsz=4096   blocks=0, rtextents=0</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

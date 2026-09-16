@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Windows</h1>
-  <div class="meta">2026-09-14 · 约 1000 字 · 源自 notes-src/ops/windows/README.md</div>
+  <div class="meta">2026-09-16 · 约 1000 字 · 源自 notes-src/ops/windows/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Windows</span></div>
 </div>
 
@@ -67,11 +73,13 @@
 <nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1">1 批处理脚本</a></li><li class="l3"><a href="#11-if">1.1 if 判断</a></li><li class="l3"><a href="#12-for">1.2 for 循环</a></li><li class="l3"><a href="#13">1.3 函数调用</a></li><li class="l3"><a href="#14">1.4 常用语句</a></li></ul></nav>
 <main>
 <ul>
-<li><a href="#1-批处理脚本">1 批处理脚本</a></li>
+<li><a href="#1-批处理脚本">1 批处理脚本</a><ul>
 <li><a href="#11-if-判断">1.1 if 判断</a></li>
 <li><a href="#12-for-循环">1.2 for 循环</a></li>
 <li><a href="#13-函数调用">1.3 函数调用</a></li>
 <li><a href="#14-常用语句">1.4 常用语句</a></li>
+</ul>
+</li>
 </ul>
 <h1 id="1">1 批处理脚本</h1>
 <table>
@@ -156,7 +164,7 @@
 </tbody>
 </table>
 <p><strong>xcopy</strong></p>
-<pre><code class="language-bat">@REM windows打开xcopy需要在环境变量中添加如下条目
+<pre class="highlight"><code class="language-bat">@REM windows打开xcopy需要在环境变量中添加如下条目
 @REM C:\WINDOWS\SYSTEM32\XCOPY.EXE
 
 @REM 无论是拷贝文件或是拷贝目录，都需要指定拷贝目标文件名或目录名
@@ -164,28 +172,26 @@
 echo f | xcopy /y E:\mussy\test1\ceshi.txt E:\mussy\test2\ceshi222.txt
 
 @REM 拷贝目录
-echo d | xcopy /y E:\mussy\test1\ E:\mussy\test2\test1
-</code></pre>
+echo d | xcopy /y E:\mussy\test1\ E:\mussy\test2\test1</code></pre>
 <p><strong>mklink</strong></p>
-<pre><code class="language-bat">@REM 为目录创建软链接
+<pre class="highlight"><code class="language-bat">@REM 为目录创建软链接
 mklink /j link E:\mussy\test1\link
 
 @REM 为文件创建链接
 mklink ceshi.txt E:\mussy\test1\ceshi.txt
 
 @REM 为文件创建硬链接
-mklink /H ceshi.txt E:\mussy\test1\ceshi.txt
-</code></pre>
+mklink /H ceshi.txt E:\mussy\test1\ceshi.txt</code></pre>
 <p><strong>set</strong></p>
-<pre><code class="language-bat">@REM 设置环境变量
+<pre class="highlight"><code class="language-bat">@REM 设置环境变量
 set path=dst=E:\\test
 set folders=test1 test2 test3 test4
 
 @REM 把用户的输入作为值传给变量
 @echo off
 set /p input=请输入字母A或B:
-if &quot;%input%&quot;==&quot;A&quot; goto A
-if &quot;%input%&quot;==&quot;B&quot; goto B
+if "%input%"=="A" goto A
+if "%input%"=="B" goto B
 pause
 exit
 
@@ -197,10 +203,9 @@ exit
 :B
 echo 您输入的字母是B
 pause
-exit
-</code></pre>
+exit</code></pre>
 <h2 id="11-if">1.1 if 判断</h2>
-<pre><code class="language-bat">@REM 一行实现
+<pre class="highlight"><code class="language-bat">@REM 一行实现
 if exist release-dev\\Unreal\\SimOne\\SimOne.uproject del /F  /Q release-dev\\Unreal\\SimOne\\SimOne.uproject
 
 @REM 多行实现
@@ -208,11 +213,10 @@ for %%a in (%folders%) do (
     if not exist %dst%\%%a (
         md %dst%\%%a
     )
-)
-</code></pre>
+)</code></pre>
 <h2 id="12-for">1.2 for 循环</h2>
 <p>参考文章：<a href="https://www.cnblogs.com/kevin-yuan/p/3641847.html">bat命令之for命令详解 </a></p>
-<pre><code class="language-bat">set folders=test1 test2 test3 test4
+<pre class="highlight"><code class="language-bat">set folders=test1 test2 test3 test4
 set dst=E:\\test
 @REM 循环创建目录 一行实现
 for %%a in (%folders%) do (md %dst%\\%%a)
@@ -223,9 +227,9 @@ for %%a in (%folders%) do (
 )
 
 @REM 搜索当前目录下有哪些文件
-for %%i in (*.*) do echo &quot;%%i&quot;
+for %%i in (*.*) do echo "%%i"
 
-@REM 打印文件中的内容 默认以&quot; &quot;为分隔符，且只会打印每行分隔符之前的第一列
+@REM 打印文件中的内容 默认以" "为分隔符，且只会打印每行分隔符之前的第一列
 set variable=E:\\test\test.txt
 @REM 文件内容如下
 ::This is a new world
@@ -237,13 +241,12 @@ for /f %%a in (%variable%) do (
 )
 
 @REM 指定分隔符
-for /f &quot;delims=\n&quot; %%a in (%variable%) do (
+for /f "delims=\n" %%a in (%variable%) do (
     echo %%a
-)
-</code></pre>
+)</code></pre>
 <h2 id="13">1.3 函数调用</h2>
 <p>批处理脚本中函数是以:实现的，简单函数如下</p>
-<pre><code class="language-bat">@echo off
+<pre class="highlight"><code class="language-bat">@echo off
 :funcA
     echo This is A
 
@@ -252,10 +255,9 @@ for /f &quot;delims=\n&quot; %%a in (%variable%) do (
 
 @REM 由于bat脚本是行运行，所以俩函数都会被输出，输出结果如下
 This is A
-This is B
-</code></pre>
+This is B</code></pre>
 <p>如果想控制只输出某一个函数，则应该如下</p>
-<pre><code class="language-bat">@echo off
+<pre class="highlight"><code class="language-bat">@echo off
 call :funcB
 goto:eof
 
@@ -271,15 +273,14 @@ goto:eof
 This is B
 @REM 如果call调用完B函数，后边没有加goto:eof，那么则A函数也会被调用一次，因为bat是按行处理的，这种情况下输出如下
 This is B
-This is A
-</code></pre>
+This is A</code></pre>
 <h2 id="14">1.4 常用语句</h2>
-<pre><code class="language-bat">@echo off ---&gt; 关闭回显，默认是on
+<pre class="highlight"><code class="language-bat">@echo off ---&gt; 关闭回显，默认是on
 
 %~dp0 ---&gt; 更改当前目录为批处理本身的目录 (https://blog.csdn.net/qq_22642239/article/details/88549969)
 
-goto:eof ---&gt; CMD返回并将等待下一条命令
-</code></pre>
+goto:eof ---&gt; CMD返回并将等待下一条命令</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Access K8s API by Curl</h1>
-  <div class="meta">2026-09-14 · 约 220 字 · 源自 notes-src/ops/k8s/access_k8s_api_by_curl.md</div>
+  <div class="meta">2026-09-16 · 约 220 字 · 源自 notes-src/ops/k8s/access_k8s_api_by_curl.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Kubernetes</span></div>
 </div>
 
@@ -68,7 +74,7 @@
 <main>
 <h1 id="1-token">1 创建Token</h1>
 <p><strong>devops_admin_token.yaml</strong></p>
-<pre><code class="language-yaml"># Create ServiceAccount
+<pre class="highlight"><code class="language-yaml"># Create ServiceAccount
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -87,26 +93,22 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: devops-admin
-  namespace: default
-</code></pre>
+  namespace: default</code></pre>
 <p>kubectl apply -f devops_admin_token.yaml</p>
 <h1 id="2-token">2 获取Token</h1>
 <p>根据自己创建ClusterRoleBinding所选的Namespace去查找Secret，然后截取Token</p>
-<pre><code class="language-bash">TOKEN=$(kubectl describe secret `kubectl get secret -ndefault | grep devops-admin | awk '{print $1}'` | grep token: | awk '{print $NF}')
-</code></pre>
+<pre class="highlight"><code class="language-bash">TOKEN=$(kubectl describe secret `kubectl get secret -ndefault | grep devops-admin | awk '{print $1}'` | grep token: | awk '{print $NF}')</code></pre>
 <h1 id="3-api">3 访问API</h1>
 <p>（1）查询pod日志</p>
-<pre><code class="language-bash">curl -H &quot;Authorization: Bearer $TOKEN&quot; https://192.168.1.1:6443/api/v1/namespaces/scr/pods/log-85bb949cd-m546t/log/ --insecure
-</code></pre>
+<pre class="highlight"><code class="language-bash">curl -H "Authorization: Bearer $TOKEN" https://192.168.1.1:6443/api/v1/namespaces/scr/pods/log-85bb949cd-m546t/log/ --insecure</code></pre>
 <p>（2）查询所有namespace</p>
-<pre><code class="language-bash">curl -H &quot;Authorization: Bearer $TOKEN&quot; https://192.168.1.1:6443/api/v1/namespaces/ --insecure
-</code></pre>
+<pre class="highlight"><code class="language-bash">curl -H "Authorization: Bearer $TOKEN" https://192.168.1.1:6443/api/v1/namespaces/ --insecure</code></pre>
 <p>（3）查询一个namespace下所有的pod</p>
-<pre><code class="language-bash">curl -H &quot;Authorization: Bearer $TOKEN&quot; https://192.168.1.1:6443/api/v1/namespaces/scr/pods --insecure
-</code></pre>
+<pre class="highlight"><code class="language-bash">curl -H "Authorization: Bearer $TOKEN" https://192.168.1.1:6443/api/v1/namespaces/scr/pods --insecure</code></pre>
 <p><strong>参考文章：</strong> </p>
 <p><a href="https://developer.aliyun.com/article/706210">（1）如何使用curl访问k8s的apiserver</a></p>
 <p><a href="https://kubernetes.io/zh/docs/reference/using-api/#api-versioning">（2）K8s API概述</a></p>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

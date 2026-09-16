@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>nfpm是一款构建deb或rpm安装包工具</h1>
-  <div class="meta">2026-09-14 · 约 300 字 · 源自 notes-src/ops/nfpm/README.md</div>
+  <div class="meta">2026-09-16 · 约 300 字 · 源自 notes-src/ops/nfpm/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#nfpm</span></div>
 </div>
 
@@ -74,59 +80,54 @@
 <ol>
 <li>go install</li>
 </ol>
-<pre><code class="language-bash">go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
-</code></pre>
+<pre class="highlight"><code class="language-bash">go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest</code></pre>
 <ol start="2">
 <li>apt install</li>
 </ol>
-<pre><code class="language-bash">echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+<pre class="highlight"><code class="language-bash">echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
 sudo apt update
-sudo apt install nfpm
-</code></pre>
+sudo apt install nfpm</code></pre>
 <ol start="3">
 <li>manually install</li>
 </ol>
-<pre><code class="language-bash">https://github.com/goreleaser/nfpm/releases
-</code></pre>
+<pre class="highlight"><code class="language-bash">https://github.com/goreleaser/nfpm/releases</code></pre>
 <h1 id="_1">详细配置</h1>
-<pre><code class="language-bash">mkdir /data/custom_process
+<pre class="highlight"><code class="language-bash">mkdir /data/custom_process
 cd /data/custom_process 
 
 # 可以使用如下命令初始化一个打包deb的配置清单
-nfpm init
-</code></pre>
+nfpm init</code></pre>
 <p>nfpm.yaml</p>
 <blockquote>
 <p>如下配置文件会将指定的二进制程序  custom_process 拷贝至 /usr/local/bin/ 且文件权限会被改成755</p>
 </blockquote>
-<pre><code class="language-yaml"># nfpm example configuration file
+<pre class="highlight"><code class="language-yaml"># nfpm example configuration file
 #
 # check https://nfpm.goreleaser.com/configuration for detailed usage
 #
-name: &quot;custom_process&quot;
-arch: &quot;amd64&quot;
-platform: &quot;linux&quot;
-version: &quot;1.0.0&quot;
-section: &quot;default&quot;
-priority: &quot;extra&quot;
-maintainer: &quot;Rensongqi &lt;rensongqi@rsq.com&gt;&quot;
+name: "custom_process"
+arch: "amd64"
+platform: "linux"
+version: "1.0.0"
+section: "default"
+priority: "extra"
+maintainer: "Rensongqi &lt;rensongqi@rsq.com&gt;"
 description: |
   custom_process linux and64 binary
 contents:
 - src: custom_process
   dst: /usr/local/bin/custom_process
   file_info:
-    mode: 0755
-</code></pre>
+    mode: 0755</code></pre>
 <h1 id="deb">构建deb包</h1>
-<pre><code class="language-bash"># 在目录/data/custom_process下执行如下命令， build deb包，将生成的deb包放到/tmp/目录下
+<pre class="highlight"><code class="language-bash"># 在目录/data/custom_process下执行如下命令， build deb包，将生成的deb包放到/tmp/目录下
 nfpm pkg --packager deb --target /tmp/
 
 # 如果是rpm包，则执行如下命令
-nfpm pkg --packager rpm --target /tmp/
-</code></pre>
+nfpm pkg --packager rpm --target /tmp/</code></pre>
 <h1 id="_2">使用自定义源</h1>
 <p>参考此前的文章 <a href="../linux/ubuntu-private-repo.html">ubuntu private repo</a></p>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

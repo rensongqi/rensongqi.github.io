@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Kubernetes · KubeSphere Deploy</h1>
-  <div class="meta">2026-09-14 · 约 1730 字 · 源自 notes-src/ops/k8s/kubesphere_deploy.md</div>
+  <div class="meta">2026-09-16 · 约 1730 字 · 源自 notes-src/ops/k8s/kubesphere_deploy.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Kubernetes</span></div>
 </div>
 
@@ -123,7 +129,7 @@
 <p>这里我用的ansible来批量部署初始化集群，ansible配置在 芜湖R750 那台机器
 系统的初始化包括防火墙、hosts文件都已经集成在ansible中</p>
 <h3 id="11-hosts">1.1 修改hosts文件</h3>
-<pre><code class="language-bash"># vim /etc/ansible/hosts
+<pre class="highlight"><code class="language-bash"># vim /etc/ansible/hosts
 [master]
 172.16.0.50 node_name=master
 
@@ -142,11 +148,10 @@
 172.16.0.58 node_name=node08
 172.16.0.59 node_name=node09
 172.16.0.60 node_name=node10
-172.16.0.61 node_name=node11
-</code></pre>
+172.16.0.61 node_name=node11</code></pre>
 <h3 id="12-group_vars">1.2 修改group_vars</h3>
 <p>安装k8s版本和网络插件自定义即可</p>
-<pre><code class="language-bash"># vim /etc/ansible/group_vars/all.yml
+<pre class="highlight"><code class="language-bash"># vim /etc/ansible/group_vars/all.yml
 # k8s version [1.18.3/1.19.4/...]
 # 支持大多数版本
 k8s_version: '1.22.10'
@@ -169,22 +174,20 @@ hosts:
     - '172.16.0.58'
     - '172.16.0.59'
     - '172.16.0.60'
-    - '172.16.0.61'
-</code></pre>
+    - '172.16.0.61'</code></pre>
 <h3 id="13-k8s">1.3 部署k8s集群</h3>
 <p>以root用户执行如下命令</p>
-<pre><code># cd /etc/ansible/
-ansible-playbook k8s_single_master_install.yml
-</code></pre>
+<pre class="highlight"><code># cd /etc/ansible/
+ansible-playbook k8s_single_master_install.yml</code></pre>
 <h2 id="2-nfsstorageclass">2 配置nfs和storageClass</h2>
 <h3 id="21-nfs-server">2.1 nfs server配置如下</h3>
-<pre><code class="language-bash"># 1. 在每个机器内执行
+<pre class="highlight"><code class="language-bash"># 1. 在每个机器内执行
 yum install -y nfs-utils
 # 用ansible操作命令如下
-ansible all -m yum -a &quot;name=nfs-utils state=latest&quot;
+ansible all -m yum -a "name=nfs-utils state=latest"
 
 # 2. 在nfs server上执行以下命令 
-echo &quot;/home/data/ *(insecure,rw,sync,no_root_squash)&quot; &gt; /etc/exports
+echo "/home/data/ *(insecure,rw,sync,no_root_squash)" &gt; /etc/exports
 
 # 3. 在nfs server执行
 systemctl enable rpcbind
@@ -196,29 +199,26 @@ systemctl start nfs-server
 exportfs -r
 
 # 5. 在nfs server执行 检查配置是否生效
-exportfs
-</code></pre>
+exportfs</code></pre>
 <h3 id="22-nfs-client">2.2 nfs client配置如下</h3>
-<pre><code class="language-bash"># 1. 没台client机器均需要创建挂在的目录
-ansible all -m shell -a &quot;mkdir /data&quot;
+<pre class="highlight"><code class="language-bash"># 1. 没台client机器均需要创建挂在的目录
+ansible all -m shell -a "mkdir /data"
 # 2. 用ansible对所有的node节点进行nfs 挂载
-ansible nfs -m shell -a &quot;echo '172.16.0.52:/home/data /data nfs defaults 0 0' &gt;&gt;/etc/fstab&quot;
-ansible nfs -m shell -a &quot;mount -a&quot;
-</code></pre>
+ansible nfs -m shell -a "echo '172.16.0.52:/home/data /data nfs defaults 0 0' &gt;&gt;/etc/fstab"
+ansible nfs -m shell -a "mount -a"</code></pre>
 <h3 id="23-nfs-storageclass">2.3 创建nfs storageclass</h3>
-<pre><code class="language-bash">kubectl apply -f nfs.yaml
-</code></pre>
-<p>yaml文件如下:</p>
-<pre><code class="language-yaml">## 创建了一个存储类
+<p><pre class="highlight"><code class="language-bash">kubectl apply -f nfs.yaml</code></pre>
+yaml文件如下:</p>
+<pre class="highlight"><code class="language-yaml">## 创建了一个存储类
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: nfs-storage
   annotations:
-    storageclass.kubernetes.io/is-default-class: &quot;true&quot;
+    storageclass.kubernetes.io/is-default-class: "true"
 provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
 parameters:
-  archiveOnDelete: &quot;true&quot;  ## 删除pv的时候，pv的内容是否要备份
+  archiveOnDelete: "true"  ## 删除pv的时候，pv的内容是否要备份
 
 ---
 apiVersion: apps/v1
@@ -278,21 +278,21 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: nfs-client-provisioner-runner
 rules:
-  - apiGroups: [&quot;&quot;]
-    resources: [&quot;nodes&quot;]
-    verbs: [&quot;get&quot;, &quot;list&quot;, &quot;watch&quot;]
-  - apiGroups: [&quot;&quot;]
-    resources: [&quot;persistentvolumes&quot;]
-    verbs: [&quot;get&quot;, &quot;list&quot;, &quot;watch&quot;, &quot;create&quot;, &quot;delete&quot;]
-  - apiGroups: [&quot;&quot;]
-    resources: [&quot;persistentvolumeclaims&quot;]
-    verbs: [&quot;get&quot;, &quot;list&quot;, &quot;watch&quot;, &quot;update&quot;]
-  - apiGroups: [&quot;storage.k8s.io&quot;]
-    resources: [&quot;storageclasses&quot;]
-    verbs: [&quot;get&quot;, &quot;list&quot;, &quot;watch&quot;]
-  - apiGroups: [&quot;&quot;]
-    resources: [&quot;events&quot;]
-    verbs: [&quot;create&quot;, &quot;update&quot;, &quot;patch&quot;]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "update", "patch"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -315,9 +315,9 @@ metadata:
   # replace with namespace where provisioner is deployed
   namespace: default
 rules:
-  - apiGroups: [&quot;&quot;]
-    resources: [&quot;endpoints&quot;]
-    verbs: [&quot;get&quot;, &quot;list&quot;, &quot;watch&quot;, &quot;create&quot;, &quot;update&quot;, &quot;patch&quot;]
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -333,13 +333,11 @@ subjects:
 roleRef:
   kind: Role
   name: leader-locking-nfs-client-provisioner
-  apiGroup: rbac.authorization.k8s.io
-</code></pre>
+  apiGroup: rbac.authorization.k8s.io</code></pre>
 <h2 id="3-metrics-server">3 部署metrics-server</h2>
-<pre><code class="language-bash">kubectl apply -f metrics-server.yaml
-</code></pre>
-<p>yaml文件如下:</p>
-<pre><code class="language-yaml">apiVersion: v1
+<p><pre class="highlight"><code class="language-bash">kubectl apply -f metrics-server.yaml</code></pre>
+yaml文件如下:</p>
+<pre class="highlight"><code class="language-yaml">apiVersion: v1
 kind: ServiceAccount
 metadata:
   labels:
@@ -352,9 +350,9 @@ kind: ClusterRole
 metadata:
   labels:
     k8s-app: metrics-server
-    rbac.authorization.k8s.io/aggregate-to-admin: &quot;true&quot;
-    rbac.authorization.k8s.io/aggregate-to-edit: &quot;true&quot;
-    rbac.authorization.k8s.io/aggregate-to-view: &quot;true&quot;
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
   name: system:aggregated-metrics-reader
 rules:
 - apiGroups:
@@ -375,7 +373,7 @@ metadata:
   name: system:metrics-server
 rules:
 - apiGroups:
-  - &quot;&quot;
+  - ""
   resources:
   - pods
   - nodes
@@ -525,40 +523,36 @@ spec:
     name: metrics-server
     namespace: kube-system
   version: v1beta1
-  versionPriority: 100
-</code></pre>
+  versionPriority: 100</code></pre>
 <h2 id="4-kubesphere">4 部署Kubesphere</h2>
 <ol>
-<li>
-<p>配置文件如下：
-- <a href="https://lpq-k8s.oss-cn-hangzhou.aliyuncs.com/kubesphere-installer.yaml">kubesphere-installer.yaml</a>
-- <a href="https://lpq-k8s.oss-cn-hangzhou.aliyuncs.com/cluster-configuration.yaml">cluster-configuration.yaml</a></p>
-</li>
-<li>
-<p>修改cluster-configuration.yaml</p>
-</li>
+<li>配置文件如下：</li>
+</ol>
+<ul>
+<li><a href="../../../assets/attachments/kubesphere-installer-lpq-k8s-oss-cn-hangzhou--888c9c.yaml">kubesphere-installer.yaml</a></li>
+<li><a href="../../../assets/attachments/cluster-configuration-lpq-k8s-oss-cn-hangzhou--ed201f.yaml">cluster-configuration.yaml</a></li>
+</ul>
+<ol start="2">
+<li>修改cluster-configuration.yaml</li>
 </ol>
 <p>将文件内172.31.0.4 全局替换为自己master节点的IP地址</p>
 <ol start="3">
 <li>部署KubeSphere</li>
 </ol>
-<pre><code class="language-bash">kubectl apply -f kubesphere-installer.yaml
-kubectl apply -f cluster-configuration.yaml
-</code></pre>
+<pre class="highlight"><code class="language-bash">kubectl apply -f kubesphere-installer.yaml
+kubectl apply -f cluster-configuration.yaml</code></pre>
 <ol start="4">
 <li>查看安装进度</li>
 </ol>
-<pre><code class="language-bash">kubectl logs -n kubesphere-system $(kubectl get pod -n kubesphere-system -l app=ks-install -o jsonpath='{.items[0].metadata.name}') -f
-</code></pre>
+<pre class="highlight"><code class="language-bash">kubectl logs -n kubesphere-system $(kubectl get pod -n kubesphere-system -l app=ks-install -o jsonpath='{.items[0].metadata.name}') -f</code></pre>
 <ol start="5">
 <li>如果有etcd监控证书找不到的bug，执行如下命令</li>
 </ol>
-<pre><code class="language-bash">kubectl -n kubesphere-monitoring-system create secret generic kube-etcd-client-certs  --from-file=etcd-client-ca.crt=/etc/kubernetes/pki/etcd/ca.crt  --from-file=etcd-client.crt=/etc/kubernetes/pki/apiserver-etcd-client.crt  --from-file=etcd-client.key=/etc/kubernetes/pki/apiserver-etcd-client.key
-</code></pre>
+<pre class="highlight"><code class="language-bash">kubectl -n kubesphere-monitoring-system create secret generic kube-etcd-client-certs  --from-file=etcd-client-ca.crt=/etc/kubernetes/pki/etcd/ca.crt  --from-file=etcd-client.crt=/etc/kubernetes/pki/apiserver-etcd-client.crt  --from-file=etcd-client.key=/etc/kubernetes/pki/apiserver-etcd-client.key</code></pre>
 <ol start="6">
 <li>部署成功后log输出如下</li>
 </ol>
-<pre><code class="language-bash">Collecting installation results ...
+<pre class="highlight"><code class="language-bash">Collecting installation results ...
 #####################################################
 ###              Welcome to KubeSphere!           ###
 #####################################################
@@ -570,16 +564,16 @@ Password: P@88w0rd
 NOTES：
   1. After you log into the console, please check the
      monitoring status of service components in
-     &quot;Cluster Management&quot;. If any service is not
+     "Cluster Management". If any service is not
      ready, please wait patiently until all components 
      are up and running.
   2. Please change the default password after login.
 
 #####################################################
 https://kubesphere.io             2022-05-30 13:50:14
-#####################################################
-</code></pre>
+#####################################################</code></pre>
 <p>参考博客：<a href="https://blog.csdn.net/baidu_41860619/article/details/124920503">k8s与kubesphere安装</a></p>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

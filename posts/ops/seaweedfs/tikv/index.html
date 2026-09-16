@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>使用Tikv作为Filer 的store</h1>
-  <div class="meta">2026-09-14 · 约 1130 字 · 源自 notes-src/ops/seaweedfs/tikv/README.md</div>
+  <div class="meta">2026-09-16 · 约 1130 字 · 源自 notes-src/ops/seaweedfs/tikv/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#SeaweedFS</span><span>#TiKV</span></div>
 </div>
 
@@ -72,39 +78,38 @@
 <ul>
 <li><a href="https://docs.pingcap.com/zh/tidb/dev/production-deployment-using-tiup/">使用 TiUP 部署 TiDB 集群</a></li>
 </ul>
-<p>如果网络受限的情况下推荐使用离线部署很方便，注意事项
-1. Tikv集群之间需要进行ssh免密，主控机建议选择Tikv集群中某个节点即可</p>
+<p>如果网络受限的情况下推荐使用离线部署很方便，注意事项</p>
+<ol>
+<li>Tikv集群之间需要进行ssh免密，主控机建议选择Tikv集群中某个节点即可</li>
+</ol>
 <p>`</p>
 <blockquote>
 <p>在<a href="https://cn.pingcap.com/product-community/?_gl=1*20ofaf*_gcl_au*ODU5MzQ5MTcwLjE3NDIyODE1MTk.*_ga*Nzc3NDg2Njg0LjE3NDIyODE1MTk.*_ga_3JVXJ41175*MTc0MjQ1NjU1Ny40LjEuMTc0MjQ1NjU2NC41My4wLjE1ODU1NDQ2Nzc.*_ga_CPG2VW1Y41*MTc0MjQ1NjYwMy42LjAuMTc0MjQ1NjYwMy4wLjAuMA..">官方下载页面</a>选择对应版本的 TiDB server 离线镜像包（包含 TiUP 离线组件包）。需要同时下载 TiDB-community-server 软件包和 TiDB-community-toolkit 软件包。</p>
 </blockquote>
 <p>如下操作均在主控机执行</p>
-<pre><code class="language-bash"># 执行以下命令安装 TiUP 组件
+<p><pre class="highlight"><code class="language-bash"># 执行以下命令安装 TiUP 组件
 # local_install.sh 脚本会自动执行 tiup mirror set tidb-community-server-${version}-linux-amd64 命令将当前镜像地址设置为 tidb-community-server-${version}-linux-amd64。
 version=v8.5.1
 tar xzvf tidb-community-server-${version}-linux-amd64.tar.gz &amp;&amp; \
 sh tidb-community-server-${version}-linux-amd64/local_install.sh &amp;&amp; \
-source /home/&lt;user&gt;/.bash_profile
-</code></pre>
-<p>合并离线包</p>
-<pre><code class="language-bash">tar xf tidb-community-toolkit-${version}-linux-amd64.tar.gz
+source /home/&lt;user&gt;/.bash_profile</code></pre>
+合并离线包</p>
+<pre class="highlight"><code class="language-bash">tar xf tidb-community-toolkit-${version}-linux-amd64.tar.gz
 ls -ld tidb-community-server-${version}-linux-amd64 tidb-community-toolkit-${version}-linux-amd64
 cd tidb-community-server-${version}-linux-amd64/
 cp -rp keys ~/.tiup/
-tiup mirror merge ../tidb-community-toolkit-${version}-linux-amd64
-</code></pre>
+tiup mirror merge ../tidb-community-toolkit-${version}-linux-amd64</code></pre>
 <p>初始化集群配置文件</p>
-<pre><code class="language-bash">tiup cluster template &gt; topology.yaml
-</code></pre>
+<pre class="highlight"><code class="language-bash">tiup cluster template &gt; topology.yaml</code></pre>
 <p>如果仅安装Tikv可参考如下配置 <code>topology.yaml</code></p>
 <blockquote>
 <p>Tiup工具会在配置文件中不同服务器上安装指定的服务应用</p>
 </blockquote>
-<pre><code class="language-yaml">global:
-  user: &quot;root&quot;
+<pre class="highlight"><code class="language-yaml">global:
+  user: "root"
   ssh_port: 22
-  deploy_dir: &quot;/data/tikv/deploy&quot;
-  data_dir: &quot;/data/tikv/data&quot;
+  deploy_dir: "/data/tikv/deploy"
+  data_dir: "/data/tikv/data"
 
 pd_servers:
   - host: 172.16.9.175
@@ -123,48 +128,37 @@ grafana_servers:
   - host: 172.16.9.177
 
 alertmanager_servers:
-  - host: 172.16.9.178
-</code></pre>
+  - host: 172.16.9.178</code></pre>
 <p>Tikv集群所有节点均安装numactl</p>
-<pre><code class="language-bash">apt install numactl -y
-</code></pre>
+<pre class="highlight"><code class="language-bash">apt install numactl -y</code></pre>
 <p>检查集群存在的潜在风险：</p>
-<pre><code class="language-bash">tiup cluster check ./topology.yaml --user root [-p] [-i /home/root/.ssh/gcp_rsa]
-</code></pre>
+<pre class="highlight"><code class="language-bash">tiup cluster check ./topology.yaml --user root [-p] [-i /home/root/.ssh/gcp_rsa]</code></pre>
 <p>自动修复集群存在的潜在风险：</p>
-<pre><code class="language-bash">tiup cluster check ./topology.yaml --apply --user root [-p] [-i /home/root/.ssh/gcp_rsa]
-</code></pre>
+<pre class="highlight"><code class="language-bash">tiup cluster check ./topology.yaml --apply --user root [-p] [-i /home/root/.ssh/gcp_rsa]</code></pre>
 <p>部署 Tikv 集群：</p>
-<pre><code class="language-bash">tiup cluster deploy tidb-test v8.5.0 ./topology.yaml --user root [-p] [-i /home/root/.ssh/gcp_rsa]
-</code></pre>
+<pre class="highlight"><code class="language-bash">tiup cluster deploy tidb-test v8.5.0 ./topology.yaml --user root [-p] [-i /home/root/.ssh/gcp_rsa]</code></pre>
 <p>查看 TiUP 管理的集群情况</p>
-<pre><code class="language-bash">tiup cluster list
-</code></pre>
+<pre class="highlight"><code class="language-bash">tiup cluster list</code></pre>
 <p>执行如下命令检查 tidb-test 集群情况</p>
-<pre><code class="language-bash">tiup cluster display tidb-test
-</code></pre>
+<pre class="highlight"><code class="language-bash">tiup cluster display tidb-test</code></pre>
 <p>安全启动集群</p>
-<pre><code class="language-bash">tiup cluster start tidb-test --init
-</code></pre>
+<pre class="highlight"><code class="language-bash">tiup cluster start tidb-test --init</code></pre>
 <p>验证集群运行状态</p>
-<pre><code class="language-bash">tiup cluster display tidb-test
-</code></pre>
+<pre class="highlight"><code class="language-bash">tiup cluster display tidb-test</code></pre>
 <h1 id="seaweedfs">SeaweedFS配置</h1>
 <p>filer.toml</p>
-<pre><code>[tikv]
+<pre class="highlight"><code>[tikv]
 enabled = true
-pdaddrs = &quot;172.16.9.175:2379,172.16.9.177:2379,172.16.9.178:2379&quot;
+pdaddrs = "172.16.9.175:2379,172.16.9.177:2379,172.16.9.178:2379"
 deleterange_concurrency = 8
 enable_1pc = false
-ca_path=&quot;&quot;
-cert_path=&quot;&quot;
-key_path=&quot;&quot;
-verify_cn=&quot;&quot;
-</code></pre>
+ca_path=""
+cert_path=""
+key_path=""
+verify_cn=""</code></pre>
 <h1 id="redistikv-store">迁移Redis数据至Tikv store</h1>
 <p>执行如下命令，将 172.16.9.176:8888 filer对应的数据同步至 /data/seaweedfs/config/filer.toml 对应的存储中</p>
-<pre><code class="language-bash">weed filer.meta.backup -config=/data/seaweedfs/config/filer.toml  -filer=&quot;172.16.9.176:8888&quot; -restart
-</code></pre>
+<pre class="highlight"><code class="language-bash">weed filer.meta.backup -config=/data/seaweedfs/config/filer.toml  -filer="172.16.9.176:8888" -restart</code></pre>
 <ul>
 <li><code>-restart</code>参数可以支持异步增量同步，前提是已经全量同步过一次数据，但是该参数并不能确保增量数据完全同步，所以为了尽量减少对现有存储的影响，应在老存储的Filer切到Tikv之后再执行上述命令进行全量元数据同步</li>
 </ul>
@@ -173,23 +167,23 @@ verify_cn=&quot;&quot;
 <p>TiUP支持对TiDB的快速备份和还原，但是对TiKV的支持比较弱，可以通过tiup命令在主控机执行备份还原的动作</p>
 <p>需要事先创建好备份的目录</p>
 </blockquote>
-<p>参考文章：
-- <a href="https://asktug.com/t/topic/1024515/3">TiKV 数据备份咨询</a>
-- <a href="https://docs.pingcap.com/zh/tidb/stable/br-use-overview/">TiDB 备份与恢复功能使用概述</a></p>
+<p>参考文章：</p>
+<ul>
+<li><a href="https://asktug.com/t/topic/1024515/3">TiKV 数据备份咨询</a></li>
+<li><a href="https://docs.pingcap.com/zh/tidb/stable/br-use-overview/">TiDB 备份与恢复功能使用概述</a></li>
+</ul>
 <p>安装 br</p>
-<pre><code class="language-bash">tiup install br
+<pre class="highlight"><code class="language-bash">tiup install br
 
 # 如若手动安装返回成功，但是执行备份命令报错找不到br，可以尝试执行如下命令
 cd ~/.tiup/components/br/v8.5.1/
-tar -xf br-v8.5.1-linux-amd64.tar.gz
-</code></pre>
+tar -xf br-v8.5.1-linux-amd64.tar.gz</code></pre>
 <h2 id="_2">备份</h2>
 <blockquote>
 <p>由于SeaweedFS中TiKV使用的是txn格式，故仅备份 txnKV 数据即可：</p>
 </blockquote>
-<pre><code class="language-bash">mkdir /tmp/br_backup
-tiup br backup txn --pd &quot;172.16.9.175:2379&quot; --storage &quot;local:///tmp/br_backup&quot; --log-file backupfull.log
-</code></pre>
+<pre class="highlight"><code class="language-bash">mkdir /tmp/br_backup
+tiup br backup txn --pd "172.16.9.175:2379" --storage "local:///tmp/br_backup" --log-file backupfull.log</code></pre>
 <h2 id="_3">还原</h2>
 <blockquote>
 <ol>
@@ -198,8 +192,8 @@ tiup br backup txn --pd &quot;172.16.9.175:2379&quot; --storage &quot;local:///t
 <li>执行恢复命令服务器上需要有元数据文件:/path/to/backup/backupmeta，所有tikv节点需要有真正备份的全数据，由于备份数据只在leader pd节点生成，所以需要将该数据拷贝到其他tikv节点的备份路径下，最好找一块共享盘实现</li>
 </ol>
 </blockquote>
-<pre><code class="language-bash">tiup br restore txn --pd &quot;172.16.9.175:2379&quot; --storage &quot;local:///tmp/br_backup&quot;
-</code></pre>
+<pre class="highlight"><code class="language-bash">tiup br restore txn --pd "172.16.9.175:2379" --storage "local:///tmp/br_backup"</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

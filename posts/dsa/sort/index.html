@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>排序</h1>
-  <div class="meta">2026-09-14 · 约 2310 字 · 源自 notes-src/dsa/sort/README.md</div>
+  <div class="meta">2026-09-16 · 约 2310 字 · 源自 notes-src/dsa/sort/README.md</div>
   <div class="doc-tags"><span>#数据结构</span><span>#排序</span></div>
 </div>
 
@@ -130,7 +136,7 @@
 </table>
 <h2 id="1_1">1 冒泡排序</h2>
 <p>1、冒泡排序第一版本，原始冒泡排序</p>
-<pre><code class="language-go">func maoPao1(nums []int) []int {
+<pre class="highlight"><code class="language-go">func maoPao1(nums []int) []int {
     for i := 0; i &lt; len(nums)-1; i++ {
         for j := 0; j &lt; len(nums)-i-1; j++ {
             if nums[j] &gt; nums[j+1]{
@@ -139,10 +145,9 @@
         }
     }
     return nums
-}
-</code></pre>
+}</code></pre>
 <p>2、冒泡排序第二版本，当能判断出排序已经有序，则不进行循环</p>
-<pre><code class="language-go">func maoPao2(nums []int) []int {
+<pre class="highlight"><code class="language-go">func maoPao2(nums []int) []int {
     for i := 0; i &lt; len(nums)-1; i++ {
         isSorted := true
         for j := 0; j &lt; len(nums)-i-1; j++ {
@@ -157,10 +162,9 @@
         }
     }
     return nums
-}
-</code></pre>
+}</code></pre>
 <p>3、冒泡排序第三版本，内层循环每循环一次，数组最后有序的数就会增加一位，那么可以在设置一个无序边界，每次内层循环只需要循环到这个内层边界即可 sortBorder</p>
-<pre><code class="language-go">func maoPao3(nums []int) []int {
+<pre class="highlight"><code class="language-go">func maoPao3(nums []int) []int {
     //记录最后一次交换的位置，这个值需要赋值给sortBorder
     lastExchangeIndex := 0
     //无序数列的边界
@@ -182,10 +186,9 @@
         }
     }
     return nums
-}
-</code></pre>
+}</code></pre>
 <p>4、冒泡排序第四版，鸡尾酒排序，以前几次版本算法的每一轮都是从左到右来比较元素，进行交换。鸡尾酒排序是双向的，每次进行一次遍历，根据遍历次数的奇偶，来决定是从左还是右进行元素置换。鸡尾酒排序能发挥出来的优势很明显，适合大部分元素已经有序的情况下 ，缺点就是代码量几乎翻了一倍</p>
-<pre><code class="language-go">func maoPao4(nums []int) []int {
+<pre class="highlight"><code class="language-go">func maoPao4(nums []int) []int {
     for i := 0; i &lt; len(nums)-1; i++ {
         isSorted := true
         //奇数轮，从左到右进行交换
@@ -211,8 +214,7 @@
         }
     }
     return nums
-}
-</code></pre>
+}</code></pre>
 <h2 id="2">2 选择排序</h2>
 <p>选择排序也属于内部排序法，是从欲排序的数据中，按照指定的规则选出某一元素，经过和其他元素重整，再依原则交换位置后达到排序的目的。它的基本思想如下：</p>
 <ol>
@@ -220,7 +222,7 @@
 <li>第二次从nums[1]~nums[n-1]中选取最小值，与nums[1]进行交换</li>
 <li>... 以此类推，一共经过n-1次，可以得到一个值从小到大的排序后的数组</li>
 </ol>
-<pre><code class="language-go">func selectSort(nums []int) {
+<pre class="highlight"><code class="language-go">func selectSort(nums []int) {
     for j := 0; j &lt; len(nums)-1; j++ {
         //初始最大值在最左边位置0处
         max := nums[j]
@@ -237,12 +239,11 @@
             nums[j], nums[maxIndex] = nums[maxIndex], nums[j]
         }
     }
-}
-</code></pre>
+}</code></pre>
 <h2 id="3">3 插入排序</h2>
 <p>插入排序属于内部排序法，是对欲排序的元素以插入的方式找寻该元素的适当位置，以达到排序的目的。</p>
 <p>把n个待排序的元素看成为一个有序表和一个无序表，开始时有序表中只包含一个元素，无序表中包含有n-1个元素，排序过程中每次从无序表中取出一个元素，把它的排序码依次与有序元素的排序码比较，将它插入到有序表中的适当位置，使之成为新的有序表。</p>
-<pre><code class="language-go">func insertSort(nums []int) {
+<pre class="highlight"><code class="language-go">func insertSort(nums []int) {
     for j := 1; j &lt; len(nums); j++ {
         insertVal := nums[j]
         insertIndex := j - 1
@@ -254,14 +255,13 @@
         //插入数据
         nums[insertIndex+1] = insertVal
     }
-}
-</code></pre>
+}</code></pre>
 <h2 id="4">4 快速排序</h2>
 <p>同冒泡排序一样，快速排序也属于交换排序，通过元素之间的比较和交换位置来达到排序的目的。</p>
 <p>不同的是，冒泡排序在每一轮中只把1个元素冒泡到数列的一端，而快速排序则在每一轮挑选一个基准元素，并让其他比它大的元素移动到数列的一边，比它小的元素移动到数列的另一边，从而把数列拆分成两个部分，通过递归，可以使得整个数据变成有序序列。这种思路就叫做<code>分治法</code>。</p>
-<pre><code class="language-go">package main
+<pre class="highlight"><code class="language-go">package main
 
-import &quot;fmt&quot;
+import "fmt"
 
 func quickSort(arr []int, left, right int) {
     if left &lt; right {
@@ -299,8 +299,7 @@ func main() {
     arr := []int{3, 7, 9, 8, 38, 93, 12, 222, 45, 93, 23, 84, 65, 2}
     quickSort(arr, 0, len(arr)-1)
     fmt.Println(arr)
-}
-</code></pre>
+}</code></pre>
 <h2 id="5">5 堆排序</h2>
 <p>堆排序步骤：</p>
 <ol>
@@ -316,10 +315,12 @@ func main() {
 </ol>
 <h2 id="6">6 基数排序</h2>
 <p>基数排序的逻辑步骤</p>
-<p>以整数数组为例，排序 [170, 45, 75, 90, 802, 24, 2, 66]：
-1. 确定最大位数
+<p>以整数数组为例，排序 [170, 45, 75, 90, 802, 24, 2, 66]：</p>
+<ol>
+<li>
+<p>确定最大位数
 找到数组中最大数的位数（例如，802 有 3 位）。这决定了排序需要的轮次。</p>
-<ol start="2">
+</li>
 <li>
 <p>逐位排序
 从最低位开始（个位 -&gt; 十位 -&gt; 百位），每轮将数组按当前位的数字排序。</p>
@@ -329,18 +330,22 @@ func main() {
 每次排序确保相同位数相同的数字保持原有相对顺序。</p>
 </li>
 </ol>
-<p>基数排序的核心思想
-1. 最低位优先（LSD）
+<p>基数排序的核心思想</p>
+<ol>
+<li>
+<p>最低位优先（LSD）
 从最低有效位（Least Significant Digit）开始排序，逐步向高位移动。</p>
-<ol start="2">
-<li>最高位优先（MSD）
-从最高有效位（Most Significant Digit）开始排序，逐步向低位移动。</li>
+</li>
+<li>
+<p>最高位优先（MSD）
+从最高有效位（Most Significant Digit）开始排序，逐步向低位移动。</p>
+</li>
 </ol>
-<pre><code class="language-go">package main
+<pre class="highlight"><code class="language-go">package main
 
 import (
-   &quot;fmt&quot;
-   &quot;math&quot;
+   "fmt"
+   "math"
 )
 
 func RadixSort(nums []int) {
@@ -400,12 +405,28 @@ func maxbits(nums []int) int {
 
 func main() {
    nums := []int{5, 4, 13, 56, 61, 17, 412, 1212, 8}
-   fmt.Println(&quot;原始数组:&quot;, nums)
+   fmt.Println("原始数组:", nums)
    RadixSort(nums)
-   fmt.Println(&quot;排序后数组:&quot;, nums)
-}
-</code></pre>
+   fmt.Println("排序后数组:", nums)
+}</code></pre>
 <h2 id="7">7 桶排序</h2>
+<nav class="doc-attach">
+  <p class="lb">本目录附件</p>
+  <ul>
+    <li><a href="../../../notes-src/dsa/sort/bucketSort.go">bucketSort.go</a><span class="sz">20 B</span></li>
+    <li><span class="dir">get_max/</span><span class="sz">子目录</span></li>
+    <li><a href="../../../notes-src/dsa/sort/heapSort.go">heapSort.go</a><span class="sz">2.2 KB</span></li>
+    <li><a href="../../../notes-src/dsa/sort/insertSort.go">insertSort.go</a><span class="sz">1.1 KB</span></li>
+    <li><a href="../../../notes-src/dsa/sort/main.go">main.go</a><span class="sz">642 B</span></li>
+    <li><a href="../../../notes-src/dsa/sort/mergeSort.go">mergeSort.go</a><span class="sz">1.1 KB</span></li>
+    <li><a href="../../../notes-src/dsa/sort/popSort.go">popSort.go</a><span class="sz">622 B</span></li>
+    <li><a href="../../../notes-src/dsa/sort/priority_queue.go">priority_queue.go</a><span class="sz">1.4 KB</span></li>
+    <li><a href="../../../notes-src/dsa/sort/quictSort.go">quictSort.go</a><span class="sz">1.8 KB</span></li>
+    <li><a href="../../../notes-src/dsa/sort/radixSort.go">radixSort.go</a><span class="sz">2.6 KB</span></li>
+    <li><a href="../../../notes-src/dsa/sort/selectSort.go">selectSort.go</a><span class="sz">1.6 KB</span></li>
+    <li><span class="dir">swap/</span><span class="sz">子目录</span></li>
+  </ul>
+</nav>
 <nav class="doc-series">
   <p class="lb">数据结构 · 同分类笔记</p>
   <ol>

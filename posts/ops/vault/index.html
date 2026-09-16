@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Vault</h1>
-  <div class="meta">2026-09-14 · 约 430 字 · 源自 notes-src/ops/vault/README.md</div>
+  <div class="meta">2026-09-16 · 约 430 字 · 源自 notes-src/ops/vault/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Vault</span></div>
 </div>
 
@@ -70,7 +76,7 @@
 <p>参考文章：
 <a href="https://devopscube.com/vault-in-kubernetes/">vault-in-kubernetes</a></p>
 <h2 id="k8s-deploy">k8s deploy</h2>
-<pre><code class="language-bash"># git clone
+<pre class="highlight"><code class="language-bash"># git clone
 git clone https://github.com/scriptcamp/kubernetes-vault.git
 
 
@@ -82,19 +88,19 @@ kubectl create -f rbac.yaml
 # 参考文章：https://medium.com/@holden.omans/use-minio-or-s3-as-a-vault-backend-on-k8s-335312a6349a
 # 2.1 minio oss
 # 参考如下配置
-    storage &quot;s3&quot; {
-      endpoint    = &quot;ossapi.rsq.cn:9000&quot;
-      access_key  = &quot;vault&quot;
-      secret_key  = &quot;dcwa8goj0e6EiGsxxxxxxxxx&quot;
-      bucket      = &quot;vault&quot;
-      region      = &quot;oss-stg&quot;
-      disable_ssl = &quot;true&quot;
-      s3_force_path_style = &quot;true&quot;
+    storage "s3" {
+      endpoint    = "ossapi.rsq.cn:9000"
+      access_key  = "vault"
+      secret_key  = "dcwa8goj0e6EiGsxxxxxxxxx"
+      bucket      = "vault"
+      region      = "oss-stg"
+      disable_ssl = "true"
+      s3_force_path_style = "true"
     }
 # 2.2 local storage
 # 参考如下配置
-    storage &quot;file&quot; {
-      path = &quot;/vault/data&quot;
+    storage "file" {
+      path = "/vault/data"
     }
 kubecmltl apply -f configmap.yaml
 
@@ -102,24 +108,22 @@ kubecmltl apply -f configmap.yaml
 kubectl apply -f services.yaml
 
 # 4 部署statefulset
-kubectl apply -f statefulset.yaml
-</code></pre>
+kubectl apply -f statefulset.yaml</code></pre>
 <h2 id="vault_1">初始化vault</h2>
-<pre><code class="language-bash"># Generate Token
+<pre class="highlight"><code class="language-bash"># Generate Token
 kubectl exec vault-0 -n default  -- vault operator init -key-shares=1 -key-threshold=1 -format=json &gt; keys.json
 
 # 获取root key
-VAULT_UNSEAL_KEY=$(cat keys.json | jq -r &quot;.unseal_keys_b64[]&quot;)
+VAULT_UNSEAL_KEY=$(cat keys.json | jq -r ".unseal_keys_b64[]")
 echo $VAULT_UNSEAL_KEY
 
-VAULT_ROOT_KEY=$(cat keys.json | jq -r &quot;.root_token&quot;)
+VAULT_ROOT_KEY=$(cat keys.json | jq -r ".root_token")
 echo $VAULT_ROOT_KEY
 
 # Unseal is the state at which the vault can construct keys that are required to decrypt the data stored inside it.
-kubectl exec vault-0 -n default -- vault operator unseal $VAULT_UNSEAL_KEY
-</code></pre>
+kubectl exec vault-0 -n default -- vault operator unseal $VAULT_UNSEAL_KEY</code></pre>
 <h2 id="_1">日志审计</h2>
-<pre><code class="language-bash"># 对某个path开启审计
+<pre class="highlight"><code class="language-bash"># 对某个path开启审计
 vault audit enable -path=attendance file file_path=/vault/logs/audit1.log
 
 # 查看所有审计日志
@@ -130,54 +134,47 @@ attendance/    file    n/a
 file/          file    n/a
 
 # 关闭某一个path的日志审计
-vault audit disable attendance
-</code></pre>
+vault audit disable attendance</code></pre>
 <h1 id="approle">AppRole</h1>
 <ol>
 <li>开启approle</li>
 </ol>
-<pre><code class="language-bash">vault auth enable approle
-</code></pre>
+<pre class="highlight"><code class="language-bash">vault auth enable approle</code></pre>
 <ol start="2">
 <li>创建kv对</li>
 </ol>
-<pre><code class="language-bash">vault kv put -mount=devops jenkins username=admin
+<pre class="highlight"><code class="language-bash">vault kv put -mount=devops jenkins username=admin
 vault kv put -mount=devops jenkins password=123456
-vault kv get devops/jenkins/gitlab
-</code></pre>
+vault kv get devops/jenkins/gitlab</code></pre>
 <ol start="3">
 <li>创建policy
 jenkins-policy.hcl</li>
 </ol>
-<pre><code># path 为 vault kv get devops/jenkins/gitlab 获取的 Secret Path
-path &quot;devops/data/jenkins/*&quot; {
-    capabilities= [&quot;read&quot;]
-}
-</code></pre>
-<p>create</p>
-<pre><code class="language-bash">vault policy write jenkins-policy ./jenkins-policy.hcl
-</code></pre>
+<p><pre class="highlight"><code># path 为 vault kv get devops/jenkins/gitlab 获取的 Secret Path
+path "devops/data/jenkins/*" {
+    capabilities= ["read"]
+}</code></pre>
+create</p>
+<pre class="highlight"><code class="language-bash">vault policy write jenkins-policy ./jenkins-policy.hcl</code></pre>
 <ol start="4">
 <li>创建role绑定policy</li>
 </ol>
-<pre><code class="language-bash">vault write auth/approle/role/jenkins \
+<pre class="highlight"><code class="language-bash">vault write auth/approle/role/jenkins \
     token_type=batch \
     secret_id_ttl=60m \
     token_ttl=60m \
     token_max_ttl=60m \
     secret_id_num_uses=40 \
-    token_policies=jenkins-policy
-</code></pre>
+    token_policies=jenkins-policy</code></pre>
 <ol start="5">
 <li>创建secret-id</li>
 </ol>
-<pre><code class="language-bash">vault write -f auth/approle/role/jenkins/secret-id
-</code></pre>
+<pre class="highlight"><code class="language-bash">vault write -f auth/approle/role/jenkins/secret-id</code></pre>
 <ol start="6">
 <li>read role-id</li>
 </ol>
-<pre><code class="language-bash">vault read auth/approle/role/jenkins/role-id
-</code></pre>
+<pre class="highlight"><code class="language-bash">vault read auth/approle/role/jenkins/role-id</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

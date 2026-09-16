@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>MySQL</h1>
-  <div class="meta">2026-09-14 · 约 2790 字 · 源自 notes-src/ops/database/mysql/README.md</div>
+  <div class="meta">2026-09-16 · 约 2790 字 · 源自 notes-src/ops/database/mysql/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#数据库</span><span>#MySQL</span></div>
 </div>
 
@@ -67,10 +73,12 @@
 <nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1-mysql-80">1 安装MySQL 8.0</a></li><li class="l3"><a href="#1-centos7">1 Centos7本地部署</a></li><li class="l3"><a href="#12-docker-compose">1.2 Docker-compose部署</a></li><li class="l2"><a href="#2-sql">2 SQL 基础语法</a></li><li class="l3"><a href="#11-sql-dml-ddl">1.1 SQL DML 和 DDL</a></li><li class="l3"><a href="#12">1.2 创建表</a></li><li class="l3"><a href="#13">1.3 查询表</a></li><li class="l3"><a href="#14-where">1.4 WHERE</a></li><li class="l3"><a href="#15-order-by">1.5 ORDER BY</a></li><li class="l3"><a href="#16-insert">1.6 INSERT</a></li><li class="l3"><a href="#17-update">1.7 UPDATE</a></li><li class="l3"><a href="#18-delete">1.8 DELETE</a></li><li class="l2"><a href="#2-sql_1">2 SQL 高级语法</a></li><li class="l3"><a href="#21-like">2.1 LIKE</a></li><li class="l3"><a href="#22">2.2 通配符</a></li><li class="l3"><a href="#23-in">2.3 IN</a></li><li class="l3"><a href="#24-between">2.4 BETWEEN</a></li><li class="l3"><a href="#25-alias">2.5 Alias</a></li><li class="l3"><a href="#26-join">2.6 Join</a></li><li class="l3"><a href="#27-unionunion-all">2.7 UNION/UNION ALL</a></li><li class="l2"><a href="#3-sql">3 SQL 函数</a></li><li class="l2"><a href="#4-sql">4 SQL 高级操作</a></li><li class="l3"><a href="#41">4.1 复制表</a></li><li class="l2"><a href="#5-sql">5 SQL 内置语法</a></li></ul></nav>
 <main>
 <ul>
-<li><a href="#1-安装mysql-80">1 安装MySQL 8.0</a></li>
+<li><a href="#1-安装mysql-80">1 安装MySQL 8.0</a><ul>
 <li><a href="#1-centos7本地部署">1 Centos7本地部署</a></li>
 <li><a href="#12-docker-compose部署">1.2 Docker-compose部署</a></li>
-<li><a href="#2-sql-基础语法">2 SQL 基础语法</a></li>
+</ul>
+</li>
+<li><a href="#2-sql-基础语法">2 SQL 基础语法</a><ul>
 <li><a href="#11-sql-dml-和-ddl">1.1 SQL DML 和 DDL</a></li>
 <li><a href="#12-创建表">1.2 创建表</a></li>
 <li><a href="#13-查询表">1.3 查询表</a></li>
@@ -79,7 +87,9 @@
 <li><a href="#16-insert">1.6 INSERT</a></li>
 <li><a href="#17-update">1.7 UPDATE</a></li>
 <li><a href="#18-delete">1.8 DELETE</a></li>
-<li><a href="#2-sql-高级语法">2 SQL 高级语法</a></li>
+</ul>
+</li>
+<li><a href="#2-sql-高级语法">2 SQL 高级语法</a><ul>
 <li><a href="#21-like">2.1 LIKE</a></li>
 <li><a href="#22-通配符">2.2 通配符</a></li>
 <li><a href="#23-in">2.3 IN</a></li>
@@ -87,14 +97,18 @@
 <li><a href="#25-alias">2.5 Alias</a></li>
 <li><a href="#26-join">2.6 Join</a></li>
 <li><a href="#27-unionunion-all">2.7 UNION/UNION ALL</a></li>
+</ul>
+</li>
 <li><a href="#3-sql-函数">3 SQL 函数</a></li>
-<li><a href="#4-sql-高级操作">4 SQL 高级操作</a></li>
+<li><a href="#4-sql-高级操作">4 SQL 高级操作</a><ul>
 <li><a href="#41-复制表">4.1 复制表</a></li>
+</ul>
+</li>
 <li><a href="#5-sql-内置语法">5 SQL 内置语法</a></li>
 </ul>
 <h1 id="1-mysql-80">1 安装MySQL 8.0</h1>
 <h2 id="1-centos7">1 Centos7本地部署</h2>
-<pre><code class="language-bash"># 1 如果有老版本，应该先卸载老版本
+<pre class="highlight"><code class="language-bash"># 1 如果有老版本，应该先卸载老版本
 rpm -qa | grep -i mysql
 yum -y remove MySQL-*
 rm -rf /etc/my.cnf
@@ -112,7 +126,7 @@ sudo systemctl start mysqld
 sudo systemctl enable mysqld
 
 # 5 查看mysql临时密码
-grep &quot;A temporary password&quot; /var/log/mysqld.log
+grep "A temporary password" /var/log/mysqld.log
 
 # 6 更改mysql临时密码，默认密码验证很复杂， 常规密码都不能审核
 [root@node1 ~]# mysql -uroot -p
@@ -120,7 +134,7 @@ mysql&gt; ALTER USER 'root'@'localhost' IDENTIFIED BY '5LaloO!Y';
 Query OK, 0 rows affected (0.00 sec)
 
 # 7 查看密码验证策略
-mysql&gt; SHOW VARIABLES LIKE &quot;validate_password.%&quot;;
+mysql&gt; SHOW VARIABLES LIKE "validate_password.%";
 +--------------------------------------+--------+
 | Variable_name                        | Value  |
 +--------------------------------------+--------+
@@ -147,17 +161,15 @@ CREATE USER 'root'@'10.66.12.97' IDENTIFIED BY '123456';
 GRANT ALL ON *.* TO 'root'@'10.66.12.100' IDENTIFIED BY '123456';
 FLUSH Privileges;
 
-# mysql 8.0 默认字符集 CHARSET=utf8mb4
-</code></pre>
+# mysql 8.0 默认字符集 CHARSET=utf8mb4</code></pre>
 <h2 id="12-docker-compose">1.2 Docker-compose部署</h2>
 <p>初始化</p>
-<pre><code class="language-bash">mkdir /data/mysql/{data,conf} -p
-</code></pre>
+<pre class="highlight"><code class="language-bash">mkdir /data/mysql/{data,conf} -p</code></pre>
 <p>/data/mysql/conf/my.cnf</p>
 <blockquote>
 <p>配置<code>skip_ssl</code>之后客户端连接时无需指定 <code>--ssl-mode=DISABLE</code></p>
 </blockquote>
-<pre><code>[mysqld]
+<pre class="highlight"><code>[mysqld]
 user=mysql
 default-storage-engine=INNODB
 character-set-server=utf8
@@ -172,10 +184,9 @@ skip_ssl
 [client]
 default-character-set=utf8
 [mysql]
-default-character-set=utf8
-</code></pre>
+default-character-set=utf8</code></pre>
 <p>/data/mysql/docker-compose.yml</p>
-<pre><code class="language-yml">version: '3'
+<pre class="highlight"><code class="language-yml">version: '3'
 services:
   mysql:
     image: mysql:8.0.3
@@ -184,12 +195,11 @@ services:
       - ./data:/var/lib/mysql
       - ./conf/my.cnf:/etc/my.cnf
     environment:
-      - &quot;MYSQL_ROOT_PASSWORD=xxxxxxxxxx&quot;
-      - &quot;TZ=Asia/Shanghai&quot;
+      - "MYSQL_ROOT_PASSWORD=xxxxxxxxxx"
+      - "TZ=Asia/Shanghai"
     ports:
       - 3306:3306
-    restart: always
-</code></pre>
+    restart: always</code></pre>
 <h1 id="2-sql">2 SQL 基础语法</h1>
 <p>一定要记住，<strong>SQL 对大小写不敏感！</strong></p>
 <h2 id="11-sql-dml-ddl">1.1 SQL DML 和 DDL</h2>
@@ -214,27 +224,24 @@ services:
 <li><strong><em>DROP INDEX</em></strong> - 删除索引</li>
 </ul>
 <h2 id="12">1.2 创建表</h2>
-<pre><code class="language-sql">CREATE TABLE student
+<pre class="highlight"><code class="language-sql">CREATE TABLE student
 (
 ID int primary key NOT NULL AUTO_INCREMENT,
 NAME varchar(255),
 AGE int
-)
-</code></pre>
+)</code></pre>
 <h2 id="13">1.3 查询表</h2>
-<pre><code class="language-sql"># 1 常用命令
+<pre class="highlight"><code class="language-sql"># 1 常用命令
 SELECT * FROM student;
 SELECT NAME FROM student;
 SELECT NAME,AGE student;
 
 # 2 在表中，可能会包含重复值。有时您也许希望仅仅列出不同（distinct）的值，可以使用如下命令
-SELECT DISTINCT NAME FROM student;
-</code></pre>
+SELECT DISTINCT NAME FROM student;</code></pre>
 <h2 id="14-where">1.4 WHERE</h2>
 <p><strong>WHERE 子句用于规定选择的标准。</strong></p>
 <p><strong>语法：</strong></p>
-<pre><code class="language-sql">SELECT 列名称 FROM 表名称 WHERE 列 运算符 值
-</code></pre>
+<pre class="highlight"><code class="language-sql">SELECT 列名称 FROM 表名称 WHERE 列 运算符 值</code></pre>
 <p><strong>示例：</strong></p>
 <table>
 <thead>
@@ -304,7 +311,7 @@ SELECT DISTINCT NAME FROM student;
 </table>
 <h2 id="15-order-by">1.5 ORDER BY</h2>
 <p><strong>ORDER BY 语句用于对结果集进行排序</strong></p>
-<pre><code class="language-sql"># 1 默认是升序
+<pre class="highlight"><code class="language-sql"># 1 默认是升序
 SELECT * FROM student ORDER BY AGE ;
 
 # 2 降序排序
@@ -314,50 +321,42 @@ SELECT * FROM student ORDER BY AGE DESC;
 SELECT * FROM student ORDER BY NAME,AGE;
 
 # 4 按照字母和年龄顺序逆序排序
-SELECT * FROM student ORDER BY NAME,AGE DESC;
-</code></pre>
+SELECT * FROM student ORDER BY NAME,AGE DESC;</code></pre>
 <h2 id="16-insert">1.6 INSERT</h2>
 <p><strong>INSERT INTO 语句用于向表格中插入新的行。</strong></p>
 <p><strong>语法：</strong></p>
-<pre><code class="language-sql">INSERT INTO 表名称 VALUES (值1, 值2,....)
-</code></pre>
+<pre class="highlight"><code class="language-sql">INSERT INTO 表名称 VALUES (值1, 值2,....)</code></pre>
 <p><strong>我们也可以指定所要插入数据的列：</strong></p>
-<pre><code class="language-sql">INSERT INTO table_name (列1, 列2,...) VALUES (值1, 值2,....)
-</code></pre>
+<pre class="highlight"><code class="language-sql">INSERT INTO table_name (列1, 列2,...) VALUES (值1, 值2,....)</code></pre>
 <p><strong>示例：</strong></p>
-<pre><code class="language-sql"># 不指定列名
-INSERT INTO student VALUE (7,&quot;agou&quot;,41);
+<pre class="highlight"><code class="language-sql"># 不指定列名
+INSERT INTO student VALUE (7,"agou",41);
 
 # 指定列名
-INSERT INTO student (ID,Name,Age) VALUE (8,&quot;maomoa&quot;,18);
-</code></pre>
+INSERT INTO student (ID,Name,Age) VALUE (8,"maomoa",18);</code></pre>
 <h2 id="17-update">1.7 UPDATE</h2>
 <p><strong>Update 语句用于修改表中的数据。</strong></p>
 <p><strong>语法：</strong></p>
-<pre><code class="language-sql">UPDATE 表名称 SET 列名称 = 新值 WHERE 列名称 = 某值
-</code></pre>
+<pre class="highlight"><code class="language-sql">UPDATE 表名称 SET 列名称 = 新值 WHERE 列名称 = 某值</code></pre>
 <p><strong>示例：</strong></p>
-<pre><code class="language-sql"># 更新某一行中的一个列
+<pre class="highlight"><code class="language-sql"># 更新某一行中的一个列
 UPDATE student SET NAME='maomao' WHERE NAME='maomoa';
 
 # 更新某一行中的若干列
-UPDATE student SET NAME='mao',AGE=21 WHERE NAME='maomao';
-</code></pre>
+UPDATE student SET NAME='mao',AGE=21 WHERE NAME='maomao';</code></pre>
 <h2 id="18-delete">1.8 DELETE</h2>
 <p><strong>DELETE 语句用于删除表中的行。</strong></p>
 <p><strong>语法：</strong></p>
-<pre><code class="language-sql">DELETE FROM 表名称 WHERE 列名称 = 值
-</code></pre>
+<pre class="highlight"><code class="language-sql">DELETE FROM 表名称 WHERE 列名称 = 值</code></pre>
 <p><strong>示例：</strong></p>
-<pre><code class="language-sql">DELETE FROM student WHERE NAME='mao';
+<pre class="highlight"><code class="language-sql">DELETE FROM student WHERE NAME='mao';
 
 # 删除所有行
 DELETE FROM student;
-DELETE * FROM student;
-</code></pre>
+DELETE * FROM student;</code></pre>
 <h1 id="2-sql_1">2 SQL 高级语法</h1>
 <p><strong>测试数据：</strong></p>
-<pre><code class="language-sql">CREATE TABLE Persons
+<pre class="highlight"><code class="language-sql">CREATE TABLE Persons
 (
 Id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
 LastName varchar(255),
@@ -366,17 +365,15 @@ Address varchar(255),
 City varchar(255)
 );
 
-INSERT INTO Persons (LastName,FirstName,Address,City) VALUE (&quot;Adams&quot;,&quot;John&quot;,&quot;Oxford Street&quot;,&quot;London&quot;);
-INSERT INTO Persons (LastName,FirstName,Address,City) VALUE (&quot;Bush&quot;,&quot;George&quot;,&quot;Fifth Avenue&quot;,&quot;New York&quot;);
-INSERT INTO Persons (LastName,FirstName,Address,City) VALUE (&quot;Carter&quot;,&quot;Thomas&quot;,&quot;Changan Street&quot;,&quot;Beijing&quot;);
-</code></pre>
+INSERT INTO Persons (LastName,FirstName,Address,City) VALUE ("Adams","John","Oxford Street","London");
+INSERT INTO Persons (LastName,FirstName,Address,City) VALUE ("Bush","George","Fifth Avenue","New York");
+INSERT INTO Persons (LastName,FirstName,Address,City) VALUE ("Carter","Thomas","Changan Street","Beijing");</code></pre>
 <h2 id="21-like">2.1 LIKE</h2>
-<pre><code class="language-sql"># 匹配包含a的所有学生
+<pre class="highlight"><code class="language-sql"># 匹配包含a的所有学生
 SELECT * FROM Persons WHERE LastName LIKE '%a%';
 
 # 匹配不包含a的学生
-SELECT * FROM Persons WHERE LastName NOT LIKE '%a%';
-</code></pre>
+SELECT * FROM Persons WHERE LastName NOT LIKE '%a%';</code></pre>
 <h2 id="22">2.2 通配符</h2>
 <table>
 <thead>
@@ -404,75 +401,66 @@ SELECT * FROM Persons WHERE LastName NOT LIKE '%a%';
 </tr>
 </tbody>
 </table>
-<pre><code class="language-sql"># % ：选取居住在Ne开头的城市中 
+<pre class="highlight"><code class="language-sql"># % ：选取居住在Ne开头的城市中 
 SELECT * FROM Persons WHERE CITY LIKE 'Ne%';
 
 # - : 选取第一个字符之后是eorge的Person
 SELECT * FROM Persons WHERE FirstName LIKE '_eorge';
 
-# [] ： 我们希望从上面的 &quot;Persons&quot; 表中选取居住的城市以 &quot;A&quot; 或 &quot;L&quot; 或 &quot;N&quot; 开头的人：
+# [] ： 我们希望从上面的 "Persons" 表中选取居住的城市以 "A" 或 "L" 或 "N" 开头的人：
 SELECT * FROM Persons WHERE City REGEXP '^[ALN]';
 
-# [^] ：我们希望从上面的 &quot;Persons&quot; 表中选取居住的城市不以 &quot;A&quot; 或 &quot;L&quot; 或 &quot;N&quot; 开头的人：
-SELECT * FROM Persons WHERE City REGEXP '^[^ALN]';
-</code></pre>
+# [^] ：我们希望从上面的 "Persons" 表中选取居住的城市不以 "A" 或 "L" 或 "N" 开头的人：
+SELECT * FROM Persons WHERE City REGEXP '^[^ALN]';</code></pre>
 <h2 id="23-in">2.3 IN</h2>
 <p><strong>IN 操作符允许我们在 WHERE 子句中规定多个值。</strong></p>
 <p><strong>语法：</strong></p>
-<pre><code class="language-sql">SELECT column_name(s)
+<pre class="highlight"><code class="language-sql">SELECT column_name(s)
 FROM table_name
-WHERE column_name IN (value1,value2,...)
-</code></pre>
+WHERE column_name IN (value1,value2,...)</code></pre>
 <p><strong>示例：</strong></p>
-<pre><code class="language-sql"># 选择城市在Beijing和New York中的行
-SELECT * FROM Persons WHERE City IN (&quot;Beijing&quot;,&quot;New York&quot;);
-</code></pre>
+<pre class="highlight"><code class="language-sql"># 选择城市在Beijing和New York中的行
+SELECT * FROM Persons WHERE City IN ("Beijing","New York");</code></pre>
 <h2 id="24-between">2.4 BETWEEN</h2>
 <p><strong>BETWEEN ... AND</strong> 会选取介于两个值之间的数据范围。这些值可以是数值、文本或者日期。</p>
 <p><strong>语法：</strong></p>
-<pre><code>SELECT column_name(s)
+<pre class="highlight"><code>SELECT column_name(s)
 FROM table_name
 WHERE column_name
-BETWEEN value1 AND value2
-</code></pre>
+BETWEEN value1 AND value2</code></pre>
 <p><strong>示例：</strong></p>
-<pre><code class="language-sql"># 以字母顺序显示介于 &quot;Adams&quot;（包括）和 &quot;Carter&quot;（包括）之间的人：
+<pre class="highlight"><code class="language-sql"># 以字母顺序显示介于 "Adams"（包括）和 "Carter"（包括）之间的人：
 SELECT * FROM Persons WHERE LastName BETWEEN 'Adams' AND 'Carter';
 
 # 显示范围之外的人，使用 NOT 操作符
-SELECT * FROM Persons WHERE LastName NOT BETWEEN 'Adams' AND 'Carter';
-</code></pre>
+SELECT * FROM Persons WHERE LastName NOT BETWEEN 'Adams' AND 'Carter';</code></pre>
 <h2 id="25-alias">2.5 Alias</h2>
 <p><strong>通过使用 SQL，可以为列名称和表名称指定别名（Alias）。</strong></p>
 <p><strong>表SQL的语法：</strong></p>
-<pre><code>SELECT column_name(s)
+<pre class="highlight"><code>SELECT column_name(s)
 FROM table_name
-AS alias_name
-</code></pre>
+AS alias_name</code></pre>
 <p><strong>列的 SQL Alias 语法：</strong></p>
-<pre><code>SELECT column_name AS alias_name
-FROM table_name
-</code></pre>
+<pre class="highlight"><code>SELECT column_name AS alias_name
+FROM table_name</code></pre>
 <p><strong>表别名示例：</strong></p>
-<pre><code class="language-sql"># 有两个表，查询表Persons中LastName为‘Carter’ 然后 Student中NAME为'RSQ'的行
+<pre class="highlight"><code class="language-sql"># 有两个表，查询表Persons中LastName为‘Carter’ 然后 Student中NAME为'RSQ'的行
 SELECT p.LastName,s.NAME 
 FROM Persons AS p,Student AS s 
-WHERE p.LastName = 'Carter' AND s.NAME = 'RSQ';
-</code></pre>
+WHERE p.LastName = 'Carter' AND s.NAME = 'RSQ';</code></pre>
 <p><strong>列别名示例：</strong></p>
-<pre><code class="language-sql">mysql&gt; SELECT LastName AS Family, FirstName AS Name FROM Persons;
+<pre class="highlight"><code class="language-sql">mysql&gt; SELECT LastName AS Family, FirstName AS Name FROM Persons;
 +--------+--------+
 | Family | Name   |
 +--------+--------+
 | Adams  | John   |
 | Bush   | George |
 | Carter | Thomas |
-+--------+--------+
-</code></pre>
++--------+--------+</code></pre>
 <h2 id="26-join">2.6 Join</h2>
 <p><strong>SQL join 用于根据两个或多个表中的列之间的关系，从这些表中查询数据。</strong></p>
 <p><strong>Student表</strong></p>
-<pre><code class="language-sql">mysql&gt; SELECT * FROM Student;
+<pre class="highlight"><code class="language-sql">mysql&gt; SELECT * FROM Student;
 +----+----------+------+
 | ID | NAME     | AGE  |
 +----+----------+------+
@@ -483,23 +471,21 @@ WHERE p.LastName = 'Carter' AND s.NAME = 'RSQ';
 |  5 | lisi     |   28 |
 |  6 | wangwu   |   47 |
 |  7 | agou     |   41 |
-+----+----------+------+
-</code></pre>
++----+----------+------+</code></pre>
 <p><strong>Persons表</strong></p>
-<pre><code class="language-sql">mysql&gt; SELECT * FROM Persons;
+<pre class="highlight"><code class="language-sql">mysql&gt; SELECT * FROM Persons;
 +----+----------+-----------+----------------+----------+
 | Id | LastName | FirstName | Address        | City     |
 +----+----------+-----------+----------------+----------+
 |  1 | Adams    | John      | Oxford Street  | London   |
 |  2 | Bush     | George    | Fifth Avenue   | New York |
 |  3 | Carter   | Thomas    | Changan Street | Beijing  |
-+----+----------+-----------+----------------+----------+
-</code></pre>
++----+----------+-----------+----------------+----------+</code></pre>
 <p>几种不同的<code>JOIN</code>举例：</p>
 <ul>
 <li><code>INNER JOIN</code>: 如果表中有至少一个匹配，则返回行。<code>INNER JOIN</code> 与 <code>JOIN</code> 是相同的。</li>
 </ul>
-<pre><code class="language-sql">mysql&gt; SELECT p.LastName, p.FirstName, s.NAME, s.AGE
+<pre class="highlight"><code class="language-sql">mysql&gt; SELECT p.LastName, p.FirstName, s.NAME, s.AGE
     -&gt; FROM Persons AS p
     -&gt; INNER JOIN Student AS s
     -&gt; ON p.Id = s.ID
@@ -510,12 +496,11 @@ WHERE p.LastName = 'Carter' AND s.NAME = 'RSQ';
 | Adams    | John      | RSQ  |   20 |
 | Bush     | George    | aust |   30 |
 | Carter   | Thomas    | test |   27 |
-+----------+-----------+------+------+
-</code></pre>
++----------+-----------+------+------+</code></pre>
 <ul>
 <li><code>LEFT JOIN</code>: 即使右表中没有匹配，也从左表返回所有的行</li>
 </ul>
-<pre><code class="language-sql">mysql&gt; SELECT p.LastName, p.FirstName, s.NAME, s.AGE
+<pre class="highlight"><code class="language-sql">mysql&gt; SELECT p.LastName, p.FirstName, s.NAME, s.AGE
     -&gt; FROM Persons AS p
     -&gt; LEFT JOIN Student AS s
     -&gt; ON p.Id = s.ID
@@ -526,12 +511,11 @@ WHERE p.LastName = 'Carter' AND s.NAME = 'RSQ';
 | Adams    | John      | RSQ  |   20 |
 | Bush     | George    | aust |   30 |
 | Carter   | Thomas    | test |   27 |
-+----------+-----------+------+------+
-</code></pre>
++----------+-----------+------+------+</code></pre>
 <ul>
 <li><code>RIGHT JOIN</code>: 即使左表中没有匹配，也从右表返回所有的行</li>
 </ul>
-<pre><code class="language-sql">mysql&gt; SELECT p.LastName, p.FirstName, s.NAME, s.AGE
+<pre class="highlight"><code class="language-sql">mysql&gt; SELECT p.LastName, p.FirstName, s.NAME, s.AGE
     -&gt; FROM Persons AS p
     -&gt; RIGHT JOIN Student AS s
     -&gt; ON p.Id = s.ID
@@ -546,22 +530,20 @@ WHERE p.LastName = 'Carter' AND s.NAME = 'RSQ';
 | Adams    | John      | RSQ      |   20 |
 | Bush     | George    | aust     |   30 |
 | Carter   | Thomas    | test     |   27 |
-+----------+-----------+----------+------+
-</code></pre>
++----------+-----------+----------+------+</code></pre>
 <h2 id="27-unionunion-all">2.7 UNION/UNION ALL</h2>
 <p>UNION 操作符用于合并两个或多个 SELECT 语句的结果集。</p>
 <p>UNION 内部的 SELECT 语句必须拥有相同数量的列。列也必须拥有相似的数据类型。同时，每条 SELECT 语句中的列的顺序必须相同。</p>
-<pre><code class="language-sql">mysql&gt; SELECT * FROM Persons UNION SELECT * FROM Data;
+<pre class="highlight"><code class="language-sql">mysql&gt; SELECT * FROM Persons UNION SELECT * FROM Data;
 +----+----------+-----------+----------------+----------+
 | Id | LastName | FirstName | Address        | City     |
 +----+----------+-----------+----------------+----------+
 |  1 | Adams    | John      | Oxford Street  | London   |
 |  2 | Bush     | George    | Fifth Avenue   | New York |
 |  3 | Carter   | Thomas    | Changan Street | Beijing  |
-+----+----------+-----------+----------------+----------+
-</code></pre>
++----+----------+-----------+----------------+----------+</code></pre>
 <p>默认地，UNION 操作符选取不同的值。如果允许重复的值，请使用 UNION ALL。</p>
-<pre><code class="language-sql">mysql&gt; SELECT * FROM Persons UNION ALL SELECT * FROM Data;
+<pre class="highlight"><code class="language-sql">mysql&gt; SELECT * FROM Persons UNION ALL SELECT * FROM Data;
 +----+----------+-----------+----------------+----------+
 | Id | LastName | FirstName | Address        | City     |
 +----+----------+-----------+----------------+----------+
@@ -571,22 +553,20 @@ WHERE p.LastName = 'Carter' AND s.NAME = 'RSQ';
 |  1 | Adams    | John      | Oxford Street  | London   |
 |  2 | Bush     | George    | Fifth Avenue   | New York |
 |  3 | Carter   | Thomas    | Changan Street | Beijing  |
-+----+----------+-----------+----------------+----------+
-</code></pre>
++----+----------+-----------+----------------+----------+</code></pre>
 <h1 id="3-sql">3 SQL 函数</h1>
 <h1 id="4-sql">4 SQL 高级操作</h1>
 <h2 id="41">4.1 复制表</h2>
-<pre><code class="language-sql"># 1 仅复制表结构
+<pre class="highlight"><code class="language-sql"># 1 仅复制表结构
 CREATE TABLE edu SELECT * FROM student LIMIT 0;
 
 # 2 复制表数据和表结构
 CREATE TABLE edu SELECT * FROM student;
 
 # 3 复制指定列的数据和表结构
-CREATE TABLE edu SELECT NAME,AGE FROM student;
-</code></pre>
+CREATE TABLE edu SELECT NAME,AGE FROM student;</code></pre>
 <h1 id="5-sql">5 SQL 内置语法</h1>
-<pre><code class="language-sql"># 1 查看系统变量
+<pre class="highlight"><code class="language-sql"># 1 查看系统变量
 SHOW VARIABLES;
 
 # 2 查看当前字符集
@@ -612,13 +592,13 @@ mysql&gt; SHOW VARIABLES LIKE '%max_connect%';
 | max_connect_errors     | 100   |
 | max_connections        | 151   |
 | mysqlx_max_connections | 100   |
-+------------------------+-------+
-</code></pre>
++------------------------+-------+</code></pre>
 <p>参考文章：</p>
 <ul>
 <li><a href="https://www.w3school.com.cn/sql/index.asp">SQL 基础教程 - w3school</a></li>
 <li><a href="https://www.runoob.com/mysql/mysql-transaction.html">MySQL教程 - 菜鸟教程</a></li>
 </ul>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

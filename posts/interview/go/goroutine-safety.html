@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Goroutine Safety</h1>
-  <div class="meta">2026-09-14 · 约 210 字 · 源自 notes-src/interview/go/goroutine_safety.md</div>
+  <div class="meta">2026-09-16 · 约 210 字 · 源自 notes-src/interview/go/goroutine_safety.md</div>
   <div class="doc-tags"><span>#面试</span><span>#Go</span></div>
 </div>
 
@@ -68,7 +74,7 @@
 <main>
 <h2 id="_1">第一种方式：</h2>
 <p>对slice加锁，进行保护</p>
-<pre><code class="language-go">num := 10000
+<pre class="highlight"><code class="language-go">num := 10000
 
 var a []int
 var l sync.Mutex
@@ -87,12 +93,11 @@ for i := 0; i &lt; num; i++ {
 
 wg.Wait()
 
-fmt.Println(len(a))
-</code></pre>
+fmt.Println(len(a))</code></pre>
 <p>缺点：锁会影响性能</p>
 <h2 id="_2">第二种方式：</h2>
 <p>使用channel的传递数据</p>
-<pre><code class="language-go">num := 10000
+<pre class="highlight"><code class="language-go">num := 10000
 
 var wg sync.WaitGroup
 wg.Add(num)
@@ -117,11 +122,10 @@ for i := range c {
     a = append(a, i)
 }
 
-fmt.Println(len(a))
-</code></pre>
+fmt.Println(len(a))</code></pre>
 <h2 id="_3">第三种方式：</h2>
 <p>使用索引</p>
-<pre><code class="language-go">num := 10000
+<pre class="highlight"><code class="language-go">num := 10000
 
 a := make([]int, num, num)
 
@@ -144,9 +148,9 @@ for i := range a {
         count++
     }
 }
-fmt.Println(count)
-</code></pre>
+fmt.Println(count)</code></pre>
 <p>优点：无锁，不影响性能</p>
+
 <nav class="doc-series">
   <p class="lb">面试 · 同分类笔记</p>
   <ol>

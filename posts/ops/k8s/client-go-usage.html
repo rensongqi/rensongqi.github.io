@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Kubernetes · Client Go Usage</h1>
-  <div class="meta">2026-09-14 · 约 960 字 · 源自 notes-src/ops/k8s/client-go_usage.md</div>
+  <div class="meta">2026-09-16 · 约 960 字 · 源自 notes-src/ops/k8s/client-go_usage.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Kubernetes</span></div>
 </div>
 
@@ -73,30 +79,30 @@
 <p>windows 在家目录下创建一个.kube文件夹，然后把k8s的config文件放入其中，位置：<code>C:\Users\songqi\.kube\config</code></p>
 <p>linux 也是需要在go运行的机器上放置k8s访问config文件，位置：<code>~/.kube/config</code></p>
 <h2 id="21-clientset">2.1 创建clientSet</h2>
-<pre><code class="language-go">package clientset
+<pre class="highlight"><code class="language-go">package clientset
 
 import (
-    &quot;flag&quot;
-    log &quot;github.com/sirupsen/logrus&quot;
-    &quot;k8s.io/client-go/kubernetes&quot;
-    &quot;k8s.io/client-go/tools/clientcmd&quot;
-    &quot;os&quot;
-    &quot;path/filepath&quot;
+    "flag"
+    log "github.com/sirupsen/logrus"
+    "k8s.io/client-go/kubernetes"
+    "k8s.io/client-go/tools/clientcmd"
+    "os"
+    "path/filepath"
 )
 
 func GetClientSet() (*kubernetes.Clientset, error) {
     var kubeConfig *string
     // 从当前系统环境中读取家目录，然后拼接config 路径
     // 或者直接给一个kube config的绝对路径字符串也可
-    if home := HomeDir(); home != &quot;&quot; {
-        kubeConfig = flag.String(&quot;kubeconfig&quot;, filepath.Join(home, &quot;.kube&quot;, &quot;config&quot;), &quot;(optional) absolute path to the kubeconfig file&quot;)
+    if home := HomeDir(); home != "" {
+        kubeConfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
     } else {
-        kubeConfig = flag.String(&quot;kubeconfig&quot;, &quot;&quot;, &quot;absolute path to the kubeconfig file&quot;)
+        kubeConfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
     }
     flag.Parse()
 
     // uses the current context get restConfig
-    config, err := clientcmd.BuildConfigFromFlags(&quot;&quot;, *kubeConfig)
+    config, err := clientcmd.BuildConfigFromFlags("", *kubeConfig)
     if err != nil {
         log.Panic(err)
     }
@@ -111,37 +117,34 @@ func GetClientSet() (*kubernetes.Clientset, error) {
 
 func HomeDir() string {
     // linux
-    if h := os.Getenv(&quot;HOME&quot;); h != &quot;&quot; {
+    if h := os.Getenv("HOME"); h != "" {
         return h
     }
     // windows
-    return os.Getenv(&quot;USERPROFILE&quot;)
-}
-</code></pre>
+    return os.Getenv("USERPROFILE")
+}</code></pre>
 <h2 id="22-pod">2.2 获取pod信息</h2>
-<pre><code class="language-go">func GetPods(client *kubernetes.Clientset, ctx context.Context, namespace string) {
+<pre class="highlight"><code class="language-go">func GetPods(client *kubernetes.Clientset, ctx context.Context, namespace string) {
     // get pod
     pods, err := client.CoreV1().Pods(namespace).List(ctx, metaV1.ListOptions{})
     if err != nil {
         log.Panic(err)
     }
-    fmt.Println(&quot;pod Name ===&gt; &quot;, pods.Items[0].Status.ContainerStatuses[0].Name)
-    fmt.Println(&quot;pod Image ===&gt; &quot;, pods.Items[0].Status.ContainerStatuses[0].Image)
-    fmt.Println(&quot;pod State ===&gt; &quot;, pods.Items[0].Status.ContainerStatuses[0].State.Running)
-}
-</code></pre>
+    fmt.Println("pod Name ===&gt; ", pods.Items[0].Status.ContainerStatuses[0].Name)
+    fmt.Println("pod Image ===&gt; ", pods.Items[0].Status.ContainerStatuses[0].Image)
+    fmt.Println("pod State ===&gt; ", pods.Items[0].Status.ContainerStatuses[0].State.Running)
+}</code></pre>
 <h2 id="23-deployment">2.3 获取deployment信息</h2>
-<pre><code class="language-go">func GetDeploy(client *kubernetes.Clientset, ctx context.Context, deployName, namespace string) {
+<pre class="highlight"><code class="language-go">func GetDeploy(client *kubernetes.Clientset, ctx context.Context, deployName, namespace string) {
     // get deploy
     deployment, err := client.AppsV1().Deployments(namespace).Get(ctx, deployName, metaV1.GetOptions{})
     if err != nil {
         log.Println(err)
     }
-    fmt.Println(&quot;deployment name ===&gt; &quot;, deployment.Name)
-}
-</code></pre>
+    fmt.Println("deployment name ===&gt; ", deployment.Name)
+}</code></pre>
 <h2 id="24-deployment">2.4 更新deployment副本数量</h2>
-<pre><code class="language-go">func UpdateDeployReplica(client *kubernetes.Clientset, ctx context.Context, deployName, namespace string, replicas int32) {
+<pre class="highlight"><code class="language-go">func UpdateDeployReplica(client *kubernetes.Clientset, ctx context.Context, deployName, namespace string, replicas int32) {
     // 1 方法一：更新deployment 副本数量
     deployment, err := client.AppsV1().Deployments(namespace).Get(ctx, deployName, metaV1.GetOptions{})
     if err != nil {
@@ -155,30 +158,27 @@ func HomeDir() string {
     replica, err := client.AppsV1().Deployments(namespace).GetScale(ctx, deployName, metaV1.GetOptions{})
     replica.Spec.Replicas = replicas
     replica, err = client.AppsV1().Deployments(namespace).UpdateScale(ctx, deployName, replica, metaV1.UpdateOptions{})
-    fmt.Println(&quot;replica name ====&gt;&quot;, replica.Name)
-}
-</code></pre>
+    fmt.Println("replica name ====&gt;", replica.Name)
+}</code></pre>
 <h2 id="25-deployment">2.5 更新deployment镜像</h2>
-<pre><code class="language-go">func UpdateDeployImage(client *kubernetes.Clientset, ctx context.Context, deployName, namespace, image string) {
+<pre class="highlight"><code class="language-go">func UpdateDeployImage(client *kubernetes.Clientset, ctx context.Context, deployName, namespace, image string) {
     deployment, err := client.AppsV1().Deployments(namespace).Get(ctx, deployName, metaV1.GetOptions{})
     if err != nil {
         log.Println(err)
     }
     deployment.Spec.Template.Spec.Containers[0].Image = image
     deployment, err = client.AppsV1().Deployments(namespace).Update(ctx, deployment, metaV1.UpdateOptions{})
-}
-</code></pre>
+}</code></pre>
 <h2 id="26-deployment">2.6 删除deployment</h2>
-<pre><code class="language-go">func DeleteDeploy(client *kubernetes.Clientset, ctx context.Context, deployName, namespace string) {
+<pre class="highlight"><code class="language-go">func DeleteDeploy(client *kubernetes.Clientset, ctx context.Context, deployName, namespace string) {
     // 删除deployment
     err := client.AppsV1().Deployments(namespace).Delete(ctx, deployName, metaV1.DeleteOptions{})
     if err != nil{
         log.Println(err)
     }
-}
-</code></pre>
+}</code></pre>
 <h2 id="27-deploymentservice">2.7 创建deployment和service</h2>
-<pre><code class="language-go">func CreateDeploy(client *kubernetes.Clientset, ctx context.Context, namespace string) {
+<pre class="highlight"><code class="language-go">func CreateDeploy(client *kubernetes.Clientset, ctx context.Context, namespace string) {
     var replicas int32 = 3
     var targetPort int32 = 80
     intString := intstr.IntOrString{
@@ -186,9 +186,9 @@ func HomeDir() string {
     }
     deployment := &amp;appV1.Deployment{
         ObjectMeta: metaV1.ObjectMeta{
-            Name: &quot;nginx&quot;,
+            Name: "nginx",
             Labels: map[string]string{
-                &quot;app&quot;: &quot;nginx&quot;,
+                "app": "nginx",
             },
             Namespace: namespace,
         },
@@ -196,24 +196,24 @@ func HomeDir() string {
             Replicas: &amp;replicas,
             Selector: &amp;metaV1.LabelSelector{
                 MatchLabels: map[string]string{
-                    &quot;app&quot;: &quot;nginx&quot;,
+                    "app": "nginx",
                 },
             },
             Template: coreV1.PodTemplateSpec{
                 ObjectMeta: metaV1.ObjectMeta{
-                    Name: &quot;nginx&quot;,
+                    Name: "nginx",
                     Labels: map[string]string{
-                        &quot;app&quot;: &quot;nginx&quot;,
+                        "app": "nginx",
                     },
                 },
                 Spec: coreV1.PodSpec{
                     Containers: []coreV1.Container{
                         {
-                            Name: &quot;nginx&quot;,
-                            Image: &quot;nginx:1.16.1&quot;,
+                            Name: "nginx",
+                            Image: "nginx:1.16.1",
                             Ports: []coreV1.ContainerPort{
                                 {
-                                    Name: &quot;http&quot;,
+                                    Name: "http",
                                     Protocol: coreV1.ProtocolTCP,
                                     ContainerPort: 80,
                                 },
@@ -226,9 +226,9 @@ func HomeDir() string {
     }
     service := &amp;coreV1.Service{
         ObjectMeta: metaV1.ObjectMeta{
-            Name: &quot;nginx&quot;,
+            Name: "nginx",
             Labels: map[string]string{
-                &quot;app&quot;: &quot;nginx&quot;,
+                "app": "nginx",
             },
             Namespace: namespace,
         },
@@ -236,7 +236,7 @@ func HomeDir() string {
             Type: coreV1.ServiceTypeNodePort,
             Ports: []coreV1.ServicePort{
                 {
-                    Name: &quot;nginx&quot;,
+                    Name: "nginx",
                     Port: 80,
                     TargetPort: intString,
                     NodePort: 30088,
@@ -244,37 +244,36 @@ func HomeDir() string {
                 },
             },
             Selector: map[string]string{
-                &quot;app&quot;: &quot;nginx&quot;,
+                "app": "nginx",
             },
         },
     }
 
     deployment, err := client.AppsV1().Deployments(namespace).Create(ctx, deployment, metaV1.CreateOptions{})
     if err != nil {
-        log.Println(&quot;err ===&gt; &quot;, err)
+        log.Println("err ===&gt; ", err)
     }
     service, err = client.CoreV1().Services(namespace).Create(ctx, service, metaV1.CreateOptions{})
-}
-</code></pre>
+}</code></pre>
 <h2 id="28-main">2.8 main 函数</h2>
-<pre><code class="language-go">package main
+<pre class="highlight"><code class="language-go">package main
 
 import (
-    &quot;client-go/clientset&quot;
-    &quot;context&quot;
-    &quot;fmt&quot;
-    log &quot;github.com/sirupsen/logrus&quot;
-    appV1 &quot;k8s.io/api/apps/v1&quot;
-    coreV1 &quot;k8s.io/api/core/v1&quot;
-    metaV1 &quot;k8s.io/apimachinery/pkg/apis/meta/v1&quot;
-    &quot;k8s.io/apimachinery/pkg/util/intstr&quot;
-    &quot;k8s.io/client-go/kubernetes&quot;
+    "client-go/clientset"
+    "context"
+    "fmt"
+    log "github.com/sirupsen/logrus"
+    appV1 "k8s.io/api/apps/v1"
+    coreV1 "k8s.io/api/core/v1"
+    metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "k8s.io/apimachinery/pkg/util/intstr"
+    "k8s.io/client-go/kubernetes"
 )
 
 func main() {
-    deployName := &quot;myapp-deploy&quot;
-    namespace := &quot;default&quot;
-    //image := &quot;nginx:1.15-alpine&quot;
+    deployName := "myapp-deploy"
+    namespace := "default"
+    //image := "nginx:1.15-alpine"
     var replicas int32 = 2
 
     ctx := context.Background()
@@ -291,9 +290,9 @@ func main() {
     UpdateDeployReplica(client, ctx, deployName, namespace, replicas)
 
     CreateDeploy(client, ctx, namespace)
-}
-</code></pre>
+}</code></pre>
 <p><strong>有关client-go的详细说明参考文章：</strong><a href="https://blog.csdn.net/huwh_/article/details/78821805">client-go的使用及源码分析</a></p>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

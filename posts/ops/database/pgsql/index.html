@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>PostgreSQL</h1>
-  <div class="meta">2026-09-14 · 约 450 字 · 源自 notes-src/ops/database/pgsql/README.md</div>
+  <div class="meta">2026-09-16 · 约 450 字 · 源自 notes-src/ops/database/pgsql/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#数据库</span><span>#PostgreSQL</span></div>
 </div>
 
@@ -67,15 +73,14 @@
 <nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1-postgresql">1 安装postgresql</a></li><li class="l2"><a href="#2">2 修改配置文件</a></li><li class="l2"><a href="#3-postgres">3 修改postgres用户密码，并配置复制流用户</a></li><li class="l2"><a href="#4">4 配置从数据库</a></li><li class="l2"><a href="#5-postgis">5 安装postgis</a></li></ul></nav>
 <main>
 <h1 id="1-postgresql">1 安装postgresql</h1>
-<pre><code class="language-bash">sudo yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+<pre class="highlight"><code class="language-bash">sudo yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
 
 sudo yum install -y postgresql14-server
 sudo /usr/pgsql-14/bin/postgresql-14-setup initdb
 sudo systemctl enable postgresql-14
-sudo systemctl start postgresql-14
-</code></pre>
+sudo systemctl start postgresql-14</code></pre>
 <h1 id="2">2 修改配置文件</h1>
-<pre><code class="language-bash">mkdir /var/lib/pgsql/14/data/pg_archive
+<pre class="highlight"><code class="language-bash">mkdir /var/lib/pgsql/14/data/pg_archive
 vim /var/lib/pgsql/14/data/postgresql.conf
 #修改监听所有ip
 listen_addresses = '*'
@@ -88,10 +93,9 @@ vim /var/lib/pgsql/14/data/pg_hba.conf
 #增加一行
 host    all             all             0.0.0.0/0               password
 
-sudo systemctl restart postgresql-14
-</code></pre>
+sudo systemctl restart postgresql-14</code></pre>
 <h1 id="3-postgres">3 修改postgres用户密码，并配置复制流用户</h1>
-<pre><code class="language-bash">su - postgres
+<pre class="highlight"><code class="language-bash">su - postgres
 psql
 alter user postgres with password 'xxxxxxxx';
 
@@ -102,21 +106,18 @@ CREATE ROLE replica login replication encrypted password 'replica';
 vim /var/lib/pgsql/14/data/pg_hba.conf
 # 添加一行
 host    replication     replica         172.16.104.0/24         trust
-
 </code></pre>
 <h1 id="4">4 配置从数据库</h1>
-<pre><code class="language-bash">su - postgres
+<pre class="highlight"><code class="language-bash">su - postgres
 rm -rf /var/lib/pgsql/14/data/*
 
-pg_basebackup -h 172.16.104.109 -p 5432 -U replica -Fp -Xs -Pv -R -D /var/lib/pgsql/14/data/
-</code></pre>
+pg_basebackup -h 172.16.104.109 -p 5432 -U replica -Fp -Xs -Pv -R -D /var/lib/pgsql/14/data/</code></pre>
 <p>修改standby.signal</p>
-<pre><code class="language-bash">vim /var/lib/pgsql/14/data/standby.signal
+<pre class="highlight"><code class="language-bash">vim /var/lib/pgsql/14/data/standby.signal
 # 添加
-standby_mode = 'on'
-</code></pre>
+standby_mode = 'on'</code></pre>
 <p>修改主配置文件</p>
-<pre><code class="language-bash">vim /var/lib/pgsql/14/data/postgresql.conf
+<pre class="highlight"><code class="language-bash">vim /var/lib/pgsql/14/data/postgresql.conf
 primary_conninfo = 'host=172.16.104.109 port=5432 user=replica password=replica'
 recovery_target_timeline = latest
 max_connections = 1200
@@ -129,10 +130,9 @@ hot_standby_feedback = on
 chown -R postgres. /var/lib/pgsql/14/data/*
 
 # 重启数据库
-systemctl restart postgresql-14
-</code></pre>
+systemctl restart postgresql-14</code></pre>
 <h1 id="5-postgis">5 安装postgis</h1>
-<pre><code class="language-bash"># 安装postgis插件
+<pre class="highlight"><code class="language-bash"># 安装postgis插件
 sudo yum install epel-release
 sudo yum install postgis33_14.x86_64
 
@@ -149,8 +149,8 @@ postgres=# create extension address_standardizer_data_us;
 postgres=# create extension postgis_tiger_geocoder;
 
 # 查看扩展
-postgres=# \dx
-</code></pre>
+postgres=# \dx</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

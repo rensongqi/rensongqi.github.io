@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>SSL 证书 · Lego</h1>
-  <div class="meta">2026-09-14 · 约 740 字 · 源自 notes-src/ops/ssl_certs/lego.md</div>
+  <div class="meta">2026-09-16 · 约 740 字 · 源自 notes-src/ops/ssl_certs/lego.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#SSL 证书</span></div>
 </div>
 
@@ -68,10 +74,9 @@
 <main>
 <h1 id="getting-started">Getting Started</h1>
 <p>使用<code>github.com/go-acme/lego/v4</code>生成指定域名ssl证书</p>
-<pre><code class="language-bash">go get github.com/go-acme/lego/v4
-</code></pre>
+<pre class="highlight"><code class="language-bash">go get github.com/go-acme/lego/v4</code></pre>
 <h1 id="generate-private-key">Generate private key</h1>
-<pre><code class="language-bash"># 使用openssl生成私钥
+<pre class="highlight"><code class="language-bash"># 使用openssl生成私钥
 openssl ecparam -genkey -name prime256v1 -out private-key.pem
 
 # 查看生成的私钥
@@ -79,35 +84,34 @@ openssl ec -in private-key.pem -text -noout
 
 # 导出私钥为BEGIN EC PRIVATE KEY格式
 openssl ec -in private-key.pem -outform PEM -out private-key.ec.pem
-
 </code></pre>
 <h1 id="code">Code</h1>
-<pre><code class="language-go">package main
+<pre class="highlight"><code class="language-go">package main
 import (
-   &quot;crypto&quot;
-   &quot;crypto/ecdsa&quot;
-   &quot;crypto/x509&quot;
-   &quot;encoding/pem&quot;
-   &quot;fmt&quot;
-   &quot;github.com/gin-gonic/gin&quot;
-   &quot;github.com/go-acme/lego/v4/certcrypto&quot;
-   &quot;github.com/go-acme/lego/v4/certificate&quot;
-   &quot;github.com/go-acme/lego/v4/lego&quot;
-   &quot;github.com/go-acme/lego/v4/providers/dns/alidns&quot;
-   &quot;github.com/go-acme/lego/v4/registration&quot;
-   &quot;github.com/sirupsen/logrus&quot;
-   &quot;io&quot;
-   &quot;net/http&quot;
-   &quot;os&quot;
-   &quot;path&quot;
-   &quot;runtime&quot;
-   &quot;strings&quot;
+   "crypto"
+   "crypto/ecdsa"
+   "crypto/x509"
+   "encoding/pem"
+   "fmt"
+   "github.com/gin-gonic/gin"
+   "github.com/go-acme/lego/v4/certcrypto"
+   "github.com/go-acme/lego/v4/certificate"
+   "github.com/go-acme/lego/v4/lego"
+   "github.com/go-acme/lego/v4/providers/dns/alidns"
+   "github.com/go-acme/lego/v4/registration"
+   "github.com/sirupsen/logrus"
+   "io"
+   "net/http"
+   "os"
+   "path"
+   "runtime"
+   "strings"
 )
 // 阿里云token
 const (
-   AliyunRegionID        = &quot;cn-shanghai&quot;
-   AliyunAccessKeyId     = &quot;xxx&quot;
-   AliyunAccessKeySecret = &quot;xxx&quot;
+   AliyunRegionID        = "cn-shanghai"
+   AliyunAccessKeyId     = "xxx"
+   AliyunAccessKeySecret = "xxx"
 )
 type MyUser struct {
    Email        string
@@ -127,35 +131,35 @@ func (u *MyUser) GetPrivateKey() crypto.PrivateKey {
 func loadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
    bytes, err := os.ReadFile(path)
    if err != nil {
-      return nil, fmt.Errorf(&quot;could not read private key file: %w&quot;, err)
+      return nil, fmt.Errorf("could not read private key file: %w", err)
    }
    block, _ := pem.Decode(bytes)
-   if block == nil || block.Type != &quot;EC PRIVATE KEY&quot; {
-      return nil, fmt.Errorf(&quot;failed to decode PEM block containing private key&quot;)
+   if block == nil || block.Type != "EC PRIVATE KEY" {
+      return nil, fmt.Errorf("failed to decode PEM block containing private key")
    }
    privateKey, err := x509.ParseECPrivateKey(block.Bytes)
    if err != nil {
-      return nil, fmt.Errorf(&quot;could not parse private key: %w&quot;, err)
+      return nil, fmt.Errorf("could not parse private key: %w", err)
    }
    return privateKey, nil
 }
 func generateCertificate(domain string) (err error, pemBody, keyBody []byte) {
    var sslFilename string
-   if strings.HasPrefix(domain, &quot;*.&quot;) {
-      domainSplit := strings.Split(domain, &quot;*.&quot;)
+   if strings.HasPrefix(domain, "*.") {
+      domainSplit := strings.Split(domain, "*.")
       sslFilename = domainSplit[1]
    } else {
       sslFilename = domain
    }
-   keyFileName := fmt.Sprintf(&quot;data/%s.key&quot;, sslFilename)
-   pemFileName := fmt.Sprintf(&quot;data/%s.pem&quot;, sslFilename)
-   privateKey, err := loadPrivateKey(&quot;ssl_ecdsa_private_key.pem&quot;)
+   keyFileName := fmt.Sprintf("data/%s.key", sslFilename)
+   pemFileName := fmt.Sprintf("data/%s.pem", sslFilename)
+   privateKey, err := loadPrivateKey("ssl_ecdsa_private_key.pem")
    if err != nil {
       logrus.Error(err)
       return
    }
    myUser := MyUser{
-      Email: &quot;admin@rensongqi.com&quot;,
+      Email: "admin@rensongqi.com",
       key:   privateKey,
    }
    config := lego.NewConfig(&amp;myUser)
@@ -178,7 +182,7 @@ func generateCertificate(domain string) (err error, pemBody, keyBody []byte) {
       return
    }
    if err = client.Challenge.SetDNS01Provider(provider); err != nil {
-      logrus.Error(&quot;Could not create DNS provider: %v&quot;, err)
+      logrus.Error("Could not create DNS provider: %v", err)
    }
    reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
    if err != nil {
@@ -210,35 +214,35 @@ func generateCertificate(domain string) (err error, pemBody, keyBody []byte) {
    return
 }
 type SSLRecord struct {
-   Domain string `json:&quot;domain&quot; binding:&quot;required&quot;`
+   Domain string `json:"domain" binding:"required"`
 }
 func generateSSLCertificate(c *gin.Context) {
    var sslRecord SSLRecord
    if err := c.ShouldBindJSON(&amp;sslRecord); err != nil {
       c.JSON(http.StatusBadRequest, gin.H{
-         &quot;error&quot;: fmt.Sprintf(&quot;%v&quot;, err),
+         "error": fmt.Sprintf("%v", err),
       })
       return
    }
    err, pemBody, keyBody := generateCertificate(sslRecord.Domain)
    if err != nil {
       c.JSON(http.StatusInternalServerError, gin.H{
-         &quot;error&quot;: fmt.Sprintf(&quot;%v&quot;, err),
+         "error": fmt.Sprintf("%v", err),
       })
       return
    }
    c.JSON(http.StatusOK, gin.H{
-      &quot;ssl_pem&quot;: pemBody,
-      &quot;ssl_key&quot;: keyBody,
+      "ssl_pem": pemBody,
+      "ssl_key": keyBody,
    })
 }
 func init() {
    // 设置json文本输出
    logFormat := &amp;logrus.JSONFormatter{
-      TimestampFormat: &quot;2006-01-02 15:04:05.000&quot;,
+      TimestampFormat: "2006-01-02 15:04:05.000",
       PrettyPrint:     false,
       CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
-         fileName := fmt.Sprintf(&quot;%v:%v&quot;, path.Base(frame.File), frame.Line)
+         fileName := fmt.Sprintf("%v:%v", path.Base(frame.File), frame.Line)
          return frame.Function, fileName
       },
    }
@@ -250,19 +254,18 @@ func init() {
    logrus.SetOutput(stdOutWrite)
    //设置最低loglevel
    logrus.SetLevel(logrus.InfoLevel)
-   logrus.Info(&quot;日志模块初始化完成&quot;)
+   logrus.Info("日志模块初始化完成")
 }
 func main() {
    r := gin.Default()
    {
-      r.POST(&quot;/api/v1/ssl&quot;, generateSSLCertificate) // 生成ssl证书
+      r.POST("/api/v1/ssl", generateSSLCertificate) // 生成ssl证书
    }
-   _ = r.Run(&quot;:6666&quot;)
-}
-</code></pre>
+   _ = r.Run(":6666")
+}</code></pre>
 <h1 id="usage">Usage</h1>
-<pre><code class="language-bash">curl -X POST -d '{&quot;domain&quot;: &quot;*.rsq.com&quot;}' -H &quot;Content-Type: application/json&quot; http://127.0.0.1:6666/api/v1/ssl
-</code></pre>
+<pre class="highlight"><code class="language-bash">curl -X POST -d '{"domain": "*.rsq.com"}' -H "Content-Type: application/json" http://127.0.0.1:6666/api/v1/ssl</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

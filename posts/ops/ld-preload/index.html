@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>基于LD_PRELOAD的读文件拦截</h1>
-  <div class="meta">2026-09-14 · 约 720 字 · 源自 notes-src/ops/ld_preload/README.md</div>
+  <div class="meta">2026-09-16 · 约 720 字 · 源自 notes-src/ops/ld_preload/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#LD_PRELOAD</span></div>
 </div>
 
@@ -71,11 +77,13 @@
 <li><a href="#1-前言">1 前言</a></li>
 <li><a href="#2-实现架构">2 实现架构</a></li>
 <li><a href="#3-安装依赖">3 安装依赖</a></li>
-<li><a href="#4-测试方法">4 测试方法</a></li>
+<li><a href="#4-测试方法">4 测试方法</a><ul>
 <li><a href="#41-c">4.1 C</a></li>
 <li><a href="#42-python">4.2 Python</a></li>
 <li><a href="#43-rust">4.3 Rust</a></li>
 <li><a href="#44-go">4.4 Go</a></li>
+</ul>
+</li>
 </ul>
 <h1 id="1">1 前言</h1>
 <p>基于LD_PRELOAD实现在用户态拦截应用程序的读请求，从文件的属性中获取该文件所在目标s3等位置信息，从s3获取数据信息，并返回给客户端程序</p>
@@ -84,7 +92,7 @@
 <p><img alt="ld_preload" src="../../../assets/images/notes/ld_preload.png" /></p>
 <h1 id="3">3 安装依赖</h1>
 <p>以ubuntu为例</p>
-<pre><code class="language-bash"># 安装libcurl
+<pre class="highlight"><code class="language-bash"># 安装libcurl
 apt-get install curl
 apt-get install libcurl4-gnutls-dev
 sudo ln -s  /usr/include/x86_64-linux-gnu/curl  /usr/include/curl
@@ -105,20 +113,20 @@ make &amp;&amp; make install
 gcc -o s3_get_object s3_get_object.c -ls3 -lcurl
 
 # 编译inspect_fget.so
-gcc -shared -fPIC inspect_fget.c -o inspect_fget.so -ldl -ls3 -lcurl
-</code></pre>
+gcc -shared -fPIC inspect_fget.c -o inspect_fget.so -ldl -ls3 -lcurl</code></pre>
 <h1 id="4">4 测试方法</h1>
 <ol>
 <li>创建测试文件</li>
 </ol>
-<pre><code class="language-bash">echo &quot;This is real file. file01.txt.&quot; &gt;&gt; file01.txt
-</code></pre>
+<pre class="highlight"><code class="language-bash">echo "This is real file. file01.txt." &gt;&gt; file01.txt</code></pre>
 <ol start="2">
-<li>给文件设置属性
-- GPFS文件系统上设置的属性可以永久生效，属性存在inode中
-- 其它普通文件系统如xfs、ext等文件系统的文件设置完属性后<code>一旦文件被修改</code>则属性也随之消失</li>
+<li>给文件设置属性</li>
 </ol>
-<pre><code class="language-bash"># 设置属性
+<ul>
+<li>GPFS文件系统上设置的属性可以永久生效，属性存在inode中</li>
+<li>其它普通文件系统如xfs、ext等文件系统的文件设置完属性后<code>一旦文件被修改</code>则属性也随之消失</li>
+</ul>
+<pre class="highlight"><code class="language-bash"># 设置属性
 #              key前缀必须带user.          属性值        文件名
 setfattr --name user.s3_object --value s3_file01.txt file01.txt
 setfattr --name user.s3_bucket --value devops file01.txt
@@ -127,95 +135,95 @@ setfattr --name user.s3_bucket --value devops file01.txt
 getfattr -d file01.txt
 
 # 删除属性
-setfattr --remove user.s3_object file01.txt
-</code></pre>
+setfattr --remove user.s3_object file01.txt</code></pre>
 <h2 id="41-c">4.1 C</h2>
 <blockquote>
 <p>inspect_fget.so 实现了<code>fgets()</code>，也可实现<code>fread()</code>和<code>fscanf()</code></p>
 </blockquote>
 <p>测试代码<code>get.c</code></p>
-<pre><code class="language-c">#include &lt;stdio.h&gt;
+<p><pre class="highlight"><code class="language-c">#include &lt;stdio.h&gt;
 #include &lt;stdlib.h&gt;
 
 int main() {
     FILE *file;
     char buffer[256];
-    const char *filename = &quot;file01.txt&quot;;
+    const char *filename = "file01.txt";
 
-    file = fopen(filename, &quot;r&quot;);
+    file = fopen(filename, "r");
     if (file == NULL) {
-        perror(&quot;open file failed.&quot;);
+        perror("open file failed.");
         return 1;
     }
 
     while (fgets(buffer, sizeof(buffer), file) != NULL) {
-        printf(&quot;%s&quot;, buffer);
+        printf("%s", buffer);
     }
 
     fclose(file);
 
     return 0;
-}
-</code></pre>
-<p>编译测试</p>
-<pre><code class="language-bash"># 编译
+}</code></pre>
+编译测试</p>
+<p><pre class="highlight"><code class="language-bash"># 编译
 gcc -o get get.c
 
 # 读本地文件
 ./get
 
 # 配置LD_PRELOAD读
-LD_PRELOAD=inspect_fget.so ./get
-</code></pre>
-<p><img alt="openssl sign" src="../../../assets/images/notes/ld_preload_c.png" /></p>
+LD_PRELOAD=inspect_fget.so ./get</code></pre>
+<img alt="openssl sign" src="../../../assets/images/notes/ld_preload_c.png" /></p>
 <h2 id="42-python">4.2 Python</h2>
 <blockquote>
 <p>inspect_fget.so 实现了<code>read()</code></p>
 </blockquote>
 <p>测试代码<code>get.py</code></p>
-<pre><code class="language-python">with open('file01.txt', 'r') as file:
+<p><pre class="highlight"><code class="language-python">with open('file01.txt', 'r') as file:
     content = file.read()
 
-print(content)
-</code></pre>
-<p>测试</p>
-<pre><code class="language-bash"># 读本地文件
+print(content)</code></pre>
+测试</p>
+<p><pre class="highlight"><code class="language-bash"># 读本地文件
 python3 get.py
 
 # 配置LD_PRELOAD读
-LD_PRELOAD=inspect_fget.so python3 get.py
-</code></pre>
-<p><img alt="openssl sign" src="../../../assets/images/notes/ld_preload_python.png" /></p>
+LD_PRELOAD=inspect_fget.so python3 get.py</code></pre>
+<img alt="openssl sign" src="../../../assets/images/notes/ld_preload_python.png" /></p>
 <h2 id="43-rust">4.3 Rust</h2>
 <blockquote>
 <p>inspect_fget.so 实现了<code>read()</code></p>
 </blockquote>
 <p>测试代码<code>main.rs</code></p>
-<pre><code class="language-rs">use std::fs::File;
+<p><pre class="highlight"><code class="language-rs">use std::fs::File;
 use std::io::{self, BufReader, Read};
 
 fn main() -&gt; io::Result&lt;()&gt; {
-    let file = File::open(&quot;file01.txt&quot;)?;
+    let file = File::open("file01.txt")?;
     let mut reader = BufReader::new(file);
     let mut content = String::new();
     reader.read_to_string(&amp;mut content)?;
-    println!(&quot;{}&quot;, content);
+    println!("{}", content);
     Ok(())
-}
-</code></pre>
-<p>测试</p>
-<pre><code class="language-bash"># 新建项目
+}</code></pre>
+测试</p>
+<p><pre class="highlight"><code class="language-bash"># 新建项目
 cargo new rust
 
 # 读文件
 cargo run
 
 # 配置LD_PRELOAD读
-LD_PRELOAD=inspect_fget.so cargo run
-</code></pre>
-<p><img alt="openssl sign" src="../../../assets/images/notes/ld_preload_rust.png" /></p>
+LD_PRELOAD=inspect_fget.so cargo run</code></pre>
+<img alt="openssl sign" src="../../../assets/images/notes/ld_preload_rust.png" /></p>
 <h2 id="44-go">4.4 Go</h2>
 <p>待测试，需要开启cgo</p>
+<nav class="doc-attach">
+  <p class="lb">本目录附件</p>
+  <ul>
+    <li><a href="../../../notes-src/ops/ld_preload/inspect_fget.c">inspect_fget.c</a><span class="sz">17.7 KB</span></li>
+    <li><a href="../../../notes-src/ops/ld_preload/s3_get_object.c">s3_get_object.c</a><span class="sz">2.6 KB</span></li>
+  </ul>
+</nav>
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Linux · SSD Trim</h1>
-  <div class="meta">2026-09-14 · 约 2150 字 · 源自 notes-src/ops/linux/ssd_trim.md</div>
+  <div class="meta">2026-09-16 · 约 2150 字 · 源自 notes-src/ops/linux/ssd_trim.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#Linux</span></div>
 </div>
 
@@ -85,11 +91,10 @@
 <h2 id="21-linux">2.1 linux系统</h2>
 <p>方法1：
 可以通过 /sys/block 下的信息来判断 SSD 支持 TRIM, discard_granularity 非 0 表示支持。</p>
-<pre><code class="language-bash"># cat /sys/block/sdm/queue/discard_granularity
-512
-</code></pre>
-<p>也可以直接使用 lsblk 来检测，DISC-GRAN (discard granularity) 和 DISC-MAX (discard max bytes) 列非 0 表示该 SSD 支持 TRIM 功能。</p>
-<pre><code class="language-bash"># lsblk --discard
+<p><pre class="highlight"><code class="language-bash"># cat /sys/block/sdm/queue/discard_granularity
+512</code></pre>
+也可以直接使用 lsblk 来检测，DISC-GRAN (discard granularity) 和 DISC-MAX (discard max bytes) 列非 0 表示该 SSD 支持 TRIM 功能。</p>
+<p><pre class="highlight"><code class="language-bash"># lsblk --discard
 NAME                DISC-ALN DISC-GRAN DISC-MAX DISC-ZERO
 sda                        0        0B       0B         0
 ├─sda1                     0        0B       0B         0
@@ -103,30 +108,25 @@ sdb                        0      512B       4G         1
 ├─sdb4                     0      512B       4G         1
 ├─sdb5                     0      512B       4G         1
 ├─sdb6                     0      512B       4G         1
-└─sdb7                     0      512B       4G         1
-</code></pre>
-<p>方法2：</p>
-<pre><code class="language-bash"># yum install hdparm -y
+└─sdb7                     0      512B       4G         1</code></pre>
+方法2：</p>
+<pre class="highlight"><code class="language-bash"># yum install hdparm -y
 # hdparm -I  /dev/sdb | grep -i trim
            *    Data Set Management TRIM supported (limit 8 blocks)
-           *    Deterministic read ZEROs after TRIM
-</code></pre>
+           *    Deterministic read ZEROs after TRIM</code></pre>
 <h2 id="22-windows">2.2 windows系统</h2>
 <p>在CMD中查询</p>
-<pre><code class="language-bash">fsutil behavior query disabledeletenotify
-</code></pre>
-<p>如果你的电脑 <code>DisableDeleteNotify = 0</code>，则说明你的电脑系统已开启TRIM功能，如果<code>DisableDeleteNotify = 1</code>，则说明没开启。</p>
+<p><pre class="highlight"><code class="language-bash">fsutil behavior query disabledeletenotify</code></pre>
+如果你的电脑 <code>DisableDeleteNotify = 0</code>，则说明你的电脑系统已开启TRIM功能，如果<code>DisableDeleteNotify = 1</code>，则说明没开启。</p>
 <h1 id="3-trim">3 启用 TRIM</h1>
 <p>TRIM是内置于ATA命令中的SSD命令，它是磁盘与计算机交互方式的一部分。操作系统能够将TRIM命令发送到磁盘，以使其知道哪些块是已删除文件的一部分，并允许SSD在需要写入之前先擦除这些块。虽然操作系统能够在每次驱动器删除文件系统上的文件时向驱动器发送信号以擦除这些部分，但这也会影响性能并减慢运行速度。因此，建议按计划运行TRIM以间歇性地清除块。</p>
 <h2 id="31-linux">3.1 Linux系统</h2>
 <p>方法1：</p>
 <p>修改/etc/fstab中的记录，加入discard选项。此方法弊端是降低磁盘的性能。</p>
-<pre><code class="language-bash">/dev/sdb1  /data       xfs   defaults,noatime,discard   0  0
-</code></pre>
-<p>方法2：</p>
+<p><pre class="highlight"><code class="language-bash">/dev/sdb1  /data       xfs   defaults,noatime,discard   0  0</code></pre>
+方法2：</p>
 <p>手动执行</p>
-<pre><code class="language-bash"># fstrim -a -v
-</code></pre>
+<pre class="highlight"><code class="language-bash"># fstrim -a -v</code></pre>
 <blockquote>
 <p>-a标志告诉fstrim检查所有可用的有效分区，-v标志提供详细的输出，向您显示fstrim已完成的操作。您应该看到命令的输出，以查看运行情况，如果输出为正，则可以将命令添加到crontab条目中。</p>
 </blockquote>
@@ -135,7 +135,7 @@ sdb                        0      512B       4G         1
 <li>在 CentOS 7 中，已经自带了 <code>/usr/lib/systemd/system/fstrim.timer</code> 和 <code>/usr/lib/systemd/system/fstrim.service</code></li>
 <li>在 Ubuntu 中该服务默认是开启状态</li>
 </ul>
-<pre><code>/usr/lib/systemd/system/fstrim.timer：
+<p><pre class="highlight"><code>/usr/lib/systemd/system/fstrim.timer：
 [Unit]
 Description=Discard unused blocks once a week
 Documentation=man:fstrim
@@ -153,21 +153,19 @@ Description=Discard unused blocks
 
 [Service]
 Type=oneshot
-ExecStart=/usr/sbin/fstrim -a
-</code></pre>
-<p>只需开启即可：</p>
-<pre><code class="language-bash"># systemctl enable fstrim.timer
+ExecStart=/usr/sbin/fstrim -a</code></pre>
+只需开启即可：</p>
+<pre class="highlight"><code class="language-bash"># systemctl enable fstrim.timer
 # systemctl start fstrim.timer
-# systemctl status fstrim.timer
-</code></pre>
+# systemctl status fstrim.timer</code></pre>
 <h2 id="32-windows">3.2 windows系统</h2>
 <p>开启：</p>
-<pre><code>fsutil behavior set disabledeletenotify 0
-</code></pre>
-<p>参考：
+<p><pre class="highlight"><code>fsutil behavior set disabledeletenotify 0</code></pre>
+参考：
 https://www.crucial.cn/articles/about-ssd/what-can-trim-do
 https://zhuanlan.zhihu.com/p/34683444</p>
 <p>转载：<a href="https://blog.csdn.net/wylfengyujiancheng/article/details/120435464">SSD的TRIM原理及实践</a></p>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

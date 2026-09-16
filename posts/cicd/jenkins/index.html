@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>Jenkins</h1>
-  <div class="meta">2026-09-14 · 约 190 字 · 源自 notes-src/cicd/jenkins/README.md</div>
+  <div class="meta">2026-09-16 · 约 190 字 · 源自 notes-src/cicd/jenkins/README.md</div>
   <div class="doc-tags"><span>#CI/CD</span><span>#Jenkins</span></div>
 </div>
 
@@ -69,21 +75,19 @@
 <h1 id="jenkins">Jenkins配置</h1>
 <h2 id="_1">基础配置</h2>
 <h3 id="jenkins_1">安装Jenkins</h3>
-<pre><code class="language-bash">docker run -d \
+<pre class="highlight"><code class="language-bash">docker run -d \
     --name jenkins \
     -p 8080:8080 \
     -p 50000:50000 \
     --restart=on-failure \
     -v jenkins_home:/var/jenkins_home \
-    jenkins/jenkins:2.479.3-lts-jdk17
-</code></pre>
+    jenkins/jenkins:2.479.3-lts-jdk17</code></pre>
 <p>修改插件下载为清华源</p>
-<pre><code class="language-bash">docker inspect volume jenkins_home
+<pre class="highlight"><code class="language-bash">docker inspect volume jenkins_home
 
 sed -i 's#updates.jenkins.io/download#mirrors.tuna.tsinghua.edu.cn/jenkins#g' /var/lib/docker/volumes/jenkins_home/_data
 
-docker restart jenkins
-</code></pre>
+docker restart jenkins</code></pre>
 <h3 id="_2">插件安装</h3>
 <ul>
 <li>SSH</li>
@@ -92,16 +96,15 @@ docker restart jenkins
 <li>Vault</li>
 </ul>
 <h3 id="config-ldap">Config LDAP</h3>
-<pre><code>Server: ldap://RSQ.cn:389
+<pre class="highlight"><code>Server: ldap://RSQ.cn:389
 root DN: DC=RSQ,DC=CN
 User search base: CN=Users,DC=RSQ,DC=CN
 User search filter: cn={0}
 Manager DN: CN=devops,CN=Users,DC=RSQ,DC=CN
 Manager Password: xxxxxx
-Display Name LDAP attribute: displayname 或 sAMAccountName
-</code></pre>
+Display Name LDAP attribute: displayname 或 sAMAccountName</code></pre>
 <h2 id="vault">从vault中获取密码</h2>
-<pre><code class="language-pipeline">def secrets = [
+<pre class="highlight"><code class="language-pipeline">def secrets = [
     [
         path: 'devops/jenkins/gitlab', engineVersion: 2, secretValues: [
             [
@@ -123,19 +126,24 @@ def configuration = [
 pipeline {
     agent any
     stages {
-        stage(&quot;Test&quot;){
+        stage("Test"){
             steps{
                 script{
                     withVault([configuration: configuration, vaultSecrets: secrets]) {
-                        sh &quot;echo ${USERNAME}&quot;
-                        sh &quot;echo ${PASSWORD}&quot;
+                        sh "echo ${USERNAME}"
+                        sh "echo ${PASSWORD}"
                     }
                 }
             }
         }
     }
-}
-</code></pre>
+}</code></pre>
+<nav class="doc-attach">
+  <p class="lb">本目录附件</p>
+  <ul>
+    <li><span class="dir">pipeline/</span><span class="sz">子目录</span></li>
+  </ul>
+</nav>
 <nav class="doc-series">
   <p class="lb">CI/CD · 同分类笔记</p>
   <ol>

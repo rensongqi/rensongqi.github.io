@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>一致性Hash</h1>
-  <div class="meta">2026-09-14 · 约 1170 字 · 源自 notes-src/interview/redis/README.md</div>
+  <div class="meta">2026-09-16 · 约 1170 字 · 源自 notes-src/interview/redis/README.md</div>
   <div class="doc-tags"><span>#面试</span><span>#Redis</span></div>
 </div>
 
@@ -67,10 +73,12 @@
 <nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#hash">一致性Hash</a></li><li class="l3"><a href="#_1">算法的容错性和可扩展性</a></li><li class="l3"><a href="#_2">数据倾斜问题</a></li><li class="l3"><a href="#hash_1">Hash冲突</a></li><li class="l2"><a href="#redis">Redis优化</a></li><li class="l2"><a href="#redis-70">Redis 7.0</a></li></ul></nav>
 <main>
 <ul>
-<li><a href="#一致性hash">一致性Hash</a></li>
+<li><a href="#一致性hash">一致性Hash</a><ul>
 <li><a href="#算法的容错性和可扩展性">算法的容错性和可扩展性</a></li>
 <li><a href="#数据倾斜问题">数据倾斜问题</a></li>
 <li><a href="#hash冲突">Hash冲突</a></li>
+</ul>
+</li>
 <li><a href="#redis优化">Redis优化</a></li>
 <li><a href="#redis-70">Redis 7.0</a></li>
 </ul>
@@ -86,34 +94,50 @@
 <p>在一致性Hash算法服务节点太少的情况下，容易因为节点分布不均匀面造成数据倾斜（被缓存的对象大部分缓存在某一台服务器上）问题。</p>
 <p><img alt="" src="../../../assets/images/notes/redis_hash2.jpg" /></p>
 <p>这时我们发现有大量数据集中在节点A上，而节点B只有少量数据。为了解决数据倾斜问题，一致性Hash算法引入了虚拟节点机制，即对每一个服务器节点计算多个哈希，每个计算结果位置都放置一个此服务节点，称为虚拟节点</p>
-<p>数据定位算法不变，只需要增加一步：虚拟节点到实际点的映射。 所以加入虚拟节点之后，即使在服务节点很少的情况下，也能做到数据的均匀分布。</p>
+<p>数据定位算法不变，只需要增加一步：虚拟节点到实际点的映射。
+所以加入虚拟节点之后，即使在服务节点很少的情况下，也能做到数据的均匀分布。</p>
 <h2 id="hash_1">Hash冲突</h2>
 <p>Redis hash表初始化多大（4 bucket） 静态表
 多个key取模后的值落到redis的同一个bucket里，就是hash冲突</p>
 <h1 id="redis">Redis优化</h1>
-<p>1、尽量使用短的key
-- 当然在精简的同时，不要为了key的“见名知意”。对于value有些也可精简，比如性别使用0、1。</p>
-<p>2、避免使用keys *
-- keys *, 这个命令是阻塞的，即操作执行期间，其它任何命令在你的实例中都无法执行。当redis中key数据量小时到无所谓，数据量大就很糟糕了。所以我们应该避免去使用这个命令。可以去使用SCAN,来代替。</p>
-<p>3、在存到Redis之前先把你的数据压缩下
-- redis为每种数据类型都提供了两种内部编码方式，在不同的情况下redis会自动调整合适的编码方式。</p>
-<p>4、设置key有效期
-- 我们应该尽可能的利用key有效期。比如一些临时数据（短信校验码），过了有效期Redis就会自动为你清除！</p>
+<p>1、尽量使用短的key</p>
+<ul>
+<li>当然在精简的同时，不要为了key的“见名知意”。对于value有些也可精简，比如性别使用0、1。</li>
+</ul>
+<p>2、避免使用keys *</p>
+<ul>
+<li>keys *, 这个命令是阻塞的，即操作执行期间，其它任何命令在你的实例中都无法执行。当redis中key数据量小时到无所谓，数据量大就很糟糕了。所以我们应该避免去使用这个命令。可以去使用SCAN,来代替。</li>
+</ul>
+<p>3、在存到Redis之前先把你的数据压缩下</p>
+<ul>
+<li>redis为每种数据类型都提供了两种内部编码方式，在不同的情况下redis会自动调整合适的编码方式。</li>
+</ul>
+<p>4、设置key有效期</p>
+<ul>
+<li>我们应该尽可能的利用key有效期。比如一些临时数据（短信校验码），过了有效期Redis就会自动为你清除！</li>
+</ul>
 <p>5、选择回收策略(maxmemory-policy)</p>
 <p>6、尽可能的使用hash存储</p>
-<p>7、限制redis内存大小
-- 64位系统不限制内存，32位系统默认最多使用3GB内存</p>
+<p>7、限制redis内存大小</p>
+<ul>
+<li>64位系统不限制内存，32位系统默认最多使用3GB内存</li>
+</ul>
 <p>8、修改linux中TCP监听的最大容纳数量</p>
-<p>9、修改linux内核内存分配策略
-- redis在备份数据的时候，会fork出一个子进程，理论上child进程所占用的内存和parent是一样的，比如parent占用的内存为8G，这个时候也要同样分配8G的内存给child,如果内存无法负担，往往会造成redis服务器的down机或者IO负载过高，效率下降</p>
-<p>10、关闭THE
-- THP会造成内存锁影响redis性能，建议关闭</p>
+<p>9、修改linux内核内存分配策略</p>
+<ul>
+<li>redis在备份数据的时候，会fork出一个子进程，理论上child进程所占用的内存和parent是一样的，比如parent占用的内存为8G，这个时候也要同样分配8G的内存给child,如果内存无法负担，往往会造成redis服务器的down机或者IO负载过高，效率下降</li>
+</ul>
+<p>10、关闭THE</p>
+<ul>
+<li>THP会造成内存锁影响redis性能，建议关闭</li>
+</ul>
 <h1 id="redis-70">Redis 7.0</h1>
 <ul>
 <li>Cluster: 支持域名（之前仅支持ip）</li>
 <li>将 AOF 作为多个文件存储在一个文件夹中</li>
 <li>对 RDB 文件使用了新版本格式（10），与旧版本不兼容</li>
 </ul>
+
 <nav class="doc-series">
   <p class="lb">面试 · 同分类笔记</p>
   <ol>

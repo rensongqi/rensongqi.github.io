@@ -84,11 +84,11 @@ private_key_file = /root/.ssh/id_rsa  # 默认路径
 
 ## 3.3 命令行使用
 
-```ansible all -m ping
+```bash
 ansible all -m ping
 ansible all -m shell -a "ls /root"
 ansible all -m shell -a "ls /root; touch /tmp/a.txt"
-ansible servers -m copy –a "src=/etc/hosts dest=/tmp/hosts"
+ansible servers -m copy -a "src=/etc/hosts dest=/tmp/hosts"
 ```
 
 # 4 常用模块

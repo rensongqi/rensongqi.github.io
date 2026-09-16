@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>MySQL · Master Slave</h1>
-  <div class="meta">2026-09-14 · 约 450 字 · 源自 notes-src/ops/database/mysql/master_slave.md</div>
+  <div class="meta">2026-09-16 · 约 450 字 · 源自 notes-src/ops/database/mysql/master_slave.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#数据库</span><span>#MySQL</span></div>
 </div>
 
@@ -67,29 +73,29 @@
 <nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#1-master">1 master</a></li><li class="l2"><a href="#2-slave">2 slave</a></li><li class="l2"><a href="#3">3 配置主从</a></li></ul></nav>
 <main>
 <h1 id="1-master">1 master</h1>
-<pre><code class="language-bash"># mkdir /data/mysql-master/volumes/{log,conf,data} -p
+<pre class="highlight"><code class="language-bash"># mkdir /data/mysql-master/volumes/{log,conf,data} -p
 
 # vim /data/mysql-master/docker-compose.yml
-version: &quot;2&quot;
+version: "2"
 services:
   mysql-master:
     container_name: mysql-master
     image: harbor.rsq.cn/library/mysql/mysql:5.7
     restart: always
     ports:
-      - &quot;3306:3306&quot;
+      - "3306:3306"
     privileged: true
     volumes:
       - ./volumes/log:/var/log/mysql
       - ./volumes/conf/my.cnf:/etc/mysql/my.cnf
       - ./volumes/data:/var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD: &quot;xxxxxx&quot;
-      TZ: &quot;Asia/Shanghai&quot;
+      MYSQL_ROOT_PASSWORD: "xxxxxx"
+      TZ: "Asia/Shanghai"
     command: [
-      &quot;--character-set-server=utf8mb4&quot;,
-      &quot;--collation-server=utf8mb4_general_ci&quot;,
-      &quot;--max_connections=30000&quot;
+      "--character-set-server=utf8mb4",
+      "--collation-server=utf8mb4_general_ci",
+      "--max_connections=30000"
     ]
 
 # 编辑配置文件
@@ -110,32 +116,31 @@ read_rnd_buffer_size = 8M
 
 # 启动容器
 # cd /data/mysql-master
-# docker-compose up -d
-</code></pre>
+# docker-compose up -d</code></pre>
 <h1 id="2-slave">2 slave</h1>
-<pre><code class="language-bash">mkdir /data/mysql-slave/volumes/{log,conf,data} -p
+<pre class="highlight"><code class="language-bash">mkdir /data/mysql-slave/volumes/{log,conf,data} -p
 
 vim /data/mysql-slave/docker-compose.yml
-version: &quot;2&quot;
+version: "2"
 services:
   mysql-slave:
     container_name: mysql-slave
     image: harbor.rsq.cn/library/mysql/mysql:5.7
     restart: always
     ports:
-      - &quot;3306:3306&quot;
+      - "3306:3306"
     privileged: true
     volumes:
       - ./volumes/log:/var/log/mysql
       - ./volumes/conf/my.cnf:/etc/mysql/my.cnf
       - ./volumes/data:/var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD: &quot;xxxxxx&quot;
-      TZ: &quot;Asia/Shanghai&quot;
+      MYSQL_ROOT_PASSWORD: "xxxxxx"
+      TZ: "Asia/Shanghai"
     command: [
-      &quot;--character-set-server=utf8mb4&quot;,
-      &quot;--collation-server=utf8mb4_general_ci&quot;,
-      &quot;--max_connections=30000&quot;
+      "--character-set-server=utf8mb4",
+      "--collation-server=utf8mb4_general_ci",
+      "--max_connections=30000"
     ]
 
 # 编辑配置文件
@@ -158,11 +163,10 @@ read_buffer_size = 4M
 read_rnd_buffer_size = 8M
 
 # 启动容器
-docker-compose up -d
-</code></pre>
+docker-compose up -d</code></pre>
 <h1 id="3">3 配置主从</h1>
 <p>进入master容器，查看 file 和 pos 数据</p>
-<pre><code class="language-bash">mysql -uroot -p
+<pre class="highlight"><code class="language-bash">mysql -uroot -p
 
 mysql&gt; show master status;
 +---------------------------+----------+--------------+------------------+-------------------+
@@ -170,16 +174,15 @@ mysql&gt; show master status;
 +---------------------------+----------+--------------+------------------+-------------------+
 | replicas-mysql-bin.000003 |      154 |              | mysql            |                   |
 +---------------------------+----------+--------------+------------------+-------------------+
-1 row in set (0.00 sec)
-</code></pre>
+1 row in set (0.00 sec)</code></pre>
 <p>进入slave容器</p>
-<pre><code class="language-bash">mysql -uroot -p
+<pre class="highlight"><code class="language-bash">mysql -uroot -p
 
 mysql&gt; change master to master_host='172.16.104.104',master_user='root',master_password='xxxxxx',master_port=3306,master_log_file='replicas-mysql-bin.000003', master_log_pos=154,master_connect_retry=30;
 mysql&gt; start slave;
-mysql&gt; show slave status \G；
-</code></pre>
+mysql&gt; show slave status \G；</code></pre>
 <p>测试主从同步情况，master创建数据库，查看slave有没有</p>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

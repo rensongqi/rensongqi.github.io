@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,7 +65,7 @@
 
 <div class="doc-title">
   <h1>三节点ES集群(带密码校验)</h1>
-  <div class="meta">2026-09-14 · 约 1070 字 · 源自 notes-src/ops/elk/es/README.md</div>
+  <div class="meta">2026-09-16 · 约 1070 字 · 源自 notes-src/ops/elk/es/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#ELK</span><span>#Elasticsearch</span></div>
 </div>
 
@@ -69,10 +75,12 @@
 <ul>
 <li><a href="#三节点es集群带密码校验">三节点ES集群(带密码校验)</a></li>
 <li><a href="#初始化获取证书">初始化获取证书</a></li>
-<li><a href="#configuration-es-node">Configuration ES node</a></li>
+<li><a href="#configuration-es-node">Configuration ES node</a><ul>
 <li><a href="#172161020">172.16.10.20</a></li>
 <li><a href="#172161021">172.16.10.21</a></li>
 <li><a href="#172161022">172.16.10.22</a></li>
+</ul>
+</li>
 <li><a href="#配置密码">配置密码</a></li>
 <li><a href="#kibana配置">kibana配置</a></li>
 </ul>
@@ -100,27 +108,25 @@
 </tbody>
 </table>
 <h1 id="_1">初始化获取证书</h1>
-<pre><code class="language-bash">mkdir /data/elk/es/{config,data,plugins} -p
-chmod 777 /data/elk/es/
-</code></pre>
+<pre class="highlight"><code class="language-bash">mkdir /data/elk/es/{config,data,plugins} -p
+chmod 777 /data/elk/es/</code></pre>
 <p>先部署一个不开启安全验证的容器</p>
 <p><code>elasticsearch.yml</code></p>
-<pre><code class="language-yml">cluster.name: soft-es
+<pre class="highlight"><code class="language-yml">cluster.name: soft-es
 node.name: es-node1
 node.roles: [ master, data ]
 network.host: 0.0.0.0
 network.publish_host: 172.16.10.20
 http.port: 9200
 http.cors.enabled: true
-http.cors.allow-origin: &quot;*&quot;
+http.cors.allow-origin: "*"
 ingest.geoip.downloader.enabled: false
-discovery.seed_hosts: [&quot;172.16.10.20:9300&quot;, &quot;172.16.10.21:9300&quot;, &quot;172.16.10.22:9300&quot;]
-cluster.initial_master_nodes: [&quot;es-node1&quot;,&quot;es-node2&quot;,&quot;es-node3&quot;]
+discovery.seed_hosts: ["172.16.10.20:9300", "172.16.10.21:9300", "172.16.10.22:9300"]
+cluster.initial_master_nodes: ["es-node1","es-node2","es-node3"]
 xpack.security.enabled: false
-xpack.security.transport.ssl.enabled: false
-</code></pre>
+xpack.security.transport.ssl.enabled: false</code></pre>
 <p><code>docker-compose.yml</code></p>
-<pre><code class="language-yml">version: '3.7'
+<pre class="highlight"><code class="language-yml">version: '3.7'
 
 services:
   elasticsearch:
@@ -130,17 +136,16 @@ services:
     environment:
       - ES_JAVA_OPTS=-Xms6000m -Xmx6000m
     ports:
-      - &quot;9200:9200&quot;
-      - &quot;9300:9300&quot;
+      - "9200:9200"
+      - "9300:9300"
     volumes:
       - /data/elk/es/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
       - /data/elk/es/data:/usr/share/elasticsearch/data
       - /data/elk/es/plugins:/usr/share/elasticsearch/plugins
     networks:
-      - elk
-</code></pre>
+      - elk</code></pre>
 <p>进入容器，生成证书</p>
-<pre><code class="language-bash">docker exec -it elasticsearch bash
+<pre class="highlight"><code class="language-bash">docker exec -it elasticsearch bash
 
 # 创建CA，输入密码时直接回车，无需密码即可
 ./bin/elasticsearch-certutil ca --days 3650
@@ -151,12 +156,11 @@ services:
 # 会生成两个文件，CA证书elastic-stack-ca.p12和自签证书elastic-certificates.p12，将其拷贝出容器外
 # 仅将elastic-certificates.p12文件拷贝至其它node节点的 /data/elk/es/config/ 目录中即可
 docker cp elasticsearch:/usr/share/elasticsearch/elastic-certificates.p12 /data/elk/es/config/
-docker cp elasticsearch:/usr/share/elasticsearch/elastic-stack-ca.p12 /data/elk/es/config/   
-</code></pre>
+docker cp elasticsearch:/usr/share/elasticsearch/elastic-stack-ca.p12 /data/elk/es/config/   </code></pre>
 <h1 id="configuration-es-node">Configuration ES node</h1>
 <p>仅 <code>172.16.10.20</code> 配置kibana即可</p>
 <p><code>docker-compose.yml</code></p>
-<pre><code class="language-yaml">version: '3.7'
+<pre class="highlight"><code class="language-yaml">version: '3.7'
 
 services:
   elasticsearch:
@@ -166,8 +170,8 @@ services:
     environment:
       - ES_JAVA_OPTS=-Xms6000m -Xmx6000m
     ports:
-      - &quot;9200:9200&quot;
-      - &quot;9300:9300&quot;
+      - "9200:9200"
+      - "9300:9300"
     volumes:
       - /data/elk/es/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
       - /data/elk/es/data:/usr/share/elasticsearch/data
@@ -184,94 +188,89 @@ services:
     volumes: 
       - ./es/config/kibana.yml:/usr/share/kibana/config/kibana.yml
     ports:
-      - &quot;5601:5601&quot;
+      - "5601:5601"
     restart: always
     networks:
       - elk
 
 networks:
   elk:
-    driver: bridge
-</code></pre>
+    driver: bridge</code></pre>
 <h2 id="172161020">172.16.10.20</h2>
 <blockquote>
 <p>xpack.security.transport.ssl.keystore.path 配置项默认会在目录 <code>/usr/share/elasticsearch/</code> 中找证书文件</p>
 </blockquote>
-<pre><code class="language-yml">cluster.name: soft-es
+<pre class="highlight"><code class="language-yml">cluster.name: soft-es
 node.name: es-node1
 node.roles: [ master, data ]
 network.host: 0.0.0.0
 network.publish_host: 172.16.10.20
 http.port: 9200
 http.cors.enabled: true
-http.cors.allow-origin: &quot;*&quot;
+http.cors.allow-origin: "*"
 ingest.geoip.downloader.enabled: false
-discovery.seed_hosts: [&quot;172.16.10.20:9300&quot;, &quot;172.16.10.21:9300&quot;, &quot;172.16.10.22:9300&quot;]
-cluster.initial_master_nodes: [&quot;es-node1&quot;,&quot;es-node2&quot;,&quot;es-node3&quot;]
+discovery.seed_hosts: ["172.16.10.20:9300", "172.16.10.21:9300", "172.16.10.22:9300"]
+cluster.initial_master_nodes: ["es-node1","es-node2","es-node3"]
 xpack.security.enabled: true
 xpack.security.transport.ssl.enabled: true
 xpack.security.transport.ssl.verification_mode: certificate
 xpack.security.transport.ssl.client_authentication: required
 xpack.security.transport.ssl.keystore.path: elastic-certificates.p12
-xpack.security.transport.ssl.truststore.path: elastic-certificates.p12
-</code></pre>
+xpack.security.transport.ssl.truststore.path: elastic-certificates.p12</code></pre>
 <h2 id="172161021">172.16.10.21</h2>
-<pre><code class="language-yml">cluster.name: soft-es
+<pre class="highlight"><code class="language-yml">cluster.name: soft-es
 node.name: es-node2
 node.roles: [ master, data ]
 network.host: 0.0.0.0
 network.publish_host: 172.16.10.21
 http.port: 9200
 http.cors.enabled: true
-http.cors.allow-origin: &quot;*&quot;
+http.cors.allow-origin: "*"
 ingest.geoip.downloader.enabled: false
-discovery.seed_hosts: [&quot;172.16.10.20:9300&quot;, &quot;172.16.10.21:9300&quot;, &quot;172.16.10.22:9300&quot;]
-cluster.initial_master_nodes: [&quot;es-node1&quot;,&quot;es-node2&quot;,&quot;es-node3&quot;]
+discovery.seed_hosts: ["172.16.10.20:9300", "172.16.10.21:9300", "172.16.10.22:9300"]
+cluster.initial_master_nodes: ["es-node1","es-node2","es-node3"]
 xpack.security.enabled: true
 xpack.security.transport.ssl.enabled: true
 xpack.security.transport.ssl.verification_mode: certificate
 xpack.security.transport.ssl.client_authentication: required
 xpack.security.transport.ssl.keystore.path: elastic-certificates.p12
-xpack.security.transport.ssl.truststore.path: elastic-certificates.p12
-</code></pre>
+xpack.security.transport.ssl.truststore.path: elastic-certificates.p12</code></pre>
 <h2 id="172161022">172.16.10.22</h2>
-<pre><code class="language-yml">cluster.name: soft-es
+<pre class="highlight"><code class="language-yml">cluster.name: soft-es
 node.name: es-node3
 node.roles: [ master, data ]
 network.host: 0.0.0.0
 network.publish_host: 172.16.10.22
 http.port: 9200
 http.cors.enabled: true
-http.cors.allow-origin: &quot;*&quot;
+http.cors.allow-origin: "*"
 ingest.geoip.downloader.enabled: false
-discovery.seed_hosts: [&quot;172.16.10.20:9300&quot;, &quot;172.16.10.21:9300&quot;, &quot;172.16.10.22:9300&quot;]
-cluster.initial_master_nodes: [&quot;es-node1&quot;,&quot;es-node2&quot;,&quot;es-node3&quot;]
+discovery.seed_hosts: ["172.16.10.20:9300", "172.16.10.21:9300", "172.16.10.22:9300"]
+cluster.initial_master_nodes: ["es-node1","es-node2","es-node3"]
 xpack.security.enabled: true
 xpack.security.transport.ssl.enabled: true
 xpack.security.transport.ssl.verification_mode: certificate
 xpack.security.transport.ssl.client_authentication: required
 xpack.security.transport.ssl.keystore.path: elastic-certificates.p12
-xpack.security.transport.ssl.truststore.path: elastic-certificates.p12
-</code></pre>
+xpack.security.transport.ssl.truststore.path: elastic-certificates.p12</code></pre>
 <h1 id="_2">配置密码</h1>
 <blockquote>
 <p>进入 172.16.10.20 的es容器中生成密码接口，仅需在一台节点中生成密码，生成密码后重启所有es node</p>
 </blockquote>
-<pre><code class="language-bash">docker exec -it elasticsearch bash
+<pre class="highlight"><code class="language-bash">docker exec -it elasticsearch bash
 ./bin/elasticsearch-setup-passwords interactive  # 手动输入密码
 
 # 重启所有节点es node
-docker-compose restart elasticsearch
-</code></pre>
+docker-compose restart elasticsearch</code></pre>
 <h1 id="kibana">kibana配置</h1>
-<pre><code class="language-yml">i18n.locale: zh-CN
-server.host: &quot;0.0.0.0&quot;
-server.shutdownTimeout: &quot;5s&quot;
-elasticsearch.hosts: [ &quot;http://172.16.10.20:9200&quot; ]
+<pre class="highlight"><code class="language-yml">i18n.locale: zh-CN
+server.host: "0.0.0.0"
+server.shutdownTimeout: "5s"
+elasticsearch.hosts: [ "http://172.16.10.20:9200" ]
 monitoring.ui.container.elasticsearch.enabled: true
-elasticsearch.username: &quot;kibana&quot;
-elasticsearch.password: &quot;xxxxxxxxxx&quot;
-</code></pre>
+elasticsearch.username: "kibana"
+elasticsearch.password: "xxxxxxxxxx"</code></pre>
+
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>

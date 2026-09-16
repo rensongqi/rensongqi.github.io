@@ -34,6 +34,12 @@
 .doc-page main th{background:var(--bg-soft);font-weight:600}
 .doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
 .doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
 @media (max-width:1020px){
   .doc-page .layout{display:block;max-width:808px}
   .doc-page nav.toc{display:none}
@@ -59,12 +65,12 @@
 
 <div class="doc-title">
   <h1>修改logstash配置</h1>
-  <div class="meta">2026-09-14 · 约 400 字 · 源自 notes-src/ops/elk/logstash/README.md</div>
+  <div class="meta">2026-09-16 · 约 400 字 · 源自 notes-src/ops/elk/logstash/README.md</div>
   <div class="doc-tags"><span>#运维工具</span><span>#ELK</span><span>#Logstash</span></div>
 </div>
 
 <div class="layout">
-<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#logstash">修改logstash配置</a></li><li class="l2"><a href="#centos">centos</a></li><li class="l2"><a href="#ubuntu">ubuntu</a></li><li class="l2"><a href="#_1">日志解析案例</a></li></ul></nav>
+<nav class="toc"><p class="toc-lb">目录</p><ul><li class="l2"><a href="#logstash">修改logstash配置</a></li><li class="l2"><a href="#_1">日志解析案例</a></li></ul></nav>
 <main>
 <ul>
 <li><a href="#修改logstash配置">修改logstash配置</a></li>
@@ -74,52 +80,50 @@
 <ol>
 <li>
 <p>修改启动内存参数</p>
-<p><code>/etc/logstash/jvm.options</code> 
-<code>bash
--Xms3g
--Xmx3g</code></p>
+<p><code>/etc/logstash/jvm.options</code> </p>
+<pre class="highlight"><code class="language-bash">-Xms3g
+-Xmx3g</code></pre>
 </li>
 <li>
 <p>修改文件打开数量限制</p>
-<p><code>/etc/logstash/startup.options</code>
-<code>LS_OPEN_FILES=163840</code></p>
-<p><code>/lib/systemd/system/logstash.service</code>
-<code>LimitNOFILE=163840</code></p>
-<p>操作系统层面
-```bash
-cat &gt;&gt;/etc/security/limits.conf&lt;&lt;EOF
+<p><code>/etc/logstash/startup.options</code></p>
+<pre class="highlight"><code>LS_OPEN_FILES=163840</code></pre>
+<p><code>/lib/systemd/system/logstash.service</code></p>
+<pre class="highlight"><code>LimitNOFILE=163840</code></pre>
+<p>操作系统层面</p>
+<pre class="highlight"><code class="language-bash">cat &gt;&gt;/etc/security/limits.conf&lt;&lt;EOF
 * soft nofile 655360
 * hard nofile 231072
 * soft nproc 655360
 * hard nproc 655360
 * soft memlock unlimited
 * hard memlock unlimited
-EOF</p>
-<p>cat &gt;&gt;/etc/sysctl.conf&lt;&lt;EOF
+EOF
+
+cat &gt;&gt;/etc/sysctl.conf&lt;&lt;EOF
 fs.file-max = 4194303
 vm.max_map_count=262144
 fs.inotify.max_user_watches=524288
 EOF
-sysctl -p</p>
-<h1 id="centos">centos</h1>
-<p>sed -i 's/4096/unlimited/g' /etc/security/limits.d/20-nproc.conf</p>
-<h1 id="ubuntu">ubuntu</h1>
-<p>echo "* - nofile 102400" &gt;&gt; /etc/security/limits.d/nofile.conf
-echo "root - nofile 102400" &gt;&gt; /etc/security/limits.d/nofile.conf
-```</p>
+sysctl -p
+
+# centos
+sed -i 's/4096/unlimited/g' /etc/security/limits.d/20-nproc.conf
+
+# ubuntu
+echo "* - nofile 102400" &gt;&gt; /etc/security/limits.d/nofile.conf
+echo "root - nofile 102400" &gt;&gt; /etc/security/limits.d/nofile.conf</code></pre>
 </li>
 <li>
 <p>安装插件</p>
-<p><code>bash
-/usr/share/logstash/bin/logstash-plugin install logstash-filter-multiline</code></p>
+<pre class="highlight"><code class="language-bash">/usr/share/logstash/bin/logstash-plugin install logstash-filter-multiline</code></pre>
 </li>
 <li>
 <p>升级logstash</p>
 <blockquote>
 <p><a href="https://www.elastic.co/downloads/past-releases/logstash-8-17-2">官方下载地址</a></p>
 </blockquote>
-<p><code>bash
-yum install logstash-8.17.2-x86_64.rpm</code></p>
+<pre class="highlight"><code class="language-bash">yum install logstash-8.17.2-x86_64.rpm</code></pre>
 </li>
 </ol>
 <h1 id="_1">日志解析案例</h1>
@@ -134,7 +138,7 @@ yum install logstash-8.17.2-x86_64.rpm</code></p>
 </ul>
 <p>配置文件参考</p>
 <p>初始化</p>
-<pre><code class="language-bash"># 创建日志输出目录
+<pre class="highlight"><code class="language-bash"># 创建日志输出目录
 mkdir /var/log/carlog/
 chmdo 777 /var/log/carlog/
 
@@ -142,9 +146,14 @@ chmdo 777 /var/log/carlog/
 vim /lib/systemd/system/logstash.service
 [Service]
 User=root
-Group=root
-</code></pre>
+Group=root</code></pre>
 <p><a href="../../../../notes-src/ops/elk/logstash/logstash.yml">logstash.yml</a></p>
+<nav class="doc-attach">
+  <p class="lb">本目录附件</p>
+  <ul>
+    <li><a href="../../../../notes-src/ops/elk/logstash/logstash.yml">logstash.yml</a><span class="sz">4.5 KB</span></li>
+  </ul>
+</nav>
 <nav class="doc-series">
   <p class="lb">运维工具 · 同分类笔记</p>
   <ol>
