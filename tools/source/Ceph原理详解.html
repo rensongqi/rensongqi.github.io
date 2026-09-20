@@ -455,7 +455,7 @@ pgid  = "{pool_id}.{pg_id}"                   # 例如  2.1f</code></pre>
 
   <!-- 底部：输入说明 -->
   <rect x="20" y="150" width="860" height="52" rx="9" fill="#f8fafc" stroke="#cbd5e1" data-page-node-id="lWdh7Jw190lB1Zcwql6dGj"/>
-  <text x="450" y="170" text-anchor="middle" font-size="12.5" fill="#334155" data-page-node-id="JIuSWGuPGg1iakK3Jt8WWB">整个计算在<b data-page-node-id="e1WW4gKhbPW2i8aZGiA8fS">客户端本地</b>完成，只需要 3 个输入：</text>
+  <text x="450" y="170" text-anchor="middle" font-size="12.5" fill="#334155" data-page-node-id="JIuSWGuPGg1iakK3Jt8WWB">整个计算在<tspan font-weight="700">客户端本地</tspan>完成，只需要 3 个输入：</text>
   <text x="450" y="190" text-anchor="middle" font-size="12" fill="#0e7490" data-page-node-id="tylnZoUveYrDViLeosUNSW">① 对象的名字　② 集群的 CRUSH Map（拓扑+权重，从 MON 拿一次即可缓存）　③ 池的 CRUSH rule 与副本数</text>
 
   <!-- 命令示例 -->
@@ -586,7 +586,7 @@ pgid  = "{pool_id}.{pg_id}"                   # 例如  2.1f</code></pre>
   <text x="476" y="268" font-size="12.5" font-weight="700" fill="#0f766e" data-page-node-id="uCm8YkhWA4dUpZoMHJYfly">failure domain（故障域）决定了"副本怎么散"</text>
   <text x="476" y="287" font-size="11.5" fill="#115e59" data-page-node-id="h5S3NTUeMRR0RTFJCqjv6G">· <tspan font-weight="600" data-page-node-id="3n4yhCmSiCnXZSqAJGkukt">host</tspan>：3 副本必须在 3 台不同机器（默认，最常用）</text>
   <text x="476" y="304" font-size="11.5" fill="#115e59" data-page-node-id="kx2qRnJusKP9vNbafrqiZQ">· <tspan font-weight="600" data-page-node-id="j4fZjY83moxENaGQwZaONd">rack</tspan>：3 副本必须在 3 个不同机柜（大集群推荐）</text>
-  <text x="476" y="321" font-size="11.5" fill="#115e59" data-page-node-id="BdCOk4gU3yDlEDGq8vhtYy">· <tspan font-weight="600" data-page-node-id="4UGawivIySvQnuUmRAeJ4b">osd</tspan>：只保证不同盘 —— 单机测试用，生产<b data-page-node-id="ca9bKTrGiALX3IuKQvUPd6">绝不要用</b></text>
+  <text x="476" y="321" font-size="11.5" fill="#115e59" data-page-node-id="BdCOk4gU3yDlEDGq8vhtYy">· <tspan font-weight="600" data-page-node-id="4UGawivIySvQnuUmRAeJ4b">osd</tspan>：只保证不同盘 —— 单机测试用，生产<tspan font-weight="700">绝不要用</tspan></text>
 </svg>
 <figcaption data-page-node-id="1gqfCSsT5pzzIlYPTYFoPI">图 4-1　CRUSH 层级树。root → rack → host → osd，每一层都可以作为故障域。</figcaption>
 </figure>
@@ -748,9 +748,9 @@ $ ceph osd pool set my-fast-pool crush_rule ssd_rule</pre>
   <!-- 说明框 -->
   <rect x="20" y="340" width="860" height="76" rx="9" fill="#fff7ed" stroke="#fb923c" data-page-node-id="IU6VyiMexrrELik45zodAI"/>
   <text x="40" y="362" font-size="12.5" font-weight="700" fill="#9a3412" data-page-node-id="HEVE0VOPJXgrC5lYKEhx3j">关键点拆解</text>
-  <text x="40" y="381" font-size="11.8" fill="#7c2d12" data-page-node-id="jg5AzLUsJLVUtBxOOrlbLd">· <b data-page-node-id="ZM8FYQlOeka4Ts0MwNrXFr">写入延迟 = max(所有副本)</b>，不是平均。所以一块慢盘会拖慢所有落到它上面 PG 的写 —— 这就是 <tspan font-family="monospace" data-page-node-id="jgsFNItSAYlN10FjYs8b4G">ceph osd perf</tspan> 存在的意义。</text>
-  <text x="40" y="398" font-size="11.8" fill="#7c2d12" data-page-node-id="gHc3i2xXc9veeC9y6PnZNH">· <b data-page-node-id="6xoicPRS9HjIGeH3Avj7w5">没有"两阶段提交"</b>：Ceph 靠 PGLog + 版本号在故障后补齐，而不是每次写都做 2PC，这是性能考虑。</text>
-  <text x="40" y="415" font-size="11.8" fill="#7c2d12" data-page-node-id="TIcblkXG2me7MXENX4ddLF">· <b data-page-node-id="biG3y0ziIIT5PSVxXxkWaB">读永远走 Primary</b>（可配置 <tspan font-family="monospace" data-page-node-id="G5CUTGwGvaYpvWDfZa0KT3">--primary-affinity</tspan> 或 read-from-replica 例外），因此读到的一定是最新数据 —— 强一致的来源。</text>
+  <text x="40" y="381" font-size="11.8" fill="#7c2d12" data-page-node-id="jg5AzLUsJLVUtBxOOrlbLd">· <tspan font-weight="700">写入延迟 = max(所有副本)</tspan>，不是平均。所以一块慢盘会拖慢所有落到它上面 PG 的写 —— 这就是 <tspan font-family="monospace" data-page-node-id="jgsFNItSAYlN10FjYs8b4G">ceph osd perf</tspan> 存在的意义。</text>
+  <text x="40" y="398" font-size="11.8" fill="#7c2d12" data-page-node-id="gHc3i2xXc9veeC9y6PnZNH">· <tspan font-weight="700">没有"两阶段提交"</tspan>：Ceph 靠 PGLog + 版本号在故障后补齐，而不是每次写都做 2PC，这是性能考虑。</text>
+  <text x="40" y="415" font-size="11.8" fill="#7c2d12" data-page-node-id="TIcblkXG2me7MXENX4ddLF">· <tspan font-weight="700">读永远走 Primary</tspan>（可配置 <tspan font-family="monospace" data-page-node-id="G5CUTGwGvaYpvWDfZa0KT3">--primary-affinity</tspan> 或 read-from-replica 例外），因此读到的一定是最新数据 —— 强一致的来源。</text>
 </svg>
 <figcaption data-page-node-id="oYvmXFiEf750dWTIiamb29">图 5-1　三副本池的写入时序。6 个步骤，1 次 RTT 扇出，强一致。</figcaption>
 </figure>
@@ -1200,11 +1200,11 @@ ceph balancer eval-verbose | head -50</code></pre>
 
   <rect x="440" y="115" width="440" height="120" rx="9" fill="#f0fdfa" stroke="#5eead4" data-page-node-id="shtjJp6SMinSjFIDy9ySwh"/>
   <text x="458" y="138" font-size="12.5" font-weight="700" fill="#0f766e" data-page-node-id="amkvULJYEbxMuJIZ2ELICL">✅ 预防措施（比治理更重要）</text>
-  <text x="458" y="158" font-size="11.5" fill="#115e59" data-page-node-id="3W2zPloSair1FXDHACMyNp">1. <b data-page-node-id="m6ULhjoDMkUcCH0GcnQ6bz">按容量精确设置 weight</b>：8TB→8.0，4TB→4.0，别全设 1.0</text>
-  <text x="458" y="176" font-size="11.5" fill="#115e59" data-page-node-id="2LtGwnxAi64bmpznc6Kdpb">2. <b data-page-node-id="T3SsXBCs76Pg08Uoj86Ncw">不要混用容量差异过大的盘</b>：4TB 和 16TB 混部必然失衡</text>
-  <text x="458" y="194" font-size="11.5" fill="#115e59" data-page-node-id="13P0ck8D8A8Zo13BSsNj8b">3. <b data-page-node-id="iHLCJsHMh8bMvQHJL0GOvm">一次性扩容足够的量</b>：加 2 块盘到 40 块盘的集群，改善有限</text>
-  <text x="458" y="212" font-size="11.5" fill="#115e59" data-page-node-id="mTInjOuCwxRLSHgFBkhgDQ">4. <b data-page-node-id="HObGInIVv9ggV3oNo3EM6f">开启 balancer 并设低峰窗口</b>，让它持续治理而不是出事才救火</text>
-  <text x="458" y="228" font-size="11.5" fill="#115e59" data-page-node-id="Pz8DpEzfwRs0PZ9oeMWvnF">5. <b data-page-node-id="jZUHlBvbmIPYk2euUTKCYQ">PG 数要够</b>：PG 太少 → 分布粒度粗 → 物理上无法均衡（见第 8 章）</text>
+  <text x="458" y="158" font-size="11.5" fill="#115e59" data-page-node-id="3W2zPloSair1FXDHACMyNp">1. <tspan font-weight="700">按容量精确设置 weight</tspan>：8TB→8.0，4TB→4.0，别全设 1.0</text>
+  <text x="458" y="176" font-size="11.5" fill="#115e59" data-page-node-id="2LtGwnxAi64bmpznc6Kdpb">2. <tspan font-weight="700">不要混用容量差异过大的盘</tspan>：4TB 和 16TB 混部必然失衡</text>
+  <text x="458" y="194" font-size="11.5" fill="#115e59" data-page-node-id="13P0ck8D8A8Zo13BSsNj8b">3. <tspan font-weight="700">一次性扩容足够的量</tspan>：加 2 块盘到 40 块盘的集群，改善有限</text>
+  <text x="458" y="212" font-size="11.5" fill="#115e59" data-page-node-id="mTInjOuCwxRLSHgFBkhgDQ">4. <tspan font-weight="700">开启 balancer 并设低峰窗口</tspan>，让它持续治理而不是出事才救火</text>
+  <text x="458" y="228" font-size="11.5" fill="#115e59" data-page-node-id="Pz8DpEzfwRs0PZ9oeMWvnF">5. <tspan font-weight="700">PG 数要够</tspan>：PG 太少 → 分布粒度粗 → 物理上无法均衡（见第 8 章）</text>
 </svg>
 <figcaption data-page-node-id="qzrKsx1mECpaZHko28Oqwm">图 7-2　数据均衡的治理流程与关键原则。</figcaption>
 </figure>
@@ -1349,7 +1349,7 @@ ceph config set global mon_target_pg_per_osd 200</code></pre>
   <text x="660" y="169" text-anchor="middle" font-size="10.5" fill="#166534" data-page-node-id="iaZtIEa8AXSoEcPE6crCA0">· 大块（&gt;min_alloc_size，HDD 64KB / SSD 16KB）新数据</text>
   <text x="660" y="186" text-anchor="middle" font-size="10.5" fill="#166534" data-page-node-id="JzI5hFJQfusn0hjAezTh95">  直接分配新空间写入 → 无需读改写，天然顺序化</text>
   <text x="660" y="203" text-anchor="middle" font-size="10.5" fill="#166534" data-page-node-id="MOrinJIJIbOe0CDufub99f">· 小于 min_alloc_size 的小写 → 先写 WAL(延迟写)，再合并</text>
-  <text x="660" y="222" text-anchor="middle" font-size="10.5" fill="#166534" data-page-node-id="bG32npyEyQtyZsOtE9Eph4">· <b data-page-node-id="CCf7GnyCb4zikt8w5Da7sk">每份数据自带 checksum（crc32c）</b>，读时校验</text>
+  <text x="660" y="222" text-anchor="middle" font-size="10.5" fill="#166534" data-page-node-id="bG32npyEyQtyZsOtE9Eph4">· <tspan font-weight="700">每份数据自带 checksum（crc32c）</tspan>，读时校验</text>
 
   <!-- 底层设备布局 -->
   <text x="450" y="262" text-anchor="middle" font-size="13" font-weight="700" fill="#6d28d9" data-page-node-id="6v2WAYwUZfU0OpDI0ESKJd">↓ 物理设备布局：为什么要把 db 和 wal 放到 SSD/NVMe 上？</text>
@@ -1684,9 +1684,9 @@ ceph config set mds mds_max_file_recover 64</code></pre>
 
   <rect x="540" y="126" width="340" height="100" rx="9" fill="#fff7ed" stroke="#fb923c" data-page-node-id="0LajHAXdQnVNeDProPbMtF"/>
   <text x="558" y="148" font-size="12.5" font-weight="700" fill="#9a3412" data-page-node-id="1d5gEIFAX3yURZFORYwELN">cluster network（后端/复制网）★ 强烈建议分离</text>
-  <text x="558" y="167" font-size="11" fill="#7c2d12" data-page-node-id="f29frU4wYngwlSFvBZrWUj">· OSD ↔ OSD 的<b data-page-node-id="eXR1W6uiwqAdPJMzFtl0aC">副本复制</b></text>
-  <text x="558" y="184" font-size="11" fill="#7c2d12" data-page-node-id="50EfYhzteqClYGKaxWOq9c">· OSD ↔ OSD 的<b data-page-node-id="eqm093ldB4Blr9gPUjOUuE">心跳</b></text>
-  <text x="558" y="201" font-size="11" fill="#7c2d12" data-page-node-id="pHYrWhHHVht1xW8JhukUr4">· <b data-page-node-id="1s1Niy1GRxPBJlKed1GLFB">数据恢复/回填</b>（流量最大的时候）</text>
+  <text x="558" y="167" font-size="11" fill="#7c2d12" data-page-node-id="f29frU4wYngwlSFvBZrWUj">· OSD ↔ OSD 的<tspan font-weight="700">副本复制</tspan></text>
+  <text x="558" y="184" font-size="11" fill="#7c2d12" data-page-node-id="50EfYhzteqClYGKaxWOq9c">· OSD ↔ OSD 的<tspan font-weight="700">心跳</tspan></text>
+  <text x="558" y="201" font-size="11" fill="#7c2d12" data-page-node-id="pHYrWhHHVht1xW8JhukUr4">· <tspan font-weight="700">数据恢复/回填</tspan>（流量最大的时候）</text>
   <text x="558" y="218" font-size="11" fill="#7c2d12" data-page-node-id="9ka2zjAFrYMO5pc2A2o30x">· 配置：<tspan font-family="monospace" data-page-node-id="HeW6lAzVNB3N7AjT0rCTyG">cluster_network = 192.168.100.0/24</tspan></text>
 
   <rect x="540" y="240" width="340" height="46" rx="9" fill="#f8fafc" stroke="#cbd5e1" data-page-node-id="wTCmLWQDthxxYyNUTf69oA"/>

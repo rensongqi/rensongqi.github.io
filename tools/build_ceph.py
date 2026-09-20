@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-把 posts/ceph-*.html 四篇长文的内嵌样式与目录结构，统一成笔记文章页的风格
-（以 build_notes.py 生成的页面为基准）。
+把 posts/ 下长文文章页（ceph-*.html 与 3fs-*.html）的内嵌样式与目录结构，
+统一成笔记文章页的风格（以 build_notes.py 生成的页面为基准）。
 
 做法（每页）：
   1. 用「笔记页 CSS + Ceph 内容兼容样式」替换页内第一个 <style>（原页面专属样式）；
@@ -75,9 +75,9 @@ def transform_toc(html_text):
 def main():
     pages = sorted(
         os.path.join(ROOT, "posts", f) for f in os.listdir(os.path.join(ROOT, "posts"))
-        if re.match(r"ceph-.*\.html$", f))
+        if re.match(r"(?:ceph|3fs)-.*\.html$", f))
     if not pages:
-        sys.exit("posts/ 下没有找到 ceph-*.html")
+        sys.exit("posts/ 下没有找到 ceph-/3fs-*.html")
     style = "<style>%s\n%s</style>" % (NOTES_CSS, BRIDGE)
     for path in pages:
         s = open(path, encoding="utf-8").read()

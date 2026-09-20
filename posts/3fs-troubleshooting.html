@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3FS 性能排查实战：一次 C-state 引发的全员减速 · rensongqi</title>
+<meta name="description" content="现象量化 · ping/RDMA 分层定位 · 十二项排查 · 火焰图与 perf top · C-state 唤醒延迟根因 · 修复与持久化">
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="alternate" type="application/rss+xml" title="rensongqi · RSS" href="../feed.xml">
+<style>
+.doc-page .layout{display:grid;grid-template-columns:200px minmax(0,760px);gap:48px;max-width:1060px;margin:0 auto;padding:26px 24px 24px}
+.doc-page .layout.no-toc{display:block;max-width:808px}
+.doc-page nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding-left:16px;border-left:1px solid var(--line)}
+.doc-page nav.toc .toc-lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.toc ul{list-style:none;margin:0;padding:0}
+.doc-page nav.toc li{margin:5px 0;font-size:13.5px;line-height:1.6}
+.doc-page nav.toc li.l3{padding-left:14px}
+.doc-page nav.toc a{color:var(--ink-soft);border:0;display:block}
+.doc-page nav.toc a:hover{color:var(--accent)}
+.doc-page main{min-width:0;padding-bottom:8px}
+.doc-page main h1{font-size:23px;font-weight:600;margin:36px 0 12px}
+.doc-page main h2{font-size:21px;font-weight:600;margin:42px 0 12px;letter-spacing:-.01em}
+.doc-page main h3{font-size:17px;font-weight:600;margin:30px 0 8px;color:var(--accent)}
+.doc-page main h4{font-size:15.5px;font-weight:600;margin:24px 0 6px}
+.doc-page main p{margin:13px 0}
+.doc-page main ul,.doc-page main ol{padding-left:22px;margin:12px 0}
+.doc-page main li{margin:6px 0}
+.doc-page main blockquote{margin:20px 0;padding:2px 0 2px 16px;border-left:2px solid var(--line);color:var(--ink-soft)}
+.doc-page main code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:2px 5px;border-radius:var(--radius);color:#b45309}
+.doc-page main pre{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;overflow-x:auto;font-size:13px;line-height:1.7;margin:16px 0}
+.doc-page main pre code{background:none;padding:0;color:var(--ink)}
+.doc-page main table{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+.doc-page main th,.doc-page main td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+.doc-page main th{background:var(--bg-soft);font-weight:600}
+.doc-page main img{display:block;max-width:100%;margin:18px auto;border:1px solid var(--line);border-radius:var(--radius)}
+.doc-page main hr{margin:36px 0}
+.doc-page nav.doc-attach{margin:30px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg-soft)}
+.doc-page nav.doc-attach .lb{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute);margin:0 0 8px}
+.doc-page nav.doc-attach ul{list-style:none;margin:0;padding:0}
+.doc-page nav.doc-attach li{display:flex;justify-content:space-between;gap:16px;margin:5px 0;font-size:13.5px}
+.doc-page nav.doc-attach .dir{color:var(--ink-soft)}
+.doc-page nav.doc-attach .sz{color:var(--ink-mute);font-size:12px;white-space:nowrap}
+@media (max-width:1020px){
+  .doc-page .layout{display:block;max-width:808px}
+  .doc-page nav.toc{display:none}
+}
+
+
+/* ── Ceph 长文内容兼容（保持笔记页极简风格） ── */
+.doc-page main section{margin:36px 0 0;padding:0;background:none;border:0;border-radius:0}
+.doc-page main section:first-of-type{margin-top:4px}
+.doc-page main h2{border-bottom:1px solid var(--line);padding-bottom:10px;scroll-margin-top:70px}
+.doc-page main h2 .num{display:inline-block;min-width:23px;text-align:center;padding:1px 7px;margin-right:9px;background:var(--accent);color:#fff;font-size:13px;line-height:20px;border-radius:6px;vertical-align:2px}
+.doc-page main .note,.doc-page main .warn,.doc-page main .good,.doc-page main .tip{border:1px solid var(--line);border-left-width:3px;border-radius:var(--radius);padding:11px 15px;margin:16px 0;font-size:14.5px}
+.doc-page main .note{background:#eef7f9;border-left-color:var(--accent)}
+.doc-page main .warn{background:#fdf6e3;border-left-color:#b45309}
+.doc-page main .good{background:#f0f9f1;border-left-color:#15803d}
+.doc-page main .tip{background:#f5f2fc;border-left-color:#6d28d9}
+.doc-page main .note b,.doc-page main .warn b,.doc-page main .good b,.doc-page main .tip b{color:inherit}
+.doc-page main .grid2,.doc-page main .grid3{display:grid;gap:14px;margin:16px 0}
+.doc-page main .grid2{grid-template-columns:1fr 1fr}
+.doc-page main .grid3{grid-template-columns:repeat(3,1fr)}
+@media (max-width:760px){.doc-page main .grid2,.doc-page main .grid3{grid-template-columns:1fr}}
+.doc-page main .card{border:1px solid var(--line);border-radius:var(--radius);padding:12px 15px;background:var(--bg-soft)}
+.doc-page main .card h5{margin:0 0 6px;font-size:14.5px}
+.doc-page main .card p{margin:0;font-size:13.5px;color:var(--ink-soft)}
+.doc-page main .kv{background:var(--bg-soft);border:1px dashed var(--line);border-radius:var(--radius);padding:10px 14px;margin:12px 0;font-size:13.5px}
+.doc-page main .q{border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;margin:12px 0}
+.doc-page main .q .qq{font-weight:600;color:var(--accent)}
+.doc-page main svg{max-width:100%;height:auto}
+.doc-page nav.toc li.part{font-size:11.5px;letter-spacing:.08em;color:var(--accent);font-weight:600;margin:13px 0 3px}
+</style>
+</head>
+<body class="doc-page">
+
+<header class="site-head">
+  <div class="site-head__in">
+    <a class="site-logo" href="../index.html">rensongqi</a>
+    <nav class="site-nav">
+      <a href="../index.html">首页</a>
+      <a href="../archive.html">归档</a>
+      <a href="../storage.html" class="is-active">存储</a>
+      <a href="../notes/">笔记</a>
+      <a href="../about.html">关于</a>
+    </nav>
+  </div>
+</header>
+
+<div class="doc-crumb"><a href="../index.html">首页</a> / <a href="../storage.html">存储</a> / <span>3FS 性能排查实战：一次 C-state 引发的全员减速</span></div>
+
+<div class="doc-title">
+  <h1>3FS 性能排查实战：一次 C-state 引发的全员减速</h1>
+  <div class="meta">2026-09-17 · 约 1.1 万字 · 更新于 2026-09-17</div>
+  <div class="doc-tags"><span>#3FS</span><span>#RDMA</span><span>#性能</span><span>#排障</span></div>
+</div>
+
+<div class="layout">
+<nav class="toc"><p class="toc-lb">目录</p><ul>
+<li class="part">现场</li>
+<li><a href="#s1">1. 现象：延迟高在哪里</a></li>
+<li><a href="#s2">2. 用 ping/mtr 把问题量化到链路</a></li>
+<li class="part">排除</li>
+<li><a href="#s3">3. 十二项排查逐项排除</a></li>
+<li><a href="#s4">4. 火焰图与 perf top：锁定 CPU 侧</a></li>
+<li class="part">真相</li>
+<li><a href="#s5">5. 根因：C-state 未禁用</a></li>
+<li><a href="#s6">6. 修复与验证</a></li>
+<li><a href="#s7">7. 复盘：这次教会我们什么</a></li>
+</ul></nav>
+<main>
+<p class="lead">现象量化 · ping/RDMA 分层定位 · 十二项排查 · 火焰图与 perf top · C-state 唤醒延迟根因 · 修复与持久化</p>
+<style>
+/* ── 本文内容样式（构建时保留） ── */
+.fs-shots{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+.fs-shots figure{margin:0}
+.fs-shots img{margin:0;max-width:100%}
+.fs-cap{text-align:center;font-size:13px;color:var(--ink-soft);margin:6px 0 0}
+.fs-one figure img{margin:0 auto}
+@media (max-width:760px){.fs-shots{grid-template-columns:1fr}}
+.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:13px}
+.js-svg text{font-family:ui-monospace,Consolas,"Microsoft YaHei",monospace}
+</style>
+
+<section id="s1">
+<h2><span class="num">1</span>现象：延迟高在哪里</h2>
+
+<div class="warn"><b>故障现场。</b>某 GPU 训练集群（TF 机型）批量出现 3FS 读写延迟高、性能差：除 013、014 两台节点正常外，其余节点全部异常。表现为——单进程 fio 或 cp 拷贝大文件，异常节点吞吐比正常节点<strong>下降约 1/3</strong>；4K 小文件随机读写延迟<strong>相差约 10 倍</strong>。</div>
+
+<p>存储类问题的第一步永远是<strong>量化差异</strong>：用同一套 fio 参数在正常与异常节点各压一遍，看延迟分布到底差多少。测试命令（任何一台机器上可直接重跑）：</p>
+
+<pre><code>fio --name=randread \
+    --filename=/3fs/cache/test/test.file \
+    --size=4G \
+    --bs=4k \
+    --rw=randread \
+    --ioengine=io_uring \
+    --iodepth=1 \
+    --numjobs=1 \
+    --direct=1 \
+    --runtime=60 \
+    --time_based \
+    --group_reporting</code></pre>
+
+<p>本次用于对照的四台节点（主机名与内网 IP 已脱敏，双网卡：ens1np0 走 TCP 业务面，ens4np0 走 RoCE 存储面）：</p>
+
+<table>
+<thead><tr><th>节点</th><th>ens1np0（TCP）</th><th>ens4np0（RoCE）</th><th>状态</th></tr></thead>
+<tbody>
+<tr><td class="mono">gpu-008</td><td class="mono">10.10.40.135</td><td class="mono">10.10.41.134</td><td>异常</td></tr>
+<tr><td class="mono">gpu-009</td><td class="mono">10.10.40.134</td><td class="mono">10.10.41.133</td><td>异常</td></tr>
+<tr><td class="mono">gpu-013</td><td class="mono">10.10.40.130</td><td class="mono">10.10.41.144</td><td>正常</td></tr>
+<tr><td class="mono">gpu-014</td><td class="mono">10.10.40.143</td><td class="mono">10.10.41.142</td><td>正常</td></tr>
+</tbody>
+</table>
+
+<p>集群内其余节点（gpu-001/005/006/007/008/009/010/011/012/016 等）表现与 008/009 一致，均为异常。</p>
+
+<h3>4K 随机读延迟分布</h3>
+<p>同一套 fio 参数下，两端的延迟百分位分布截然不同：</p>
+
+<div class="fs-shots">
+<figure>
+<img src="../assets/images/3fs/fio-normal.png" alt="正常节点 fio 延迟分布">
+<figcaption class="fs-cap">正常节点（gpu-013）：98% 的 IO 延迟在 250μs 以内</figcaption>
+</figure>
+<figure>
+<img src="../assets/images/3fs/fio-abnormal.png" alt="异常节点 fio 延迟分布">
+<figcaption class="fs-cap">异常节点（gpu-008）：96% 以上的 IO 延迟落在 2ms 档</figcaption>
+</figure>
+</div>
+
+<div class="note">延迟整体右移了近一个数量级，而且是<strong>整档平移</strong>——不是毛刺，不是长尾，是每一次 IO 都变慢了。这种形态通常不是存储服务端的问题，而是<strong>全链路里存在一个固定的、每次都要付的开销</strong>。带着这个假设往下查。</div>
+</section>
+
+<section id="s2">
+<h2><span class="num">2</span>用 ping/mtr 把问题量化到链路</h2>
+
+<p>3FS 的 IO 走 RoCE，RoCE 跑在 ens4np0 上。先不谈存储，先问网络：<strong>异常节点之间、异常到正常节点之间的裸链路时延是多少？</strong>以 gpu-009（异常，ens4np0 为 10.10.41.133）为源，ping 对端的 ens4np0 地址：</p>
+
+<div class="fs-one">
+<figure>
+<img src="../assets/images/3fs/ping-bad.png" alt="异常节点 ping 正常节点 200ms+">
+<figcaption class="fs-cap">异常节点 gpu-009 ping 正常节点：延迟高且不稳（ICMP 走内核协议栈，对 CPU 响应速度敏感）</figcaption>
+</figure>
+</div>
+
+<p>对照组——两台正常节点互 ping：</p>
+
+<div class="fs-shots">
+<figure>
+<img src="../assets/images/3fs/ping-good-1.png" alt="正常节点互 ping 延迟低">
+<figcaption class="fs-cap">gpu-013 ↔ gpu-014互 ping：大部分在 0.0x ms 量级</figcaption>
+</figure>
+<figure>
+<img src="../assets/images/3fs/ping-good-2.jpg" alt="正常节点互 ping 延迟低（续）">
+<figcaption class="fs-cap">同一交换机、同网段下，正常节点之间的 RTT 稳定在亚毫秒</figcaption>
+</figure>
+</div>
+
+<div class="warn">抓到一个看似矛盾的线索：<strong>异常节点 ping 谁都慢，正常节点互 ping 都快。</strong>异常和正常机器接的是同一台接入交换机、同网段。如果慢在交换网络，正常节点间也应该慢。结论：问题大概率在<strong>异常节点的端侧</strong>，而不是在网络中间。</div>
+
+<p>再用 mtr 确认路径与逐跳表现（<code>Best</code> 字段反映该主机出方向的最好时延）：</p>
+
+<pre><code>mtr -I ens4np0 10.10.74.18</code></pre>
+
+<div class="fs-one">
+<figure>
+<img src="../assets/images/3fs/mtr.jpg" alt="mtr 逐跳测试">
+<figcaption class="fs-cap">mtr 对比：有问题机型的 Best 延迟比正常机型多出约一倍</figcaption>
+</figure>
+</div>
+</section>
+
+<section id="s3">
+<h2><span class="num">3</span>十二项排查逐项排除</h2>
+
+<p>范围收窄到「端侧」之后，把网卡、系统、驱动、配置逐层过一遍。全部十二项检查与结论汇总如下，逐项展开见下文：</p>
+
+<table>
+<thead><tr><th>#</th><th>检查项</th><th>手段</th><th>结论</th></tr></thead>
+<tbody>
+<tr><td>3.1</td><td>网卡队列 / PFC / DSCP</td><td>mlnx_qos 逐参数对比</td><td>正常，配置与标准脚本一致</td></tr>
+<tr><td>3.2</td><td>CPU 频率与 governor</td><td>cpupower frequency-info</td><td>performance 模式，频率正常</td></tr>
+<tr><td>3.3</td><td>路由表</td><td>route -n</td><td>RoCE 面只有低优先级默认路由，正常</td></tr>
+<tr><td>3.4</td><td>RDMA 裸延迟</td><td>ib_write_lat 直连存储端打流</td><td>正常</td></tr>
+<tr><td>3.5</td><td>3FS 客户端配置</td><td>diff 配置文件 + fusermount 版本</td><td>一致，正常</td></tr>
+<tr><td>3.6</td><td>客户端与网卡 NUMA 分布</td><td>numastat + sysfs</td><td>与正常机型一致；调整亲和性无效果</td></tr>
+<tr><td>3.7</td><td>IB 网卡驱动</td><td>ethtool -i + lsmod</td><td>驱动/固件版本一致，正常</td></tr>
+<tr><td>3.8</td><td>丢包 / 错包 / MTU</td><td>ip -s -s link + ethtool -S</td><td>无增长计数，MTU 1500，正常</td></tr>
+<tr><td>3.9</td><td>show_gids 顺序</td><td>show_gids</td><td>正常</td></tr>
+<tr><td>3.10</td><td>内核参数</td><td>sysctl -a 全量对比</td><td>正常</td></tr>
+<tr><td>3.11</td><td>光模块光功率</td><td>mlxlink -m</td><td>Rx/Tx 均在阈值内，正常</td></tr>
+<tr><td>3.12</td><td>网络侧排查</td><td>交换机端口计数 / 二层路径</td><td>交换机侧无丢包，排除网络</td></tr>
+</tbody>
+</table>
+
+<h3>3.1 网卡队列、PFC、DSCP</h3>
+<p>RoCE 对 QoS 配置极其敏感，第一项先核对 ens4np0 的队列与 PFC：<code>mlnx_qos -i ens4np0</code>。异常节点输出与标准完全一致——trust 走 DSCP，PFC 只开在优先级 5，dscp2prio 映射、buffer、tc 带宽分配逐项比对无差异。配置出自同一份标准部署脚本，关键段落如下（交付标准，可直接复用）：</p>
+
+<pre><code>#!/bin/bash
+MLNX_ROCE_TOS=162
+MLNX_ROCE_CNP_DSCP=48
+COMPUTE_IFACES=(ens4np0)
+for iface in "${COMPUTE_IFACES[@]}"; do
+    mlnx_qos -i "$iface" --trust=dscp >/dev/null
+    mlnx_qos -i "$iface" --cable_len=30
+    mlnx_qos -i "$iface" --pfc 0,0,0,0,0,1,0,0 >/dev/null
+    mlnx_qos -i "$iface" --prio_tc=0,1,2,3,4,5,6,7 >/dev/null
+    mlnx_qos -i "$iface" --dscp2prio='set,40,5' >/dev/null   # 计算面队列走 TC1
+    mlnx_qos -i "$iface" --dscp2prio='set,48,6' >/dev/null   # 流控队列走 TC0
+    mlnx_qos -i "$iface" -s ets,ets,ets,ets,strict,strict,strict,strict --tcbw=9,1,80,10,0,0,0,0 >/dev/null 2>&1
+    mlnx_qos -i "$iface" --buffer_size 19872,220896,0,0,0,0,0,0 >/dev/null 2>&1
+    echo 1 > /sys/class/net/"$iface"/ecn/roce_np/enable/5    # 优先级5开 ECN
+    echo 1 > /sys/class/net/"$iface"/ecn/roce_rp/enable/5
+    echo "$MLNX_ROCE_CNP_DSCP" > /sys/class/net/"${iface}"/ecn/roce_np/cnp_dscp
+    mlnx_qos -i "$iface" --prio2buffer=0,0,0,0,0,1,0,0 >/dev/null
+done
+
+HCA=(mlx5_17)
+for mlx in "${HCA[@]}"; do
+    cma_roce_mode -d "$mlx" -p 1 -m 2 1>/dev/null
+    cma_roce_tos -d "$mlx" -t "$MLNX_ROCE_TOS" 1>/dev/null
+    echo "$MLNX_ROCE_TOS" > /sys/class/infiniband/"$mlx"/tc/1/traffic_class
+    mlxreg -d "$mlx" --reg_name ROCE_ACCL \
+      --set 'roce_slow_restart_en=0x0,roce_adp_retrans_en=0x1,roce_tx_window_en=0x0,roce_slow_restart_idle_en=0x0' \
+      --yes >/dev/null
+done</code></pre>
+
+<h3>3.2 CPU 频率与 governor</h3>
+<p><code>cpupower frequency-info</code>：governor 为 <code>performance</code>，当前频率 3.60GHz 顶在高位，睿频开启——<strong>频率层面无异常</strong>。注意：当时只看了频率和 governor，没有看 idle 状态，这是后话。配置高性能模式与核验的标准命令：</p>
+
+<pre><code># 配置
+cpupower frequency-set -g performance
+
+# 验证 governor
+cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+
+# 查看当前频率
+cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq</code></pre>
+
+<h3>3.3 路由表</h3>
+<p>RoCE 面只挂着 metric 4096 的低优先级默认路由，没有抢流量的错误路由：</p>
+
+<pre><code># route -n
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         10.10.40.1      0.0.0.0         UG    0      0        0 ens1np0
+0.0.0.0         10.10.41.1      0.0.0.0         UG    4096   0        0 ens4np0
+10.10.40.0      0.0.0.0         255.255.255.0   U     0      0        0 ens1np0
+10.10.41.0      0.0.0.0         255.255.255.0   U     4096   0        0 ens4np0
+10.10.41.1      0.0.0.0         255.255.255.255 UH    4096   0        0 ens4np0</code></pre>
+
+<h3>3.4 ib_write_lat 直连打流</h3>
+<p>绕开 3FS，用 RDMA 原语直接和存储端网卡打流测裸延迟，两端各起一个：</p>
+
+<pre><code># server 端（存储侧）
+ib_write_lat -F -n 2000 -s 2 --report_gbits -d mlx5_0 -p6007
+
+# 客户端（计算侧）
+ib_write_lat -F -n 2000 -s 2 --report_gbits -d mlx5_17 -p6007 &lt;对端IP&gt;</code></pre>
+
+<p>结果正常。RDMA 数据面（不过内核协议栈、不过 CPU 协议处理）是通的、快的——<strong>这和 ping 慢的结论拼起来，矛头开始指向 CPU 响应侧</strong>：RDMA 旁路了 CPU，而 ICMP 每个包都要 CPU 从内核协议栈过一遍。</p>
+
+<h3>3.5 3FS 配置与 fuse 版本</h3>
+<p>配置文件 <code>/opt/3fs/etc/hf3fs_fuse_main_launcher.toml</code> 与正常节点 diff 一致；fuse 版本一致：</p>
+
+<pre><code>root@gpu-008:~# fusermount -V
+fusermount version: 2.9.9
+root@gpu-008:~# fusermount3 -V
+fusermount3 version: 3.16.2
+root@gpu-008:~# ps -ef | grep 3fs
+root     148531       1  1 20:57 ?  00:00:13 /opt/3fs/bin/hf3fs_fuse_main --launcher_cfg /opt/3fs/etc/hf3fs_fuse_main_launcher.toml
+root     148596  148531  0 20:57 ?  00:00:00 fusermount3 --auto-unmount -- /3fs/cache</code></pre>
+
+<h3>3.6 客户端与网卡的 NUMA 分布</h3>
+<p>正常机型 ens4np0 在 NUMA1，3FS 进程内存主要分布在 NUMA0，异常机型初始分布一致；尝试把 3FS 进程绑定到与网卡同 NUMA，<strong>无效果</strong>。NUMA 不是本次问题的变量。</p>
+
+<pre><code>root@gpu-008:~# numastat -p 3932177
+Per-node process memory usage (in MBs) for PID 3932177 (hf3fs_fuse_main)
+                           Node 0          Node 1           Total
+                  --------------- --------------- ---------------
+Huge                         0.00            0.00            0.00
+Heap                         0.00            2.23            2.23
+Stack                        0.00            0.10            0.10
+Private                    357.14           11.68          368.83
+
+root@gpu-008:~# cat /sys/class/net/ens4np0/device/numa_node
+1</code></pre>
+
+<h3>3.7 IB 网卡驱动</h3>
+<p>驱动与固件版本全集群一致：<code>mlx5_core 23.10-1.1.9</code>，固件 <code>28.39.3560</code>；<code>lsmod | grep rdma</code> 各模块（rdma_ucm / rdma_cm / ib_core / mlx5_ib 等）加载正常；本机无 bond，无需检查 802.1q 驱动。</p>
+
+<pre><code>root@gpu-008:~# ethtool -i ens4np0
+driver: mlx5_core
+version: 23.10-1.1.9
+firmware-version: 28.39.3560 (MT_0000000838)
+bus-info: 0000:e6:00.0</code></pre>
+
+<h3>3.8 丢包、错包、MTU</h3>
+<p><code>ip -s -s link show ens4np0</code>：测试期间丢包计数无增长，错包 54 个为历史累计且不再增加；MTU 1500（DHCP 自动分配）；<code>ethtool -S ens4np0 | grep -iE 'discards'</code> 无异常增长。</p>
+
+<h3>3.9 show_gids 顺序</h3>
+<p>RoCE 依赖正确的 GID 索引选择，异常节点 <code>show_gids | grep ens4np0</code> 输出与正常节点一致：</p>
+
+<div class="fs-one">
+<figure>
+<img src="../assets/images/3fs/show-gids.png" alt="show_gids 输出正常">
+<figcaption class="fs-cap">show_gids：GID 表顺序正常</figcaption>
+</figure>
+</div>
+
+<h3>3.10 内核参数 / 3.11 光功率 / 3.12 网络侧</h3>
+<p><code>sysctl -a</code> 全量对比正常与异常机型，无差异。光模块收发光功率在规格范围内：</p>
+
+<pre><code>ethtool -i ens4np0 | grep "bus-info"
+mlxlink -d &lt;bus-info&gt; -m | grep dBm
+
+# 输出在阈值范围内即正常，例如：
+Rx Power Current [dBm]  : 1.103,1.290,0.931,1.103 [-9.508..6.999]
+Tx Power Current [dBm]  : 1.380,1.638,1.449,1.123 [-8.508..6.999]</code></pre>
+
+<p>网络侧收到 ping 延迟高的信息后做了排查：正常与异常机器接入同一台交换机、同网段，二层基本没有交换机参与，交换机端口计数无丢包——<strong>正式排除网络问题</strong>。</p>
+
+<div class="note"><b>阶段性结论。</b>十二项检查全部正常，但三个事实彼此咬合：① ICMP ping 慢（CPU 参与）；② RDMA 裸打流正常（CPU 被旁路）；③ fio 每次 IO 都慢（用户态进程参与）。交集收敛为一个方向：<strong>异常节点的 CPU 在处理「每个小事件」时都要付出一笔固定开销</strong>。</div>
+</section>
+
+<section id="s4">
+<h2><span class="num">4</span>火焰图与 perf top：锁定 CPU 侧</h2>
+
+<p>上火焰图对比 fio 压测阶段的 CPU 时间消耗。正常机器在测试各阶段（读/写/校验）的耗时都明显更少：</p>
+
+<div class="fs-shots">
+<figure>
+<img src="../assets/images/3fs/flame-1.png" alt="正常节点火焰图">
+<figcaption class="fs-cap">正常节点：fio 测试各阶段读写耗时较少</figcaption>
+</figure>
+<figure>
+<img src="../assets/images/3fs/flame-2.png" alt="异常节点火焰图">
+<figcaption class="fs-cap">异常节点：同类工作消耗的 CPU 时间明显更多</figcaption>
+</figure>
+</div>
+
+<p>再用 perf top 聚焦 fio 进程本身，确认时间花在哪——是在 <code>try_grab_compound_head</code>（GUP 页 pin）、<code>io_uring_enter</code> 还是 <code>fuse_direct_IO</code>：</p>
+
+<pre><code>ps -ef | grep fio
+perf top -p &lt;PID&gt;   # 排除其他进程干扰，聚焦 fio 在忙什么</code></pre>
+
+<p>两端的热点对比（各取头部）：</p>
+
+<pre><code># gpu-013 正常节点
+Overhead  Shared Object   Symbol
+  58.57%  [kernel]        [k] try_grab_compound_head
+  11.58%  [kernel]        [k] gup_pte_range
+   3.73%  [kernel]        [k] update_sg_lb_stats
+   1.49%  [kernel]        [k] _raw_spin_lock
+   0.74%  [kernel]        [k] fuse_direct_io
+
+# gpu-008 异常节点
+Overhead  Shared Object   Symbol
+  24.72%  [kernel]        [k] try_grab_compound_head
+   5.82%  [kernel]        [k] gup_pte_range
+   1.92%  [kernel]        [k] kmem_cache_alloc_trace
+   1.85%  fio             [.] get_io_u
+   1.29%  [kernel]        [k] io_req_io_end</code></pre>
+
+<div class="note"><b>怎么读这两组数。</b>两端<strong>热点结构一致</strong>（都是 GUP 页 pin 占大头），说明代码路径没有本质差别；但同样的 60 秒压测，异常节点完成的事件少、每个事件的响应慢、热点占比被稀释——这正是「每个事件都多付了一笔固定开销」在采样里的样子。它不像函数热点，更像<strong>每笔交易都被加收手续费</strong>。到这一步，嫌疑名单上只剩一个东西：CPU 的省电休眠，也就是 C-state。</div>
+</section>
+
+<section id="s5">
+<h2><span class="num">5</span>根因：C-state 未禁用</h2>
+
+<p>执行 <code>cpupower idle-info</code> 对比两端：</p>
+
+<div class="fs-one">
+<figure>
+<img src="../assets/images/3fs/idle-info.png" alt="cpupower idle-info 对比">
+<figcaption class="fs-cap">正常节点 C1_ACPI / C2_ACPI 均为 DISABLED；异常节点未禁用</figcaption>
+</figure>
+</div>
+
+<div class="warn"><b>一句话根因：正常节点的 C1_ACPI 和 C2_ACPI 都是禁用状态，异常节点没有禁用。是 CPU 休眠状态（C-state）引入的固定唤醒延迟，叠加到了每一次中断响应上。</b></div>
+
+<h3>5.1 C-state 是什么</h3>
+<p>现代 Intel CPU 在空闲时会进入不同深度的休眠状态省电，「睡」得越深，<strong>醒过来</strong>要花的时间越长：</p>
+
+<table>
+<thead><tr><th>状态</th><th>说明</th><th>Exit Latency（退出延迟）</th></tr></thead>
+<tbody>
+<tr><td>POLL / C0</td><td>忙等待 / 运行态</td><td>0</td></tr>
+<tr><td>C1_ACPI</td><td>轻度休眠</td><td>约 1μs</td></tr>
+<tr><td>C2_ACPI</td><td>深度休眠</td><td>约 170μs</td></tr>
+</tbody>
+</table>
+
+<p><code>cpupower idle-info</code> 里的 <strong>Latency</strong> 字段就是 CPU 从该睡眠态被唤醒、恢复到可执行指令状态所需的时间。</p>
+
+<h3>5.2 开启状态发生了什么</h3>
+<p>C1_ACPI、C2_ACPI 均启用时，CPU 在两次网卡中断之间的空闲窗口里，会被 <code>menu</code> 调度器（cpuidle governor）根据历史空闲时长预测，主动切进 C2_ACPI 省电。此时一个网络包（比如 ICMP echo）到达触发硬件中断，CPU 要先从 C2 <strong>花约 170μs 唤醒</strong>，再加上中断响应和调度延迟——这笔开销直接叠加到 ping 的 RTT 里，也叠加到 fio 每一个 4K IO 的中断处理路径上。</p>
+
+<p>关闭状态下则完全相反：所有 C-state 被 DISABLED，CPU 核心被锁在浅层甚至运行态，中断到达时<strong>几乎零延迟响应</strong>——所以正常节点 ping 延迟低而稳（抖动也小），RDMA 又因为本身旁路 CPU 而两头都不受影响。前面三组矛盾现象到这一步全部对上。</p>
+
+<figure class="fs-one">
+<svg class="js-svg" viewBox="0 0 860 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="C-state 唤醒延迟如何叠加到 RTT">
+  <rect x="10" y="20" width="405" height="210" rx="10" fill="#fdf6e3" stroke="#d8b365"/>
+  <text x="28" y="48" font-size="14" font-weight="700" fill="#8a5a00">C-state 启用（异常节点）</text>
+  <rect x="30" y="66" width="84" height="34" rx="6" fill="#fff" stroke="#b7b7b7"/>
+  <text x="72" y="88" font-size="12" text-anchor="middle" fill="#333">网包到达</text>
+  <polygon points="118,83 128,83 123,93" fill="#8a5a00"/>
+  <text x="123" y="74" font-size="11" text-anchor="middle" fill="#8a5a00">IRQ</text>
+  <rect x="132" y="66" width="104" height="34" rx="6" fill="#fdeaea" stroke="#c0504d"/>
+  <text x="184" y="81" font-size="12" text-anchor="middle" fill="#c0504d">CPU 在 C2</text>
+  <text x="184" y="95" font-size="11" text-anchor="middle" fill="#c0504d">唤醒 ≈170μs</text>
+  <polygon points="240,83 250,83 245,93" fill="#8a5a00"/>
+  <rect x="254" y="66" width="76" height="34" rx="6" fill="#fff" stroke="#b7b7b7"/>
+  <text x="292" y="88" font-size="12" text-anchor="middle" fill="#333">协议栈</text>
+  <polygon points="334,83 344,83 339,93" fill="#8a5a00"/>
+  <rect x="348" y="66" width="52" height="34" rx="6" fill="#fff" stroke="#b7b7b7"/>
+  <text x="374" y="88" font-size="12" text-anchor="middle" fill="#333">回包</text>
+  <text x="30" y="132" font-size="12.5" fill="#333">RTT = 传输 + 唤醒 170μs + 中断/调度开销</text>
+  <text x="30" y="156" font-size="12.5" fill="#333">一次 ping 多付约 170μs；每个 4K IO 的中断路径同理</text>
+  <text x="30" y="186" font-size="12" fill="#8a5a00">→ 高频小 IO 场景 = 每笔都交「唤醒手续费」</text>
+
+  <rect x="445" y="20" width="405" height="210" rx="10" fill="#eef7f9" stroke="#0e7490"/>
+  <text x="463" y="48" font-size="14" font-weight="700" fill="#0e7490">C-state 禁用（正常节点）</text>
+  <rect x="465" y="66" width="84" height="34" rx="6" fill="#fff" stroke="#b7b7b7"/>
+  <text x="507" y="88" font-size="12" text-anchor="middle" fill="#333">网包到达</text>
+  <polygon points="553,83 563,83 558,93" fill="#0e7490"/>
+  <text x="558" y="74" font-size="11" text-anchor="middle" fill="#0e7490">IRQ</text>
+  <rect x="567" y="66" width="104" height="34" rx="6" fill="#e2f3e2" stroke="#2f7d3a"/>
+  <text x="619" y="81" font-size="12" text-anchor="middle" fill="#2f7d3a">CPU 常驻 C0</text>
+  <text x="619" y="95" font-size="11" text-anchor="middle" fill="#2f7d3a">即刻响应</text>
+  <polygon points="675,83 685,83 680,93" fill="#0e7490"/>
+  <rect x="689" y="66" width="66" height="34" rx="6" fill="#fff" stroke="#b7b7b7"/>
+  <text x="722" y="88" font-size="12" text-anchor="middle" fill="#333">协议栈</text>
+  <polygon points="759,83 769,83 764,93" fill="#0e7490"/>
+  <rect x="773" y="66" width="52" height="34" rx="6" fill="#fff" stroke="#b7b7b7"/>
+  <text x="799" y="88" font-size="12" text-anchor="middle" fill="#333">回包</text>
+  <text x="465" y="132" font-size="12.5" fill="#333">RTT = 传输 + 中断/调度开销（无唤醒项）</text>
+  <text x="465" y="156" font-size="12.5" fill="#333">亚毫秒、低抖动</text>
+  <text x="465" y="186" font-size="12" fill="#0e7490">→ RDMA 两头都正常：它本来就旁路 CPU</text>
+</svg>
+<figcaption class="fs-cap">图 5-1：同一个包，两种 CPU 状态——唤醒延迟直接叠加进每一次响应</figcaption>
+</figure>
+</section>
+
+<section id="s6">
+<h2><span class="num">6</span>修复与验证</h2>
+
+<h3>6.1 临时禁用（重启失效）</h3>
+
+<pre><code># 先看清楚本机的 idle 状态列表与 index（不同机器/BIOS 列表可能不同，有的有 C6）
+cpupower idle-info
+
+# 按 index 禁用（本例 C1_ACPI=1、C2_ACPI=2）
+cpupower idle-set -d 2 -d 1</code></pre>
+
+<p>注意 <code>state index</code> 是动态的，先用 <code>idle-info</code> 确认序号再禁，不要照抄别人的数字。</p>
+
+<h3>6.2 持久化（重启生效）</h3>
+<p><code>cpupower idle-set</code> 重启后失效，长期方案写进内核启动参数，编辑 <code>/etc/default/grub</code>：</p>
+
+<pre><code>GRUB_CMDLINE_LINUX="... intel_idle.max_cstate=1 processor.max_cstate=1"</code></pre>
+
+<pre><code>update-grub
+reboot</code></pre>
+
+<h3>6.3 验证</h3>
+<p>先只禁 C2（170μs 退出延迟，是大头）：性能提升约 70%；再把 C1 一并禁用（C1 只有约 1μs，影响小，但一起禁更彻底）：<strong>读写延迟与正常机型拉齐</strong>——90%+ 的 IO 延迟回到 250μs 档：</p>
+
+<div class="fs-one">
+<figure>
+<img src="../assets/images/3fs/fio-fixed.png" alt="禁用 C-state 后 fio 延迟恢复">
+<figcaption class="fs-cap">禁用 C-state 后重跑同一套 fio：延迟分布恢复，90%+ 落在 250μs 左右</figcaption>
+</figure>
+</div>
+
+<div class="good"><b>修复确认。</b>异常节点在禁用 C1/C2 后，fio 延迟分布、ping RTT 均与正常节点一致；集群批量按 6.1 + 6.2 处理后故障消除。</div>
+</section>
+
+<section id="s7">
+<h2><span class="num">7</span>复盘：这次教会我们什么</h2>
+
+<figure class="fs-one">
+<svg class="js-svg" viewBox="0 0 860 276" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="本次排查路径回顾">
+  <defs>
+    <marker id="arrw" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#0e7490"/>
+    </marker>
+  </defs>
+  <g font-size="12.5">
+    <rect x="10" y="14" width="150" height="44" rx="8" fill="#eef7f9" stroke="#0e7490"/>
+    <text x="85" y="32" text-anchor="middle" fill="#0e7490" font-weight="700">1. 现象量化</text>
+    <text x="85" y="48" text-anchor="middle" fill="#555" font-size="11.5">fio 延迟分布整档右移</text>
+    <line x1="162" y1="36" x2="182" y2="36" stroke="#0e7490" stroke-width="1.5" marker-end="url(#arrw)"/>
+
+    <rect x="186" y="14" width="150" height="44" rx="8" fill="#eef7f9" stroke="#0e7490"/>
+    <text x="261" y="32" text-anchor="middle" fill="#0e7490" font-weight="700">2. 链路分层</text>
+    <text x="261" y="48" text-anchor="middle" fill="#555" font-size="11.5">ping 慢 / RDMA 正常</text>
+    <line x1="338" y1="36" x2="358" y2="36" stroke="#0e7490" stroke-width="1.5" marker-end="url(#arrw)"/>
+
+    <rect x="362" y="14" width="150" height="44" rx="8" fill="#eef7f9" stroke="#0e7490"/>
+    <text x="437" y="32" text-anchor="middle" fill="#0e7490" font-weight="700">3. 逐项排除</text>
+    <text x="437" y="48" text-anchor="middle" fill="#555" font-size="11.5">12 项配置全部正常</text>
+    <line x1="514" y1="36" x2="534" y2="36" stroke="#0e7490" stroke-width="1.5" marker-end="url(#arrw)"/>
+
+    <rect x="538" y="14" width="150" height="44" rx="8" fill="#eef7f9" stroke="#0e7490"/>
+    <text x="613" y="32" text-anchor="middle" fill="#0e7490" font-weight="700">4. 热点定位</text>
+    <text x="613" y="48" text-anchor="middle" fill="#555" font-size="11.5">火焰图 + perf top</text>
+    <line x1="690" y1="36" x2="710" y2="36" stroke="#0e7490" stroke-width="1.5" marker-end="url(#arrw)"/>
+
+    <rect x="714" y="14" width="136" height="44" rx="8" fill="#f0f9f1" stroke="#15803d"/>
+    <text x="782" y="32" text-anchor="middle" fill="#15803d" font-weight="700">5. idle-info</text>
+    <text x="782" y="48" text-anchor="middle" fill="#555" font-size="11.5">C-state 根因落地</text>
+  </g>
+
+  <rect x="10" y="84" width="840" height="178" rx="10" fill="#fafbfc" stroke="#e3e3e3"/>
+  <text x="28" y="112" font-size="13.5" font-weight="700" fill="#0e7490">三条可以带走的经验</text>
+  <text x="28" y="140" font-size="12.5" fill="#333">① 算力服务器的交付标准里应默认关闭 C-state —— 行业通用做法；缺标准，故障就会以「批量莫名变慢」的形式出现</text>
+  <text x="28" y="166" font-size="12.5" fill="#333">② 延迟类问题先用最便宜的探针分层：ping（过 CPU/协议栈） + RDMA 打流（旁路 CPU），两层一对照，方向立刻收窄</text>
+  <text x="28" y="192" font-size="12.5" fill="#333">③ perf top 的热点占比是「相对值」：两端热点结构一致 ≠ 正常；配合火焰图的绝对耗时，才能看出「每笔都多付手续费」</text>
+  <text x="28" y="226" font-size="12.5" fill="#8a5a00">教训彩蛋：3.2 查 CPU 时只看了 frequency/governor 没看 idle 状态 —— cpupower 要一次查全</text>
+  <text x="28" y="250" font-size="12.5" fill="#555">（frequency-info + idle-info 是一对，省电的两个旋钮：跑多快 + 睡多深）</text>
+</svg>
+<figcaption class="fs-cap">图 7-1：五步排查路径回顾，以及三条可复用的经验</figcaption>
+</figure>
+
+<h3>附：同类问题速查清单</h3>
+<table>
+<thead><tr><th>症状组合</th><th>优先怀疑</th><th>一拍即合的验证命令</th></tr></thead>
+<tbody>
+<tr><td>ping 慢 + RDMA 快 + 小 IO 延迟整档升高</td><td>CPU C-state 未禁用</td><td class="mono">cpupower idle-info</td></tr>
+<tr><td>吞吐低 + 延迟毛刺型抖动</td><td>governor 非 performance</td><td class="mono">cpupower frequency-info</td></tr>
+<tr><td>RoCE 建连/选路异常</td><td>GID 顺序、QoS 映射</td><td class="mono">show_gids · mlnx_qos -i &lt;iface&gt;</td></tr>
+<tr><td>单向丢包/时延逐跳劣化</td><td>光功率越限、链路问题</td><td class="mono">mlxlink -d &lt;bus&gt; -m · mtr</td></tr>
+</tbody>
+</table>
+</section>
+<nav class="doc-series">
+  <p class="lb">Ceph 四部曲</p>
+  <ol>
+<li class=""><a href="../posts/ceph-principles.html">① Ceph 原理详解：从寻址到数据均衡</a></li>
+<li class=""><a href="../posts/ceph-deployment.html">② Ceph 完整部署手册（手动 + Ansible）</a></li>
+<li class=""><a href="../posts/ceph-operations.html">③ Ceph 日常运维实战手册</a></li>
+<li class=""><a href="../posts/ceph-tuning.html">④ Ceph 性能瓶颈分析与调优</a></li>
+<li class="cur"><a href="../posts/3fs-troubleshooting.html">⑤ 3FS 性能排查实战：C-state 根因</a></li>
+  </ol>
+</nav>
+</main>
+</div>
+
+<footer class="site-foot">
+  <div class="site-foot__in">
+    <span>&copy; 2026 rensongqi</span>
+    <span class="r">
+      <a href="../feed.xml">RSS</a>
+      <a href="../storage.html">存储专题</a>
+      <a href="https://github.com/rensongqi/rensongqi.github.io">源码</a>
+    </span>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js"></script>
+</body>
+</html>

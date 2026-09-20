@@ -97,11 +97,9 @@
 <div class="layout">
 <nav class="toc"><p class="toc-lb">目录</p><ul>
 <li><a href="#ch0">0. 版本与工具选型</a></li>
-<li class="part">第一部分 · 规划与准备</li>
 <li><a href="#ch1">1. 部署前规划</a></li>
 <li><a href="#ch2">2. 操作系统初始化</a></li>
 <li><a href="#ch3">3. 磁盘规划与准备</a></li>
-<li class="part">第二部分 · 手动部署</li>
 <li><a href="#ch4">4. 安装 Ceph 软件包</a></li>
 <li><a href="#ch5">5. 部署 MON</a></li>
 <li><a href="#ch6">6. 部署 MGR</a></li>
@@ -110,14 +108,12 @@
 <li><a href="#ch9">9. 部署 RGW 对象网关</a></li>
 <li><a href="#ch10">10. Dashboard 与客户端配置</a></li>
 <li><a href="#ch11">11. 手动扩容 / 换盘 / 缩容</a></li>
-<li class="part">第三部分 · Ansible 部署</li>
 <li><a href="#ch12">12. 控制节点准备</a></li>
 <li><a href="#ch13">13. 编写 Inventory</a></li>
 <li><a href="#ch14">14. 编写 group_vars</a></li>
 <li><a href="#ch15">15. 执行部署与验证</a></li>
 <li><a href="#ch16">16. Ansible 扩缩容运维</a></li>
 <li><a href="#ch17">17. Ansible 常见报错</a></li>
-<li class="part">第四部分 · 收尾</li>
 <li><a href="#ch18">18. 部署后必做清单</a></li>
 <li><a href="#ch19">19. 附录：端口 / 目录 / 命令</a></li>
 <li><a href="#ch20">A. 附：cephadm 快速方案</a></li>
@@ -529,7 +525,7 @@ ceph --version
   <line x1="480" y1="65" x2="488" y2="65" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b2)"/>
   <line x1="600" y1="65" x2="608" y2="65" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b2)"/>
   <line x1="720" y1="65" x2="728" y2="65" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b2)"/>
-  <text x="450" y="122" text-anchor="middle" font-size="11.5" fill="#475569">手动部署七步。<b>核心文件只有三个</b>：<tspan font-family="monospace">/etc/ceph/ceph.conf</tspan>、<tspan font-family="monospace">keyring</tspan>、<tspan font-family="monospace">monmap</tspan>。</text>
+  <text x="450" y="122" text-anchor="middle" font-size="11.5" fill="#475569">手动部署七步。<tspan font-weight="700">核心文件只有三个</tspan>：<tspan font-family="monospace">/etc/ceph/ceph.conf</tspan>、<tspan font-family="monospace">keyring</tspan>、<tspan font-family="monospace">monmap</tspan>。</text>
 </svg>
 <figcaption>图 4-1　手动部署七步流程。</figcaption>
 </figure>
@@ -1602,7 +1598,7 @@ EOF
   <line x1="412" y1="66" x2="420" y2="66" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b3)"/>
   <line x1="550" y1="66" x2="558" y2="66" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b3)"/>
   <line x1="688" y1="66" x2="696" y2="66" stroke="#0e7490" stroke-width="1.8" marker-end="url(#b3)"/>
-  <text x="450" y="122" text-anchor="middle" font-size="11.5" fill="#475569">Ansible 部署六步。<b>强烈建议先 --check 预演</b>，避免把配置写坏了。</text>
+  <text x="450" y="122" text-anchor="middle" font-size="11.5" fill="#475569">Ansible 部署六步。<tspan font-weight="700">强烈建议先 --check 预演</tspan>，避免把配置写坏了。</text>
 </svg>
 <figcaption>图 15-1　Ansible 部署执行流程。</figcaption>
 </figure>
@@ -2011,6 +2007,7 @@ ceph orch upgrade status
 <li class="cur"><a href="../posts/ceph-deployment.html">② Ceph 完整部署手册（手动 + Ansible）</a></li>
 <li class=""><a href="../posts/ceph-operations.html">③ Ceph 日常运维实战手册</a></li>
 <li class=""><a href="../posts/ceph-tuning.html">④ Ceph 性能瓶颈分析与调优</a></li>
+<li class=""><a href="../posts/3fs-troubleshooting.html">⑤ 3FS 性能排查实战：C-state 根因</a></li>
   </ol>
 </nav>
 </main>

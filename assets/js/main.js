@@ -50,6 +50,15 @@ window.POSTS = [
     words: "约 1.5 万字",
     desc: "六大瓶颈层剖析、3 副本随机写时延分解、写放大链条、网络与 CPU 定量规划、mclock 隐性 IOPS 天花板、四段压测定位法、六层参数表与六套场景化配方。"
   },
+  {
+    title: "3FS 性能排查实战：一次 C-state 引发的全员减速",
+    url: "posts/3fs-troubleshooting.html",
+    date: "2026-09-17",
+    module: "存储",
+    tags: ["3FS", "RDMA", "性能", "排障"],
+    words: "约 1.1 万字",
+    desc: "GPU 集群 3FS 读写延迟批量升高：fio 量化、ping/RDMA 分层定位、十二项配置逐项排除、火焰图与 perf top 锁定 CPU 侧，根因为 C1/C2 C-state 未禁用（每次中断多付 170μs 唤醒费），含修复持久化与速查清单。"
+  },
   /*__NOTES_BEGIN__*/
   {"title": "gRPC", "url": "posts/go/grpc/index.html", "date": "2026-09-16", "module": "Go 语言", "tags": ["Go 语言", "gRPC"], "words": "约 1190 字", "desc": "下边创建一个简单的server端和client端，实现两者之间的交互"},
   {"title": "Go 语言", "url": "posts/go/index.html", "date": "2026-09-16", "module": "Go 语言", "tags": ["Go 语言"], "words": "约 40 字", "desc": "主要记录了go语言中底层的一些知识，包括内存管理、逃逸分析、垃圾回收和一些常见包的使用及分析"},

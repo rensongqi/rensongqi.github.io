@@ -23,7 +23,7 @@ def main():
     bad = []
     total = 0
     for dirpath, dirnames, files in os.walk(ROOT):
-        dirnames[:] = [d for d in dirnames if d != ".git"]
+        dirnames[:] = [d for d in dirnames if d not in (".git", "tools")]
         for name in files:
             if not name.endswith(".html"):
                 continue

@@ -29,7 +29,9 @@ SERIES = [
     ("posts/ceph-deployment.html", "② Ceph 完整部署手册（手动 + Ansible）"),
     ("posts/ceph-operations.html", "③ Ceph 日常运维实战手册"),
     ("posts/ceph-tuning.html", "④ Ceph 性能瓶颈分析与调优"),
+    ("posts/3fs-troubleshooting.html", "⑤ 3FS 性能排查实战：C-state 根因"),
 ]
+SERIES_LABEL = "存储专题"
 
 DOCS = [
     {
@@ -67,6 +69,16 @@ DOCS = [
         "tags": ["Ceph", "性能", "调优"],
         "date": "2026-09-14",
         "words": "约 1.5 万字",
+    },
+    {
+        "src": "3FS性能排查.html",
+        "out": "3fs-troubleshooting.html",
+        "title": "3FS 性能排查实战：一次 C-state 引发的全员减速",
+        "sub": "现象量化 · ping/RDMA 分层定位 · 十二项排查 · 火焰图与 perf top · C-state 唤醒延迟根因 · 修复与持久化",
+        "tags": ["3FS", "RDMA", "性能", "排障"],
+        "date": "2026-09-17",
+        "words": "约 1.1 万字",
+        "updated": "2026-09-17",
     },
 ]
 
@@ -144,6 +156,7 @@ def build(doc):
       <a href="../index.html">首页</a>
       <a href="../archive.html">归档</a>
       <a href="../storage.html" class="is-active">存储</a>
+      <a href="../notes/">笔记</a>
       <a href="../about.html">关于</a>
     </nav>
   </div>
@@ -153,7 +166,7 @@ def build(doc):
 
 <div class="doc-title">
   <h1>{title}</h1>
-  <div class="meta">{date} · {words} · 更新于 2026-09-14</div>
+  <div class="meta">{date} · {words} · 更新于 {updated}</div>
   <div class="doc-tags">{tags}</div>
 </div>
 
@@ -189,6 +202,8 @@ def build(doc):
         title=doc["title"], sub=doc["sub"], css=css, toc=toc,
         main=main.strip(), tags=tags_html, series=series_html,
         date=doc["date"], words=doc["words"],
+        updated=doc.get("updated", "2026-09-14"),
+        series_label=SERIES_LABEL,
     )
 
     if not os.path.isdir(OUT_DIR):

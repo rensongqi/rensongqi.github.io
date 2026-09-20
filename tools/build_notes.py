@@ -802,9 +802,19 @@ def patch_main_js(posts):
 
 def write_feed(posts):
     items = []
+    note_guids = {SITE + p["url"] for p in posts}
+    seen = set()
     head = read(os.path.join(ROOT, "feed.xml"))
     for m in re.finditer(r"    <item>.*?</item>\n", head, re.S):
-        items.append(m.group(0))  # 保留 Ceph 长文的既有条目
+        blk = m.group(0)
+        mg = re.search(r"<guid[^>]*>([^<]+)</guid>", blk)
+        g = mg.group(1) if mg else blk
+        if g in note_guids:
+            continue            # 笔记条目由下方按当前数据重新生成，丢弃旧块
+        if g in seen:
+            continue            # 幂等：历史累积的重复块只保留一份
+        seen.add(g)
+        items.append(blk)      # 保留手工长文条目（Ceph/3FS 等）
     for p in posts:
         items.append("""    <item>
       <title>%s</title>
